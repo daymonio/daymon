@@ -12,6 +12,11 @@ files:
 asarUnpack:
   - "node_modules/better-sqlite3/**"
   - "resources/**"
+extraResources:
+  - from: "out/mcp"
+    to: "mcp"
+    filter:
+      - "**/*"
 mac:
   extendInfo:
     - NSDocumentsFolderUsageDescription: "Daymon needs access to your Documents folder for file watching."

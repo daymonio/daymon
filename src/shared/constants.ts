@@ -25,6 +25,8 @@ export const IPC_CHANNELS = {
   TASKS_RESUME: 'tasks:resume',
   TASKS_GET_RUNS: 'tasks:getRuns',
   TASKS_GET_LATEST_RUN: 'tasks:getLatestRun',
+  TASKS_GET_RUNNING_RUNS: 'tasks:getRunningRuns',
+  TASKS_RUN_NOW: 'tasks:runNow',
 
   // Settings
   SETTINGS_GET: 'settings:get',
@@ -42,5 +44,18 @@ export const DEFAULTS = {
   OBSERVATION_SOURCE: 'claude',
   ENTITY_TYPE: 'fact',
   WINDOW_WIDTH: 400,
-  WINDOW_HEIGHT: 600
+  WINDOW_HEIGHT: 600,
+  PROGRESS_THROTTLE_MS: 2000
+} as const
+
+export const TRIGGER_TYPES = {
+  CRON: 'cron',
+  ONCE: 'once',
+  MANUAL: 'manual'
+} as const
+
+export const TASK_STATUSES = {
+  ACTIVE: 'active',
+  PAUSED: 'paused',
+  COMPLETED: 'completed'
 } as const

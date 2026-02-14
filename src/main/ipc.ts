@@ -1,6 +1,11 @@
 import { ipcMain, app } from 'electron'
 import * as memory from './db/memory'
 import * as tasks from './db/tasks'
+import { executeTask } from './scheduler/runner'
+import { getConfig, getClaudeConfigPath } from './config'
+import { checkClaudeCliAvailable } from './executor/claude-code'
+import { startWatch, stopWatch } from './file-watcher'
+import { uninstall } from './uninstall'
 import type { CreateTaskInput } from '../shared/types'
 
 export function registerIpcHandlers(): void {
@@ -45,6 +50,9 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('tasks:resume', (_e, id: number) => tasks.resumeTask(id))
   ipcMain.handle('tasks:getRuns', (_e, taskId: number) => tasks.getTaskRuns(taskId))
   ipcMain.handle('tasks:getLatestRun', (_e, taskId: number) => tasks.getLatestTaskRun(taskId))
+  ipcMain.handle('tasks:listAllRuns', (_e, limit: number) => tasks.listAllRuns(limit))
+  ipcMain.handle('tasks:runNow', (_e, id: number) => executeTask(id))
+  ipcMain.handle('tasks:getRunningRuns', () => tasks.getRunningTaskRuns())
 
   // ─── Settings ─────────────────────────────────────────
 
@@ -52,8 +60,36 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('settings:set', (_e, key: string, value: string) => tasks.setSetting(key, value))
   ipcMain.handle('settings:getAll', () => tasks.getAllSettings())
 
+  // ─── Watches ─────────────────────────────────────────
+
+  ipcMain.handle('watches:create', (_e, path: string, description?: string, actionPrompt?: string) => {
+    const watch = tasks.createWatch(path, description, actionPrompt)
+    startWatch(watch)
+    return watch
+  })
+  ipcMain.handle('watches:list', (_e, status?: string) => tasks.listWatches(status))
+  ipcMain.handle('watches:delete', (_e, id: number) => {
+    stopWatch(id)
+    tasks.deleteWatch(id)
+  })
+
   // ─── App ──────────────────────────────────────────────
 
   ipcMain.handle('app:getVersion', () => app.getVersion())
   ipcMain.handle('app:quit', () => app.quit())
+  ipcMain.handle('app:getPaths', () => {
+    const config = getConfig()
+    return {
+      dbPath: config.dbPath,
+      resultsDir: config.resultsDir,
+      dataDir: config.dataDir,
+      claudeConfigPath: getClaudeConfigPath()
+    }
+  })
+  ipcMain.handle('app:checkClaude', () => checkClaudeCliAvailable())
+  ipcMain.handle('app:getAutoLaunch', () => app.getLoginItemSettings().openAtLogin)
+  ipcMain.handle('app:setAutoLaunch', (_e, enabled: boolean) => {
+    app.setLoginItemSettings({ openAtLogin: enabled })
+  })
+  ipcMain.handle('app:uninstall', () => uninstall())
 }

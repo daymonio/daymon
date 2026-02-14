@@ -26,6 +26,15 @@ interface TasksAPI {
   resume: (id: number) => Promise<void>
   getRuns: (taskId: number) => Promise<TaskRun[]>
   getLatestRun: (taskId: number) => Promise<TaskRun | null>
+  listAllRuns: (limit?: number) => Promise<TaskRun[]>
+  runNow: (id: number) => Promise<void>
+  getRunningRuns: () => Promise<TaskRun[]>
+}
+
+interface WatchesAPI {
+  create: (path: string, description?: string, actionPrompt?: string) => Promise<Watch>
+  list: (status?: string) => Promise<Watch[]>
+  delete: (id: number) => Promise<void>
 }
 
 interface SettingsAPI {
@@ -37,11 +46,17 @@ interface SettingsAPI {
 interface AppAPI {
   getVersion: () => Promise<string>
   quit: () => Promise<void>
+  getPaths: () => Promise<{ dbPath: string; resultsDir: string; dataDir: string; claudeConfigPath: string }>
+  checkClaude: () => Promise<{ available: boolean; version?: string; error?: string }>
+  getAutoLaunch: () => Promise<boolean>
+  setAutoLaunch: (enabled: boolean) => Promise<void>
+  uninstall: () => Promise<void>
 }
 
 interface DaymonAPI {
   memory: MemoryAPI
   tasks: TasksAPI
+  watches: WatchesAPI
   settings: SettingsAPI
   app: AppAPI
 }

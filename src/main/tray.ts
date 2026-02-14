@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, nativeImage, screen, shell } from 'electron'
+import { app, BrowserWindow, Menu, Tray, nativeImage, screen, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { DEFAULTS } from '../shared/constants'
@@ -86,19 +86,25 @@ export function createTray(): BrowserWindow {
   const iconPath = join(
     app.isPackaged ? process.resourcesPath : app.getAppPath(),
     'resources',
-    'trayIconTemplate.png'
+    'logo.png'
   )
 
   const icon = nativeImage.createFromPath(iconPath)
-  const resizedIcon = icon.resize({ width: 18, height: 18 })
+  const resizedIcon = icon.resize({ width: 22, height: 22 })
 
   tray = new Tray(resizedIcon)
   tray.setToolTip('Daymon')
 
   popoverWindow = createPopoverWindow()
 
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Show Daymon', click: () => showPopover() },
+    { type: 'separator' },
+    { label: 'Quit', click: () => app.quit() }
+  ])
+
   tray.on('click', () => togglePopover())
-  tray.on('right-click', () => togglePopover())
+  tray.on('right-click', () => tray!.popUpContextMenu(contextMenu))
 
   return popoverWindow
 }

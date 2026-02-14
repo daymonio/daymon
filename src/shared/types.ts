@@ -35,6 +35,7 @@ export interface Task {
   cronExpression: string | null
   triggerType: string
   triggerConfig: string | null
+  scheduledAt: string | null
   executor: string
   status: string
   lastRun: string | null
@@ -51,6 +52,7 @@ export interface CreateTaskInput {
   cronExpression?: string
   triggerType?: string
   triggerConfig?: string
+  scheduledAt?: string
   executor?: string
 }
 
@@ -64,6 +66,8 @@ export interface TaskRun {
   resultFile: string | null
   errorMessage: string | null
   durationMs: number | null
+  progress: number | null
+  progressMessage: string | null
 }
 
 // ─── Watch Types ────────────────────────────────────────────

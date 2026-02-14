@@ -2,7 +2,7 @@
   "name": "daymon",
   "version": "0.1.0",
   "description": "Open source autopilot for Claude and ChatGPT",
-  "main": "test-electron.js",
+  "main": "./out/main/index.js",
   "author": "Daymon <hello@daymon.io>",
   "homepage": "https://daymon.io",
   "repository": {
@@ -12,7 +12,8 @@
   "license": "AGPL-3.0",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "npm run typecheck && electron-vite build",
+    "build": "npm run typecheck && electron-vite build && npm run build:mcp",
+    "build:mcp": "esbuild src/mcp/server.ts --bundle --platform=node --target=node18 --outfile=out/mcp/server.js --external:better-sqlite3 && cd out/mcp && npm install better-sqlite3@11.10.0 2>/dev/null || true",
     "start": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
@@ -25,19 +26,26 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "better-sqlite3": "^11.10.0"
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "better-sqlite3": "^11.10.0",
+    "chokidar": "^5.0.0",
+    "cron-parser": "^5.0.0",
+    "node-cron": "^3.0.3",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@electron/rebuild": "^4.0.3",
     "@tailwindcss/vite": "^4.1.10",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^5.1.1",
     "electron": "^35.2.1",
     "electron-builder": "^26.7.0",
     "electron-vite": "^5.0.0",
+    "esbuild": "^0.24.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^4.1.10",

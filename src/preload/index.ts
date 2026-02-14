@@ -38,7 +38,17 @@ const api = {
     pause: (id: number) => ipcRenderer.invoke('tasks:pause', id),
     resume: (id: number) => ipcRenderer.invoke('tasks:resume', id),
     getRuns: (taskId: number) => ipcRenderer.invoke('tasks:getRuns', taskId),
-    getLatestRun: (taskId: number) => ipcRenderer.invoke('tasks:getLatestRun', taskId)
+    getLatestRun: (taskId: number) => ipcRenderer.invoke('tasks:getLatestRun', taskId),
+    listAllRuns: (limit?: number) => ipcRenderer.invoke('tasks:listAllRuns', limit ?? 20),
+    runNow: (id: number) => ipcRenderer.invoke('tasks:runNow', id),
+    getRunningRuns: () => ipcRenderer.invoke('tasks:getRunningRuns')
+  },
+
+  watches: {
+    create: (path: string, description?: string, actionPrompt?: string) =>
+      ipcRenderer.invoke('watches:create', path, description, actionPrompt),
+    list: (status?: string) => ipcRenderer.invoke('watches:list', status),
+    delete: (id: number) => ipcRenderer.invoke('watches:delete', id)
   },
 
   settings: {
@@ -49,7 +59,12 @@ const api = {
 
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
-    quit: () => ipcRenderer.invoke('app:quit')
+    quit: () => ipcRenderer.invoke('app:quit'),
+    getPaths: () => ipcRenderer.invoke('app:getPaths'),
+    checkClaude: () => ipcRenderer.invoke('app:checkClaude'),
+    getAutoLaunch: () => ipcRenderer.invoke('app:getAutoLaunch'),
+    setAutoLaunch: (enabled: boolean) => ipcRenderer.invoke('app:setAutoLaunch', enabled),
+    uninstall: () => ipcRenderer.invoke('app:uninstall')
   }
 }
 
