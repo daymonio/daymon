@@ -27,12 +27,7 @@ async function startStdio(): Promise<void> {
 }
 
 async function startHttp(port: number): Promise<void> {
-  const server = createMcpServer()
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined // stateless mode
-  })
-
-  const httpServer = createServer((req, res) => {
+  const httpServer = createServer(async (req, res) => {
     // CORS headers for ChatGPT Desktop
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
@@ -44,10 +39,19 @@ async function startHttp(port: number): Promise<void> {
       return
     }
 
-    transport.handleRequest(req, res)
-  })
+    // Stateless mode: create fresh server + transport per request
+    const server = createMcpServer()
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined
+    })
 
-  await server.connect(transport)
+    res.on('close', () => {
+      transport.close().catch(() => {})
+    })
+
+    await server.connect(transport)
+    await transport.handleRequest(req, res)
+  })
 
   httpServer.listen(port, () => {
     console.error(`Daymon MCP server started (HTTP on port ${port})`)
