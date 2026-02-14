@@ -20,6 +20,17 @@ const api = {
     getStats: () => ipcRenderer.invoke('memory:getStats')
   },
 
+  workers: {
+    create: (input: { name: string; systemPrompt: string; description?: string; model?: string; isDefault?: boolean }) =>
+      ipcRenderer.invoke('workers:create', input),
+    get: (id: number) => ipcRenderer.invoke('workers:get', id),
+    list: () => ipcRenderer.invoke('workers:list'),
+    update: (id: number, updates: Record<string, unknown>) =>
+      ipcRenderer.invoke('workers:update', id, updates),
+    delete: (id: number) => ipcRenderer.invoke('workers:delete', id),
+    getDefault: () => ipcRenderer.invoke('workers:getDefault')
+  },
+
   tasks: {
     create: (task: {
       name: string

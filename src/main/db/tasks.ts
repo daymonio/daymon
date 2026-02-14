@@ -1,6 +1,34 @@
 import { getDatabase } from './index'
 import * as queries from '../../shared/db-queries'
-import type { Task, TaskRun, CreateTaskInput, Watch } from '../../shared/types'
+import type { Task, TaskRun, CreateTaskInput, Watch, Worker, CreateWorkerInput } from '../../shared/types'
+
+// ─── Workers ────────────────────────────────────────────────
+
+export function createWorker(input: CreateWorkerInput): Worker {
+  return queries.createWorker(getDatabase(), input)
+}
+
+export function getWorker(id: number): Worker | null {
+  return queries.getWorker(getDatabase(), id)
+}
+
+export function listWorkers(): Worker[] {
+  return queries.listWorkers(getDatabase())
+}
+
+export function updateWorker(id: number, updates: Partial<{
+  name: string; systemPrompt: string; description: string; model: string; isDefault: boolean
+}>): void {
+  return queries.updateWorker(getDatabase(), id, updates)
+}
+
+export function deleteWorker(id: number): void {
+  return queries.deleteWorker(getDatabase(), id)
+}
+
+export function getDefaultWorker(): Worker | null {
+  return queries.getDefaultWorker(getDatabase())
+}
 
 // ─── Tasks ──────────────────────────────────────────────────
 
@@ -16,12 +44,7 @@ export function listTasks(status?: string): Task[] {
   return queries.listTasks(getDatabase(), status)
 }
 
-export function updateTask(id: number, updates: Partial<{
-  name: string; description: string; prompt: string; cronExpression: string
-  triggerType: string; triggerConfig: string; scheduledAt: string; executor: string
-  status: string; lastRun: string; lastResult: string; errorCount: number
-  maxRuns: number; runCount: number
-}>): void {
+export function updateTask(id: number, updates: Record<string, unknown>): void {
   return queries.updateTask(getDatabase(), id, updates)
 }
 

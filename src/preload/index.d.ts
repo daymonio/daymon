@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { Entity, Observation, Relation, Task, TaskRun, Watch, CreateTaskInput, MemoryStats } from '../shared/types'
+import type { Entity, Observation, Relation, Task, TaskRun, Watch, CreateTaskInput, MemoryStats, Worker, CreateWorkerInput } from '../shared/types'
 
 interface MemoryAPI {
   createEntity: (name: string, type?: string, category?: string) => Promise<Entity>
@@ -53,8 +53,18 @@ interface AppAPI {
   uninstall: () => Promise<void>
 }
 
+interface WorkersAPI {
+  create: (input: CreateWorkerInput) => Promise<Worker>
+  get: (id: number) => Promise<Worker | null>
+  list: () => Promise<Worker[]>
+  update: (id: number, updates: Record<string, unknown>) => Promise<void>
+  delete: (id: number) => Promise<void>
+  getDefault: () => Promise<Worker | null>
+}
+
 interface DaymonAPI {
   memory: MemoryAPI
+  workers: WorkersAPI
   tasks: TasksAPI
   watches: WatchesAPI
   settings: SettingsAPI

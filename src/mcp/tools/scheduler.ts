@@ -46,10 +46,19 @@ export function registerSchedulerTools(server: McpServer): void {
         description: z.string().optional().describe('Optional description of what the task does'),
         maxRuns: z.number().optional().describe(
           'Maximum number of successful runs before the task auto-completes. Omit for unlimited.'
+        ),
+        workerId: z.number().optional().describe(
+          'Assign this task to a specific worker by ID. The worker\'s system prompt will be passed via --system-prompt at execution time. '
+          + 'If omitted, the default worker (if any) will be used.'
+        ),
+        sessionContinuity: z.boolean().optional().describe(
+          'Enable session continuity across runs. When true, each run continues the previous Claude CLI session, '
+          + 'allowing the task to build on prior context naturally (e.g., "compared to yesterday\'s results..."). '
+          + 'Default: false (each run is stateless).'
         )
       }
     },
-    async ({ name, prompt, cronExpression, scheduledAt, description, maxRuns }) => {
+    async ({ name, prompt, cronExpression, scheduledAt, description, maxRuns, workerId, sessionContinuity }) => {
       const db = getMcpDatabase()
 
       // Auto-determine trigger type
@@ -90,16 +99,20 @@ export function registerSchedulerTools(server: McpServer): void {
         triggerConfig: JSON.stringify({ source: process.env.DAYMON_SOURCE || 'claude-desktop' }),
         description,
         executor: 'claude_code',
-        maxRuns: maxRuns ?? undefined
+        maxRuns: maxRuns ?? undefined,
+        workerId: workerId ?? undefined,
+        sessionContinuity: sessionContinuity ?? false
       })
 
       // Response varies by type
       const maxRunsNote = maxRuns ? `\nWill auto-complete after ${maxRuns} successful run(s).` : ''
+      const workerNote = workerId ? (() => { const w = queries.getWorker(db, workerId); return w ? `\nWorker: ${w.name}` : '' })() : ''
+      const sessionNote = sessionContinuity ? '\nSession continuity: enabled' : ''
       if (triggerType === 'cron') {
         return {
           content: [{
             type: 'text' as const,
-            text: `Scheduled recurring task "${taskName}" (id: ${task.id}).\nSchedule: ${cronExpression}${maxRunsNote}\nThe Daymon scheduler will pick it up within 30 seconds.`
+            text: `Scheduled recurring task "${taskName}" (id: ${task.id}).\nSchedule: ${cronExpression}${maxRunsNote}${workerNote}${sessionNote}\nThe Daymon scheduler will pick it up within 30 seconds.`
           }]
         }
       } else if (triggerType === 'once') {
@@ -111,14 +124,14 @@ export function registerSchedulerTools(server: McpServer): void {
         return {
           content: [{
             type: 'text' as const,
-            text: `Scheduled one-time task "${taskName}" (id: ${task.id}).\nRuns at: ${scheduledAt}\nTime until execution: ~${timeDesc}\nThe Daymon scheduler checks every 30 seconds.`
+            text: `Scheduled one-time task "${taskName}" (id: ${task.id}).\nRuns at: ${scheduledAt}\nTime until execution: ~${timeDesc}${workerNote}${sessionNote}\nThe Daymon scheduler checks every 30 seconds.`
           }]
         }
       } else {
         return {
           content: [{
             type: 'text' as const,
-            text: `Created on-demand task "${taskName}" (id: ${task.id}).\nRun it anytime with daymon_run_task.`
+            text: `Created on-demand task "${taskName}" (id: ${task.id}).${workerNote}${sessionNote}\nRun it anytime with daymon_run_task.`
           }]
         }
       }
@@ -144,19 +157,25 @@ export function registerSchedulerTools(server: McpServer): void {
         }
       }
 
-      const list = tasks.map((t) => ({
-        id: t.id,
-        name: t.name,
-        status: t.status,
-        triggerType: t.triggerType,
-        schedule: t.cronExpression,
-        scheduledAt: t.scheduledAt,
-        lastRun: t.lastRun,
-        errorCount: t.errorCount,
-        maxRuns: t.maxRuns,
-        runCount: t.runCount,
-        description: t.description
-      }))
+      const list = tasks.map((t) => {
+        const worker = t.workerId ? queries.getWorker(db, t.workerId) : null
+        return {
+          id: t.id,
+          name: t.name,
+          status: t.status,
+          triggerType: t.triggerType,
+          schedule: t.cronExpression,
+          scheduledAt: t.scheduledAt,
+          lastRun: t.lastRun,
+          errorCount: t.errorCount,
+          maxRuns: t.maxRuns,
+          runCount: t.runCount,
+          description: t.description,
+          workerId: t.workerId,
+          workerName: worker?.name ?? null,
+          sessionContinuity: t.sessionContinuity
+        }
+      })
 
       return {
         content: [
@@ -410,6 +429,31 @@ export function registerSchedulerTools(server: McpServer): void {
             elapsedMs,
             elapsedFormatted: `${(elapsedMs / 1000).toFixed(1)}s`
           }, null, 2)
+        }]
+      }
+    }
+  )
+
+  server.registerTool(
+    'daymon_reset_session',
+    {
+      title: 'Reset Task Session',
+      description: 'Clear the session for a task, forcing the next run to start a fresh conversation. Only relevant for tasks with session continuity enabled.',
+      inputSchema: {
+        id: z.number().describe('The task ID to reset the session for')
+      }
+    },
+    async ({ id }) => {
+      const db = getMcpDatabase()
+      const task = queries.getTask(db, id)
+      if (!task) {
+        return { content: [{ type: 'text' as const, text: `No task found with id ${id}.` }] }
+      }
+      queries.clearTaskSession(db, id)
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Session cleared for task "${task.name}" (id: ${id}). Next run will start a fresh conversation.`
         }]
       }
     }

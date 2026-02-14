@@ -1,18 +1,27 @@
 import cron from 'node-cron'
 import { listTasks, getDueOnceTasks, updateTask } from '../db/tasks'
 import { executeTask } from './runner'
+import { getDatabase } from '../db'
+import { indexPendingEmbeddings } from '../../shared/embedding-indexer'
+import { initEngine } from '../../shared/embeddings'
 import type { Task } from '../../shared/types'
 
 const scheduledJobs = new Map<number, cron.ScheduledTask>()
 const pendingOnceTasks = new Set<number>()
 let pollTimer: ReturnType<typeof setInterval> | null = null
+let embeddingTimer: ReturnType<typeof setInterval> | null = null
 
 const POLL_INTERVAL_MS = 30_000 // 30 seconds
+const EMBEDDING_INDEX_INTERVAL_MS = 5 * 60_000 // 5 minutes
 
 export function startScheduler(): void {
   console.log('Starting scheduler...')
   syncWithDatabase()
   pollTimer = setInterval(syncWithDatabase, POLL_INTERVAL_MS)
+
+  // Background embedding indexer (lazy — init engine then index every 5 minutes)
+  initEngine().catch(() => { /* non-fatal: embeddings are optional */ })
+  embeddingTimer = setInterval(runEmbeddingIndexer, EMBEDDING_INDEX_INTERVAL_MS)
 }
 
 export function stopScheduler(): void {
@@ -20,6 +29,10 @@ export function stopScheduler(): void {
   if (pollTimer) {
     clearInterval(pollTimer)
     pollTimer = null
+  }
+  if (embeddingTimer) {
+    clearInterval(embeddingTimer)
+    embeddingTimer = null
   }
   for (const [taskId, job] of scheduledJobs) {
     job.stop()
@@ -96,6 +109,17 @@ function scheduleTask(task: Task): void {
 
   scheduledJobs.set(task.id, job)
   console.log(`Scheduled task ${task.id} (${task.name}): ${task.cronExpression}`)
+}
+
+function runEmbeddingIndexer(): void {
+  try {
+    const db = getDatabase()
+    indexPendingEmbeddings(db, 10).catch((err) => {
+      console.error('Embedding indexer error:', err)
+    })
+  } catch {
+    // Non-fatal: DB might not be ready yet
+  }
 }
 
 export function getSchedulerStatus(): { running: boolean; jobCount: number; jobs: Array<{ taskId: number }> } {

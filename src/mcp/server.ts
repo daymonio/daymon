@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { registerMemoryTools } from './tools/memory'
 import { registerSchedulerTools } from './tools/scheduler'
 import { registerWatcherTools } from './tools/watcher'
+import { registerWorkerTools } from './tools/workers'
 
 async function main(): Promise<void> {
   const server = new McpServer({
@@ -13,6 +14,7 @@ async function main(): Promise<void> {
   registerMemoryTools(server)
   registerSchedulerTools(server)
   registerWatcherTools(server)
+  registerWorkerTools(server)
 
   const transport = new StdioServerTransport()
   await server.connect(transport)

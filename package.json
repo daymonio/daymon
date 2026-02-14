@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "unset ELECTRON_RUN_AS_NODE && electron-vite dev",
     "build": "npm run typecheck && electron-vite build && npm run build:mcp",
-    "build:mcp": "esbuild src/mcp/server.ts --bundle --platform=node --target=node18 --outfile=out/mcp/server.js --external:better-sqlite3 && cd out/mcp && npm install better-sqlite3@11.10.0 2>/dev/null || true",
+    "build:mcp": "esbuild src/mcp/server.ts --bundle --platform=node --target=node18 --outfile=out/mcp/server.js --external:better-sqlite3 --external:@huggingface/transformers --external:onnxruntime-node && cd out/mcp && npm install better-sqlite3@11.10.0 @huggingface/transformers 2>/dev/null || true",
     "start": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
@@ -33,6 +33,7 @@
     "chokidar": "^5.0.0",
     "cron-parser": "^5.0.0",
     "node-cron": "^3.0.3",
+    "@huggingface/transformers": "^3.4.1",
     "zod": "^3.24.0"
   },
   "devDependencies": {

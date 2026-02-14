@@ -2,8 +2,20 @@ import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { getMcpDatabase } from '../db'
 import * as queries from '../../shared/db-queries'
+import { embed, isEngineReady, cosineSimilarity, blobToVector, initEngine } from '../../shared/embeddings'
+
+// Fire-and-forget engine init on first memory tool registration
+let engineInitStarted = false
+function ensureEngineInit(): void {
+  if (!engineInitStarted) {
+    engineInitStarted = true
+    initEngine().catch(() => { /* non-fatal */ })
+  }
+}
 
 export function registerMemoryTools(server: McpServer): void {
+  ensureEngineInit()
+
   server.registerTool(
     'daymon_remember',
     {
@@ -50,29 +62,52 @@ export function registerMemoryTools(server: McpServer): void {
     },
     async ({ query }) => {
       const db = getMcpDatabase()
-      const entities = queries.searchEntities(db, query)
 
-      if (entities.length === 0) {
+      // Try hybrid search if embedding engine is ready
+      let semanticResults: Array<{ entityId: number; score: number }> | null = null
+      if (isEngineReady()) {
+        try {
+          const queryVec = await embed(query)
+          if (queryVec) {
+            const allEmbeddings = queries.getAllEmbeddings(db)
+            semanticResults = allEmbeddings
+              .map(e => ({
+                entityId: e.entityId,
+                score: cosineSimilarity(queryVec, blobToVector(e.vector))
+              }))
+              .filter(e => e.score > 0.3)
+              .sort((a, b) => b.score - a.score)
+              .slice(0, 20)
+          }
+        } catch {
+          // Non-fatal: fall through to FTS-only
+        }
+      }
+
+      const hybridResults = queries.hybridSearch(db, query, semanticResults)
+
+      if (hybridResults.length === 0) {
         return {
           content: [{ type: 'text' as const, text: `No memories found matching "${query}".` }]
         }
       }
 
-      const results = entities.map((entity) => {
-        const observations = queries.getObservations(db, entity.id)
-        const relations = queries.getRelations(db, entity.id)
+      const results = hybridResults.map((hr) => {
+        const observations = queries.getObservations(db, hr.entity.id)
+        const relations = queries.getRelations(db, hr.entity.id)
         return {
-          id: entity.id,
-          name: entity.name,
-          type: entity.type,
-          category: entity.category,
+          id: hr.entity.id,
+          name: hr.entity.name,
+          type: hr.entity.type,
+          category: hr.entity.category,
+          score: Math.round(hr.combinedScore * 1000) / 1000,
           observations: observations.map((o) => o.content),
           relations: relations.map((r) => ({
             type: r.relation_type,
             fromEntity: r.from_entity,
             toEntity: r.to_entity
           })),
-          updatedAt: entity.updated_at
+          updatedAt: hr.entity.updated_at
         }
       })
 

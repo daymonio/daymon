@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from '../schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5 } from '../schema'
 import * as queries from '../db-queries'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -25,6 +25,7 @@ function initTestDb(): Database.Database {
   d.exec(SCHEMA_V2)
   d.exec(SCHEMA_V3)
   d.exec(SCHEMA_V4)
+  d.exec(SCHEMA_V5)
   return d
 }
 
@@ -107,14 +108,17 @@ describe('executeTask - success', () => {
       stderr: '',
       exitCode: 0,
       durationMs: 1234,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     const result = await executeTask(id, { db, resultsDir })
     expect(result.success).toBe(true)
     expect(result.output).toBe('Hello world')
     expect(result.durationMs).toBe(1234)
-    expect(mockExecute).toHaveBeenCalledWith('Say hello', undefined, expect.any(Function))
+    expect(mockExecute).toHaveBeenCalledWith('Say hello', expect.objectContaining({
+      onProgress: expect.any(Function)
+    }))
   })
 
   it('creates a TaskRun record', async () => {
@@ -124,7 +128,8 @@ describe('executeTask - success', () => {
       stderr: '',
       exitCode: 0,
       durationMs: 500,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     await executeTask(id, { db, resultsDir })
@@ -142,7 +147,8 @@ describe('executeTask - success', () => {
       stderr: '',
       exitCode: 0,
       durationMs: 100,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     const result = await executeTask(id, { db, resultsDir })
@@ -162,7 +168,8 @@ describe('executeTask - success', () => {
       stderr: '',
       exitCode: 0,
       durationMs: 200,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     const onComplete = vi.fn()
@@ -183,7 +190,8 @@ describe('executeTask - failure', () => {
       stderr: 'Something broke',
       exitCode: 1,
       durationMs: 300,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     const result = await executeTask(id, { db, resultsDir })
@@ -199,7 +207,8 @@ describe('executeTask - failure', () => {
       stderr: '',
       exitCode: 1,
       durationMs: 300000,
-      timedOut: true
+      timedOut: true,
+      sessionId: null
     })
 
     const result = await executeTask(id, { db, resultsDir })
@@ -214,7 +223,8 @@ describe('executeTask - failure', () => {
       stderr: 'crash',
       exitCode: 2,
       durationMs: 50,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     await executeTask(id, { db, resultsDir })
@@ -231,7 +241,8 @@ describe('executeTask - failure', () => {
       stderr: 'error',
       exitCode: 1,
       durationMs: 100,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     const onFailed = vi.fn()
@@ -269,7 +280,8 @@ describe('executeTask - maxRuns', () => {
       stderr: '',
       exitCode: 0,
       durationMs: 100,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     await executeTask(task.id, { db, resultsDir })
@@ -290,7 +302,8 @@ describe('executeTask - maxRuns', () => {
       stderr: '',
       exitCode: 0,
       durationMs: 100,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     // First run
@@ -316,7 +329,8 @@ describe('executeTask - maxRuns', () => {
       stderr: 'error',
       exitCode: 1,
       durationMs: 50,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     await executeTask(task.id, { db, resultsDir })
@@ -335,7 +349,8 @@ describe('executeTask - maxRuns', () => {
       stderr: '',
       exitCode: 0,
       durationMs: 100,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     await executeTask(task.id, { db, resultsDir })
@@ -357,7 +372,8 @@ describe('executeTask - maxRuns', () => {
       stderr: '',
       exitCode: 0,
       durationMs: 50,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     await executeTask(task.id, { db, resultsDir })
@@ -385,7 +401,8 @@ describe('result file', () => {
       stderr: '',
       exitCode: 0,
       durationMs: 100,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     await executeTask(id, { db, resultsDir: nestedDir })
@@ -399,7 +416,8 @@ describe('result file', () => {
       stderr: '',
       exitCode: 1,
       durationMs: 300000,
-      timedOut: true
+      timedOut: true,
+      sessionId: null
     })
 
     const result = await executeTask(id, { db, resultsDir })
@@ -414,7 +432,8 @@ describe('result file', () => {
       stderr: 'error',
       exitCode: 2,
       durationMs: 50,
-      timedOut: false
+      timedOut: false,
+      sessionId: null
     })
 
     const result = await executeTask(id, { db, resultsDir })
@@ -439,7 +458,7 @@ describe('executeTask - memory integration', () => {
     queries.addObservation(db, entity.id, '[SUCCESS] Previous result data', 'task_runner')
 
     mockExecute.mockResolvedValue({
-      stdout: 'New output', stderr: '', exitCode: 0, durationMs: 100, timedOut: false
+      stdout: 'New output', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
     })
 
     await executeTask(task.id, { db, resultsDir })
@@ -454,7 +473,7 @@ describe('executeTask - memory integration', () => {
   it('stores result in memory after successful execution', async () => {
     const id = createActiveTask('Store Result Task', 'Do work')
     mockExecute.mockResolvedValue({
-      stdout: 'Task output for memory', stderr: '', exitCode: 0, durationMs: 100, timedOut: false
+      stdout: 'Task output for memory', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
     })
 
     await executeTask(id, { db, resultsDir })
@@ -470,7 +489,7 @@ describe('executeTask - memory integration', () => {
   it('stores failure in memory after failed execution', async () => {
     const id = createActiveTask('Fail Memory Task', 'Try something')
     mockExecute.mockResolvedValue({
-      stdout: '', stderr: 'error output', exitCode: 1, durationMs: 50, timedOut: false
+      stdout: '', stderr: 'error output', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
     })
 
     await executeTask(id, { db, resultsDir })
@@ -485,7 +504,7 @@ describe('executeTask - memory integration', () => {
   it('executes without memory context on first run', async () => {
     const id = createActiveTask('Fresh Task', 'First time run')
     mockExecute.mockResolvedValue({
-      stdout: 'First run output', stderr: '', exitCode: 0, durationMs: 100, timedOut: false
+      stdout: 'First run output', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
     })
 
     await executeTask(id, { db, resultsDir })
@@ -500,7 +519,7 @@ describe('executeTask - memory integration', () => {
 
     for (let i = 0; i < 3; i++) {
       mockExecute.mockResolvedValue({
-        stdout: `Run ${i} output`, stderr: '', exitCode: 0, durationMs: 100, timedOut: false
+        stdout: `Run ${i} output`, stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
       })
       await executeTask(id, { db, resultsDir })
     }
@@ -513,5 +532,195 @@ describe('executeTask - memory integration', () => {
     const thirdCallPrompt = mockExecute.mock.calls[2][0]
     expect(thirdCallPrompt).toContain('Your previous results')
     expect(thirdCallPrompt).toContain('Run 1 output')
+  })
+})
+
+// ─── Worker System Prompt ────────────────────────────────────
+
+describe('executeTask - worker system prompt', () => {
+  it('passes worker system prompt to executor', async () => {
+    const worker = queries.createWorker(db, { name: 'Bot', systemPrompt: 'You are a bot.' })
+    const task = queries.createTask(db, {
+      name: 'Worker Task',
+      prompt: 'Do work',
+      triggerType: 'manual',
+      workerId: worker.id
+    })
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    expect(mockExecute).toHaveBeenCalledWith('Do work', expect.objectContaining({
+      systemPrompt: 'You are a bot.'
+    }))
+  })
+
+  it('uses default worker when task has no worker', async () => {
+    queries.createWorker(db, { name: 'Default', systemPrompt: 'Default prompt.', isDefault: true })
+    const id = createActiveTask('No Worker', 'Do stuff')
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    await executeTask(id, { db, resultsDir })
+
+    expect(mockExecute).toHaveBeenCalledWith('Do stuff', expect.objectContaining({
+      systemPrompt: 'Default prompt.'
+    }))
+  })
+
+  it('passes no systemPrompt when no workers exist', async () => {
+    const id = createActiveTask('Plain Task', 'No worker')
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    await executeTask(id, { db, resultsDir })
+
+    expect(mockExecute).toHaveBeenCalledWith('No worker', expect.objectContaining({
+      systemPrompt: undefined
+    }))
+  })
+
+  it('prefers task worker over default worker', async () => {
+    queries.createWorker(db, { name: 'Default', systemPrompt: 'Default.', isDefault: true })
+    const specific = queries.createWorker(db, { name: 'Specific', systemPrompt: 'Specific.' })
+    const task = queries.createTask(db, {
+      name: 'Specific Worker',
+      prompt: 'Do it',
+      triggerType: 'manual',
+      workerId: specific.id
+    })
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    expect(mockExecute).toHaveBeenCalledWith('Do it', expect.objectContaining({
+      systemPrompt: 'Specific.'
+    }))
+  })
+})
+
+// ─── Session Continuity ─────────────────────────────────────
+
+describe('executeTask - session continuity', () => {
+  it('stores session ID on task after successful run', async () => {
+    const task = queries.createTask(db, {
+      name: 'Session Task',
+      prompt: 'Continue',
+      triggerType: 'manual',
+      sessionContinuity: true
+    })
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false,
+      sessionId: 'sess-new-123'
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    const updated = queries.getTask(db, task.id)!
+    expect(updated.sessionId).toBe('sess-new-123')
+  })
+
+  it('resumes session on subsequent run', async () => {
+    const task = queries.createTask(db, {
+      name: 'Resume Task',
+      prompt: 'Continue work',
+      triggerType: 'manual',
+      sessionContinuity: true
+    })
+    queries.updateTask(db, task.id, { sessionId: 'sess-existing' })
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false,
+      sessionId: 'sess-existing'
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    expect(mockExecute).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      resumeSessionId: 'sess-existing'
+    }))
+  })
+
+  it('does not resume session for non-continuous tasks', async () => {
+    const task = queries.createTask(db, {
+      name: 'Stateless',
+      prompt: 'No session',
+      triggerType: 'manual',
+      sessionContinuity: false
+    })
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false,
+      sessionId: 'sess-abc'
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    expect(mockExecute).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      resumeSessionId: undefined
+    }))
+    // Should not store session on non-continuous task
+    expect(queries.getTask(db, task.id)!.sessionId).toBeNull()
+  })
+
+  it('retries without session on resume failure', async () => {
+    const task = queries.createTask(db, {
+      name: 'Retry Task',
+      prompt: 'Do retry',
+      triggerType: 'manual',
+      sessionContinuity: true
+    })
+    queries.updateTask(db, task.id, { sessionId: 'sess-broken' })
+
+    // First call fails (resume failure), second call succeeds (fresh)
+    mockExecute
+      .mockResolvedValueOnce({
+        stdout: '', stderr: 'resume error', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+      })
+      .mockResolvedValueOnce({
+        stdout: 'fresh ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: 'sess-new'
+      })
+
+    const result = await executeTask(task.id, { db, resultsDir })
+
+    expect(result.success).toBe(true)
+    expect(result.output).toBe('fresh ok')
+    // Should have cleared old session and stored new one
+    expect(queries.getTask(db, task.id)!.sessionId).toBe('sess-new')
+    // Should have been called twice
+    expect(mockExecute).toHaveBeenCalledTimes(2)
+    // Second call should NOT have resumeSessionId
+    const retryOptions = mockExecute.mock.calls[1][1] as Record<string, unknown>
+    expect(retryOptions.resumeSessionId).toBeUndefined()
+  })
+
+  it('stores session ID on task run', async () => {
+    const task = queries.createTask(db, {
+      name: 'Run Session',
+      prompt: 'Go',
+      triggerType: 'manual',
+      sessionContinuity: true
+    })
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false,
+      sessionId: 'sess-run-123'
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    const runs = queries.getTaskRuns(db, task.id, 1)
+    expect(runs[0].sessionId).toBe('sess-run-123')
   })
 })

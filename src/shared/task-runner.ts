@@ -23,6 +23,8 @@ export interface TaskExecutionResult {
 
 const runningTasks = new Set<number>()
 
+const SESSION_MAX_RUNS = 20
+
 export function isTaskRunning(taskId: number): boolean {
   return runningTasks.has(taskId)
 }
@@ -56,44 +58,101 @@ export async function executeTask(
   const run = queries.createTaskRun(db, taskId)
 
   try {
+    // Resolve worker system prompt: task's workerId > default worker > none
+    let systemPrompt: string | undefined
+    try {
+      if (task.workerId) {
+        const worker = queries.getWorker(db, task.workerId)
+        if (worker) systemPrompt = worker.systemPrompt
+      }
+      if (!systemPrompt) {
+        const defaultWorker = queries.getDefaultWorker(db)
+        if (defaultWorker) systemPrompt = defaultWorker.systemPrompt
+      }
+    } catch {
+      // Non-fatal: worker resolution failure should not block execution
+    }
+
+    // Determine session resume ID
+    let resumeSessionId: string | undefined
+    if (task.sessionContinuity && task.sessionId) {
+      // Check session rotation: start fresh after SESSION_MAX_RUNS consecutive runs
+      try {
+        const sessionRunCount = queries.getSessionRunCount(db, taskId, task.sessionId)
+        if (sessionRunCount < SESSION_MAX_RUNS) {
+          resumeSessionId = task.sessionId
+        }
+        // If >= SESSION_MAX_RUNS, leave resumeSessionId undefined to start fresh
+      } catch {
+        // Non-fatal: if we can't check run count, start fresh
+      }
+    }
+
     // Inject memory context into prompt
     let augmentedPrompt = task.prompt
     try {
-      const memoryContext = queries.getTaskMemoryContext(db, taskId)
-      if (memoryContext) {
-        augmentedPrompt = `${memoryContext}\n\n---\n\n${task.prompt}`
+      if (task.sessionContinuity && resumeSessionId) {
+        // Session-continuous task with existing session: only inject cross-task knowledge
+        // (the session already has own history from previous runs)
+        const crossTaskContext = queries.getCrossTaskMemoryContext(db, taskId)
+        if (crossTaskContext) {
+          augmentedPrompt = `${crossTaskContext}\n\n---\n\n${task.prompt}`
+        }
+      } else {
+        // First run, stateless task, or session rotation: full memory injection
+        const memoryContext = queries.getTaskMemoryContext(db, taskId)
+        if (memoryContext) {
+          augmentedPrompt = `${memoryContext}\n\n---\n\n${task.prompt}`
+        }
       }
     } catch {
       // Non-fatal: memory injection failure should not block execution
     }
 
     let lastProgressUpdate = 0
-    const result = await executeClaudeCode(augmentedPrompt, undefined, (progress) => {
-      const now = Date.now()
-      if (now - lastProgressUpdate >= DEFAULTS.PROGRESS_THROTTLE_MS) {
-        queries.updateTaskRunProgress(db, run.id, progress.fraction, progress.message)
-        lastProgressUpdate = now
+    const result = await executeClaudeCode(augmentedPrompt, {
+      systemPrompt,
+      resumeSessionId,
+      onProgress: (progress) => {
+        const now = Date.now()
+        if (now - lastProgressUpdate >= DEFAULTS.PROGRESS_THROTTLE_MS) {
+          queries.updateTaskRunProgress(db, run.id, progress.fraction, progress.message)
+          lastProgressUpdate = now
+        }
       }
     })
 
-    const output = result.stdout || result.stderr || '(no output)'
-    const resultFilePath = saveResult(resultsDir, task.name, output, result)
+    // If resume failed, retry without session
+    if (result.exitCode !== 0 && resumeSessionId) {
+      try {
+        queries.clearTaskSession(db, taskId)
+      } catch { /* non-fatal */ }
 
-    if (result.exitCode === 0 && !result.timedOut) {
-      queries.completeTaskRun(db, run.id, output, resultFilePath)
-      try { queries.storeTaskResultInMemory(db, taskId, output, true) } catch { /* non-fatal */ }
-      queries.incrementRunCount(db, taskId)
-      onComplete?.(task, output.slice(0, 200))
-      return { success: true, output, durationMs: result.durationMs, resultFilePath }
-    } else {
-      const errorMsg = result.timedOut
-        ? `Timed out after ${result.durationMs}ms`
-        : `Exit code ${result.exitCode}: ${result.stderr || '(no stderr)'}`
-      queries.completeTaskRun(db, run.id, output, resultFilePath, errorMsg)
-      try { queries.storeTaskResultInMemory(db, taskId, output, false) } catch { /* non-fatal */ }
-      onFailed?.(task, errorMsg)
-      return { success: false, output, errorMessage: errorMsg, durationMs: result.durationMs, resultFilePath }
+      // Re-inject full memory context for the fresh run
+      let retryPrompt = task.prompt
+      try {
+        const memoryContext = queries.getTaskMemoryContext(db, taskId)
+        if (memoryContext) {
+          retryPrompt = `${memoryContext}\n\n---\n\n${task.prompt}`
+        }
+      } catch { /* non-fatal */ }
+
+      lastProgressUpdate = 0
+      const retryResult = await executeClaudeCode(retryPrompt, {
+        systemPrompt,
+        onProgress: (progress) => {
+          const now = Date.now()
+          if (now - lastProgressUpdate >= DEFAULTS.PROGRESS_THROTTLE_MS) {
+            queries.updateTaskRunProgress(db, run.id, progress.fraction, progress.message)
+            lastProgressUpdate = now
+          }
+        }
+      })
+
+      return finishRun(db, run.id, taskId, task, retryResult, resultsDir, onComplete, onFailed)
     }
+
+    return finishRun(db, run.id, taskId, task, result, resultsDir, onComplete, onFailed)
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err)
     queries.completeTaskRun(db, run.id, '', undefined, errorMsg)
@@ -101,6 +160,46 @@ export async function executeTask(
     return { success: false, output: '', errorMessage: errorMsg, durationMs: 0 }
   } finally {
     runningTasks.delete(taskId)
+  }
+}
+
+function finishRun(
+  db: Database.Database,
+  runId: number,
+  taskId: number,
+  task: Task,
+  result: { stdout: string; stderr: string; exitCode: number; durationMs: number; timedOut: boolean; sessionId: string | null },
+  resultsDir: string,
+  onComplete?: (task: Task, output: string) => void,
+  onFailed?: (task: Task, error: string) => void
+): TaskExecutionResult {
+  const output = result.stdout || result.stderr || '(no output)'
+  const resultFilePath = saveResult(resultsDir, task.name, output, result)
+
+  // Store session ID on run and task for future runs
+  if (result.sessionId) {
+    try {
+      queries.updateTaskRunSessionId(db, runId, result.sessionId)
+      if (task.sessionContinuity) {
+        queries.updateTask(db, taskId, { sessionId: result.sessionId })
+      }
+    } catch { /* non-fatal */ }
+  }
+
+  if (result.exitCode === 0 && !result.timedOut) {
+    queries.completeTaskRun(db, runId, output, resultFilePath)
+    try { queries.storeTaskResultInMemory(db, taskId, output, true) } catch { /* non-fatal */ }
+    queries.incrementRunCount(db, taskId)
+    onComplete?.(task, output.slice(0, 200))
+    return { success: true, output, durationMs: result.durationMs, resultFilePath }
+  } else {
+    const errorMsg = result.timedOut
+      ? `Timed out after ${result.durationMs}ms`
+      : `Exit code ${result.exitCode}: ${result.stderr || '(no stderr)'}`
+    queries.completeTaskRun(db, runId, output, resultFilePath, errorMsg)
+    try { queries.storeTaskResultInMemory(db, taskId, output, false) } catch { /* non-fatal */ }
+    onFailed?.(task, errorMsg)
+    return { success: false, output, errorMessage: errorMsg, durationMs: result.durationMs, resultFilePath }
   }
 }
 

@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { getConfig } from '../config'
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from '../../shared/schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5 } from '../../shared/schema'
 
 let db: Database.Database | null = null
 
@@ -61,6 +61,11 @@ function runMigrations(database: Database.Database): void {
   if (currentVersion < 4) {
     database.exec(SCHEMA_V4)
     console.log('Database schema v4 applied (memory-task integration)')
+  }
+
+  if (currentVersion < 5) {
+    database.exec(SCHEMA_V5)
+    console.log('Database schema v5 applied (workers, sessions, embeddings)')
   }
 }
 

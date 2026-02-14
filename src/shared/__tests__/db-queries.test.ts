@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from '../schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5 } from '../schema'
 import * as q from '../db-queries'
 
 let db: Database.Database
@@ -11,6 +11,7 @@ function initTestDb(): Database.Database {
   d.exec(SCHEMA_V2)
   d.exec(SCHEMA_V3)
   d.exec(SCHEMA_V4)
+  d.exec(SCHEMA_V5)
   return d
 }
 
@@ -641,11 +642,39 @@ describe('schema migration', () => {
     expect(colNames).toContain('memory_entity_id')
   })
 
-  it('schema_version table has versions 1, 2, 3, and 4', () => {
+  it('V5 adds workers table', () => {
+    const tables = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+      .all() as { name: string }[]
+    expect(tables.map((t) => t.name)).toContain('workers')
+  })
+
+  it('V5 adds worker_id and session columns to tasks', () => {
+    const columns = db.prepare('PRAGMA table_info(tasks)').all() as { name: string }[]
+    const colNames = columns.map((c) => c.name)
+    expect(colNames).toContain('worker_id')
+    expect(colNames).toContain('session_continuity')
+    expect(colNames).toContain('session_id')
+  })
+
+  it('V5 adds session_id column to task_runs', () => {
+    const columns = db.prepare('PRAGMA table_info(task_runs)').all() as { name: string }[]
+    const colNames = columns.map((c) => c.name)
+    expect(colNames).toContain('session_id')
+  })
+
+  it('V5 adds embeddings table', () => {
+    const tables = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+      .all() as { name: string }[]
+    expect(tables.map((t) => t.name)).toContain('embeddings')
+  })
+
+  it('schema_version table has versions 1-5', () => {
     const versions = db
       .prepare('SELECT version FROM schema_version ORDER BY version')
       .all() as { version: number }[]
-    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4])
+    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4, 5])
   })
 })
 
@@ -847,5 +876,257 @@ describe('incrementRunCount', () => {
     }
     expect(q.getTask(db, task.id)!.status).toBe('active')
     expect(q.getTask(db, task.id)!.runCount).toBe(100)
+  })
+})
+
+// ─── Workers ─────────────────────────────────────────────────
+
+describe('createWorker', () => {
+  it('creates a worker with required fields', () => {
+    const w = q.createWorker(db, { name: 'Research Bot', systemPrompt: 'You are a researcher.' })
+    expect(w.id).toBe(1)
+    expect(w.name).toBe('Research Bot')
+    expect(w.systemPrompt).toBe('You are a researcher.')
+    expect(w.isDefault).toBe(false)
+    expect(w.taskCount).toBe(0)
+  })
+
+  it('creates a default worker and clears previous default', () => {
+    const w1 = q.createWorker(db, { name: 'W1', systemPrompt: 'p', isDefault: true })
+    expect(w1.isDefault).toBe(true)
+
+    const w2 = q.createWorker(db, { name: 'W2', systemPrompt: 'p', isDefault: true })
+    expect(w2.isDefault).toBe(true)
+    expect(q.getWorker(db, w1.id)!.isDefault).toBe(false)
+  })
+})
+
+describe('getWorker', () => {
+  it('returns null for non-existent worker', () => {
+    expect(q.getWorker(db, 999)).toBeNull()
+  })
+})
+
+describe('listWorkers', () => {
+  it('returns workers ordered by default first, then name', () => {
+    q.createWorker(db, { name: 'Bravo', systemPrompt: 'p' })
+    q.createWorker(db, { name: 'Alpha', systemPrompt: 'p', isDefault: true })
+    const list = q.listWorkers(db)
+    expect(list).toHaveLength(2)
+    expect(list[0].name).toBe('Alpha')
+    expect(list[0].isDefault).toBe(true)
+  })
+})
+
+describe('updateWorker', () => {
+  it('updates worker fields', () => {
+    const w = q.createWorker(db, { name: 'Old', systemPrompt: 'old prompt' })
+    q.updateWorker(db, w.id, { name: 'New', systemPrompt: 'new prompt' })
+    const updated = q.getWorker(db, w.id)!
+    expect(updated.name).toBe('New')
+    expect(updated.systemPrompt).toBe('new prompt')
+  })
+})
+
+describe('deleteWorker', () => {
+  it('deletes a worker', () => {
+    const w = q.createWorker(db, { name: 'Temp', systemPrompt: 'p' })
+    q.deleteWorker(db, w.id)
+    expect(q.getWorker(db, w.id)).toBeNull()
+  })
+})
+
+describe('getDefaultWorker', () => {
+  it('returns null when no default worker', () => {
+    q.createWorker(db, { name: 'W', systemPrompt: 'p' })
+    expect(q.getDefaultWorker(db)).toBeNull()
+  })
+
+  it('returns the default worker', () => {
+    q.createWorker(db, { name: 'Default', systemPrompt: 'p', isDefault: true })
+    const def = q.getDefaultWorker(db)
+    expect(def).not.toBeNull()
+    expect(def!.name).toBe('Default')
+  })
+})
+
+describe('task-worker relationship', () => {
+  it('creates task with workerId', () => {
+    const w = q.createWorker(db, { name: 'Bot', systemPrompt: 'p' })
+    const task = q.createTask(db, { name: 'T', prompt: 'p', workerId: w.id })
+    expect(task.workerId).toBe(w.id)
+  })
+
+  it('refreshes worker task count on task create', () => {
+    const w = q.createWorker(db, { name: 'Bot', systemPrompt: 'p' })
+    q.createTask(db, { name: 'T1', prompt: 'p', workerId: w.id })
+    q.createTask(db, { name: 'T2', prompt: 'p', workerId: w.id })
+    expect(q.getWorker(db, w.id)!.taskCount).toBe(2)
+  })
+
+  it('refreshes worker task count on task delete', () => {
+    const w = q.createWorker(db, { name: 'Bot', systemPrompt: 'p' })
+    const t1 = q.createTask(db, { name: 'T1', prompt: 'p', workerId: w.id })
+    q.createTask(db, { name: 'T2', prompt: 'p', workerId: w.id })
+    q.deleteTask(db, t1.id)
+    expect(q.getWorker(db, w.id)!.taskCount).toBe(1)
+  })
+
+  it('creates task with sessionContinuity', () => {
+    const task = q.createTask(db, { name: 'Session Task', prompt: 'p', sessionContinuity: true })
+    expect(task.sessionContinuity).toBe(true)
+    expect(task.sessionId).toBeNull()
+  })
+
+  it('defaults sessionContinuity to false', () => {
+    const task = q.createTask(db, { name: 'Normal Task', prompt: 'p' })
+    expect(task.sessionContinuity).toBe(false)
+  })
+})
+
+// ─── Session Continuity Queries ──────────────────────────────
+
+describe('session queries', () => {
+  it('updateTaskRunSessionId stores session on a run', () => {
+    const task = q.createTask(db, { name: 'T', prompt: 'p' })
+    const run = q.createTaskRun(db, task.id)
+    q.updateTaskRunSessionId(db, run.id, 'sess-abc')
+    const updated = q.getTaskRun(db, run.id)!
+    expect(updated.sessionId).toBe('sess-abc')
+  })
+
+  it('clearTaskSession clears session_id on task', () => {
+    const task = q.createTask(db, { name: 'T', prompt: 'p', sessionContinuity: true })
+    q.updateTask(db, task.id, { sessionId: 'sess-123' })
+    expect(q.getTask(db, task.id)!.sessionId).toBe('sess-123')
+
+    q.clearTaskSession(db, task.id)
+    expect(q.getTask(db, task.id)!.sessionId).toBeNull()
+  })
+
+  it('getSessionRunCount counts runs with a specific session', () => {
+    const task = q.createTask(db, { name: 'T', prompt: 'p' })
+    const r1 = q.createTaskRun(db, task.id)
+    const r2 = q.createTaskRun(db, task.id)
+    const r3 = q.createTaskRun(db, task.id)
+    q.updateTaskRunSessionId(db, r1.id, 'sess-a')
+    q.updateTaskRunSessionId(db, r2.id, 'sess-a')
+    q.updateTaskRunSessionId(db, r3.id, 'sess-b')
+
+    expect(q.getSessionRunCount(db, task.id, 'sess-a')).toBe(2)
+    expect(q.getSessionRunCount(db, task.id, 'sess-b')).toBe(1)
+    expect(q.getSessionRunCount(db, task.id, 'sess-c')).toBe(0)
+  })
+})
+
+describe('getCrossTaskMemoryContext', () => {
+  it('returns null when no related entities exist', () => {
+    const task = q.createTask(db, { name: 'Isolated Task', prompt: 'p' })
+    expect(q.getCrossTaskMemoryContext(db, task.id)).toBeNull()
+  })
+
+  it('returns cross-task knowledge excluding own entity', () => {
+    const other = q.createEntity(db, 'HN Preferences', 'preference', 'personal')
+    q.addObservation(db, other.id, 'User likes AI stories', 'claude')
+
+    const task = q.createTask(db, { name: 'HN Digest', prompt: 'p' })
+    const own = q.createEntity(db, 'Task: HN Digest', 'task_result', 'task')
+    q.updateTask(db, task.id, { memoryEntityId: own.id })
+    q.addObservation(db, own.id, 'Own result data', 'task_runner')
+
+    const context = q.getCrossTaskMemoryContext(db, task.id)
+    expect(context).not.toBeNull()
+    expect(context).toContain('HN Preferences')
+    expect(context).toContain('AI stories')
+    expect(context).not.toContain('Own result data')
+  })
+})
+
+// ─── Embeddings ──────────────────────────────────────────────
+
+describe('embedding CRUD', () => {
+  it('upserts and retrieves an embedding', () => {
+    const entity = q.createEntity(db, 'Test Embed')
+    const vector = Buffer.alloc(384 * 4)
+    q.upsertEmbedding(db, entity.id, 'entity', entity.id, 'hash123', vector, 'all-MiniLM-L6-v2', 384)
+
+    const embeddings = q.getEmbeddingsForEntity(db, entity.id)
+    expect(embeddings).toHaveLength(1)
+    expect(embeddings[0].sourceType).toBe('entity')
+    expect(embeddings[0].textHash).toBe('hash123')
+  })
+
+  it('upsert replaces on conflict', () => {
+    const entity = q.createEntity(db, 'Test')
+    const v1 = Buffer.alloc(384 * 4)
+    const v2 = Buffer.alloc(384 * 4, 1)
+    q.upsertEmbedding(db, entity.id, 'entity', entity.id, 'hash1', v1, 'all-MiniLM-L6-v2', 384)
+    q.upsertEmbedding(db, entity.id, 'entity', entity.id, 'hash2', v2, 'all-MiniLM-L6-v2', 384)
+
+    const embeddings = q.getEmbeddingsForEntity(db, entity.id)
+    expect(embeddings).toHaveLength(1)
+    expect(embeddings[0].textHash).toBe('hash2')
+  })
+
+  it('getAllEmbeddings returns all', () => {
+    const e1 = q.createEntity(db, 'A')
+    const e2 = q.createEntity(db, 'B')
+    q.upsertEmbedding(db, e1.id, 'entity', e1.id, 'h1', Buffer.alloc(4), 'model', 1)
+    q.upsertEmbedding(db, e2.id, 'entity', e2.id, 'h2', Buffer.alloc(4), 'model', 1)
+    expect(q.getAllEmbeddings(db)).toHaveLength(2)
+  })
+
+  it('deleteEmbeddingsForEntity removes embeddings', () => {
+    const entity = q.createEntity(db, 'Doomed')
+    q.upsertEmbedding(db, entity.id, 'entity', entity.id, 'h', Buffer.alloc(4), 'model', 1)
+    q.deleteEmbeddingsForEntity(db, entity.id)
+    expect(q.getEmbeddingsForEntity(db, entity.id)).toHaveLength(0)
+  })
+
+  it('getUnembeddedEntities returns entities without embeddings', () => {
+    q.createEntity(db, 'A')
+    const b = q.createEntity(db, 'B')
+    q.upsertEmbedding(db, b.id, 'entity', b.id, 'h', Buffer.alloc(4), 'model', 1)
+
+    const unembedded = q.getUnembeddedEntities(db, 10)
+    expect(unembedded).toHaveLength(1)
+    expect(unembedded[0].name).toBe('A')
+  })
+})
+
+// ─── Hybrid Search ──────────────────────────────────────────
+
+describe('hybridSearch', () => {
+  it('works with FTS only (no semantic results)', () => {
+    q.createEntity(db, 'Project Alpha')
+    q.createEntity(db, 'Project Beta')
+
+    const results = q.hybridSearch(db, 'Project', null)
+    expect(results.length).toBeGreaterThanOrEqual(2)
+    expect(results[0].semanticScore).toBe(0)
+  })
+
+  it('merges FTS and semantic results', () => {
+    const e1 = q.createEntity(db, 'Machine Learning')
+    q.createEntity(db, 'Deep Learning')
+
+    const semanticResults = [
+      { entityId: e1.id, score: 0.9 },
+      { entityId: 999, score: 0.5 } // non-existent, should be skipped
+    ]
+
+    const results = q.hybridSearch(db, 'Machine', semanticResults)
+    expect(results.length).toBeGreaterThanOrEqual(1)
+    // Machine Learning should rank high (both FTS and semantic)
+    const ml = results.find(r => r.entity.name === 'Machine Learning')
+    expect(ml).toBeDefined()
+    expect(ml!.semanticScore).toBe(0.9)
+    expect(ml!.ftsScore).toBeGreaterThan(0)
+  })
+
+  it('returns empty for no matches', () => {
+    q.createEntity(db, 'Something')
+    const results = q.hybridSearch(db, 'zzzznotfound', null)
+    expect(results).toHaveLength(0)
   })
 })

@@ -6,7 +6,7 @@ import { getConfig, getClaudeConfigPath } from './config'
 import { checkClaudeCliAvailable } from '../shared/claude-code'
 import { startWatch, stopWatch } from './file-watcher'
 import { uninstall } from './uninstall'
-import type { CreateTaskInput } from '../shared/types'
+import type { CreateTaskInput, CreateWorkerInput } from '../shared/types'
 
 export function registerIpcHandlers(): void {
   // ─── Memory: Entities ───────────────────────────────────
@@ -38,6 +38,15 @@ export function registerIpcHandlers(): void {
   // ─── Memory: Stats ───────────────────────────────────
 
   ipcMain.handle('memory:getStats', () => memory.getMemoryStats())
+
+  // ─── Workers ────────────────────────────────────────────
+
+  ipcMain.handle('workers:create', (_e, input: CreateWorkerInput) => tasks.createWorker(input))
+  ipcMain.handle('workers:get', (_e, id: number) => tasks.getWorker(id))
+  ipcMain.handle('workers:list', () => tasks.listWorkers())
+  ipcMain.handle('workers:update', (_e, id: number, updates: Record<string, unknown>) => tasks.updateWorker(id, updates))
+  ipcMain.handle('workers:delete', (_e, id: number) => tasks.deleteWorker(id))
+  ipcMain.handle('workers:getDefault', () => tasks.getDefaultWorker())
 
   // ─── Tasks ────────────────────────────────────────────
 

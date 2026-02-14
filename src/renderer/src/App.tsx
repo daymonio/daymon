@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { TabBar, type Tab } from './components/TabBar'
 import { StatusPanel } from './components/StatusPanel'
 import { MemoryPanel } from './components/MemoryPanel'
+import { WorkersPanel } from './components/WorkersPanel'
 import { TasksPanel } from './components/TasksPanel'
 import { ResultsPanel } from './components/ResultsPanel'
 import { SettingsPanel } from './components/SettingsPanel'
@@ -15,6 +16,8 @@ function App(): React.JSX.Element {
         return <StatusPanel onNavigate={(t) => setTab(t as Tab)} />
       case 'memory':
         return <MemoryPanel />
+      case 'workers':
+        return <WorkersPanel />
       case 'tasks':
         return <TasksPanel />
       case 'results':

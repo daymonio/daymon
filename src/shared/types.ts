@@ -1,3 +1,25 @@
+// ─── Worker Types ──────────────────────────────────────────
+
+export interface Worker {
+  id: number
+  name: string
+  systemPrompt: string
+  description: string | null
+  model: string | null
+  isDefault: boolean
+  taskCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateWorkerInput {
+  name: string
+  systemPrompt: string
+  description?: string
+  model?: string
+  isDefault?: boolean
+}
+
 // ─── Memory Types ───────────────────────────────────────────
 
 export interface Entity {
@@ -44,6 +66,9 @@ export interface Task {
   maxRuns: number | null
   runCount: number
   memoryEntityId: number | null
+  workerId: number | null
+  sessionContinuity: boolean
+  sessionId: string | null
   createdAt: string
   updatedAt: string
 }
@@ -58,6 +83,8 @@ export interface CreateTaskInput {
   scheduledAt?: string
   executor?: string
   maxRuns?: number
+  workerId?: number
+  sessionContinuity?: boolean
 }
 
 export interface TaskRun {
@@ -72,6 +99,21 @@ export interface TaskRun {
   durationMs: number | null
   progress: number | null
   progressMessage: string | null
+  sessionId: string | null
+}
+
+// ─── Embedding Types ───────────────────────────────────────
+
+export interface Embedding {
+  id: number
+  entityId: number
+  sourceType: 'entity' | 'observation'
+  sourceId: number
+  textHash: string
+  vector: Buffer
+  model: string
+  dimensions: number
+  createdAt: string
 }
 
 // ─── Watch Types ────────────────────────────────────────────

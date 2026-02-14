@@ -11,6 +11,7 @@ files:
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
 asarUnpack:
   - "node_modules/better-sqlite3/**"
+  - "node_modules/onnxruntime-node/**"
   - "resources/**"
 extraResources:
   - from: "out/mcp"

@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import type { Entity, Observation, Relation, MemoryStats, Task, CreateTaskInput, TaskRun } from './types'
+import type { Entity, Observation, Relation, MemoryStats, Task, CreateTaskInput, TaskRun, Worker, CreateWorkerInput } from './types'
 
 // ─── Entities ───────────────────────────────────────────────
 
@@ -125,13 +125,93 @@ export function getMemoryStats(db: Database.Database): MemoryStats {
   }
 }
 
+// ─── Workers ────────────────────────────────────────────────
+
+export function createWorker(db: Database.Database, input: CreateWorkerInput): Worker {
+  if (input.isDefault) {
+    db.prepare('UPDATE workers SET is_default = 0 WHERE is_default = 1').run()
+  }
+  const result = db
+    .prepare(
+      `INSERT INTO workers (name, system_prompt, description, model, is_default)
+       VALUES (?, ?, ?, ?, ?)`
+    )
+    .run(input.name, input.systemPrompt, input.description ?? null, input.model ?? null, input.isDefault ? 1 : 0)
+  return getWorker(db, result.lastInsertRowid as number)!
+}
+
+export function getWorker(db: Database.Database, id: number): Worker | null {
+  const row = db.prepare('SELECT * FROM workers WHERE id = ?').get(id) as Record<string, unknown> | undefined
+  return row ? mapWorkerRow(row) : null
+}
+
+export function listWorkers(db: Database.Database): Worker[] {
+  const rows = db.prepare('SELECT * FROM workers ORDER BY is_default DESC, name ASC').all()
+  return (rows as Record<string, unknown>[]).map(mapWorkerRow)
+}
+
+export function updateWorker(db: Database.Database, id: number, updates: Partial<{
+  name: string; systemPrompt: string; description: string; model: string; isDefault: boolean
+}>): void {
+  if (updates.isDefault === true) {
+    db.prepare('UPDATE workers SET is_default = 0 WHERE is_default = 1').run()
+  }
+  const fieldMap: Record<string, string> = {
+    name: 'name', systemPrompt: 'system_prompt', description: 'description',
+    model: 'model', isDefault: 'is_default'
+  }
+  const fields: string[] = []
+  const values: unknown[] = []
+
+  for (const [key, value] of Object.entries(updates)) {
+    const dbField = fieldMap[key]
+    if (dbField) {
+      fields.push(`${dbField} = ?`)
+      values.push(key === 'isDefault' ? (value ? 1 : 0) : value)
+    }
+  }
+  if (fields.length === 0) return
+
+  fields.push('updated_at = CURRENT_TIMESTAMP')
+  values.push(id)
+  db.prepare(`UPDATE workers SET ${fields.join(', ')} WHERE id = ?`).run(...values)
+}
+
+export function deleteWorker(db: Database.Database, id: number): void {
+  db.prepare('DELETE FROM workers WHERE id = ?').run(id)
+}
+
+export function getDefaultWorker(db: Database.Database): Worker | null {
+  const row = db.prepare('SELECT * FROM workers WHERE is_default = 1 LIMIT 1').get() as Record<string, unknown> | undefined
+  return row ? mapWorkerRow(row) : null
+}
+
+export function refreshWorkerTaskCount(db: Database.Database, workerId: number): void {
+  const row = db.prepare('SELECT COUNT(*) as count FROM tasks WHERE worker_id = ?').get(workerId) as { count: number }
+  db.prepare('UPDATE workers SET task_count = ? WHERE id = ?').run(row.count, workerId)
+}
+
+function mapWorkerRow(row: Record<string, unknown>): Worker {
+  return {
+    id: row.id as number,
+    name: row.name as string,
+    systemPrompt: row.system_prompt as string,
+    description: row.description as string | null,
+    model: row.model as string | null,
+    isDefault: (row.is_default as number) === 1,
+    taskCount: (row.task_count as number) ?? 0,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string
+  }
+}
+
 // ─── Tasks ──────────────────────────────────────────────────
 
 export function createTask(db: Database.Database, input: CreateTaskInput): Task {
   const result = db
     .prepare(
-      `INSERT INTO tasks (name, description, prompt, cron_expression, trigger_type, trigger_config, scheduled_at, executor, max_runs)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tasks (name, description, prompt, cron_expression, trigger_type, trigger_config, scheduled_at, executor, max_runs, worker_id, session_continuity)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name,
@@ -142,9 +222,13 @@ export function createTask(db: Database.Database, input: CreateTaskInput): Task 
       input.triggerConfig ?? null,
       input.scheduledAt ?? null,
       input.executor ?? 'claude_code',
-      input.maxRuns ?? null
+      input.maxRuns ?? null,
+      input.workerId ?? null,
+      input.sessionContinuity ? 1 : 0
     )
-  return getTask(db, result.lastInsertRowid as number)!
+  const task = getTask(db, result.lastInsertRowid as number)!
+  if (input.workerId) refreshWorkerTaskCount(db, input.workerId)
+  return task
 }
 
 export function getTask(db: Database.Database, id: number): Task | null {
@@ -164,6 +248,7 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
   triggerType: string; triggerConfig: string; scheduledAt: string; executor: string
   status: string; lastRun: string; lastResult: string; errorCount: number
   maxRuns: number; runCount: number; memoryEntityId: number
+  workerId: number | null; sessionContinuity: boolean; sessionId: string | null
 }>): void {
   const fieldMap: Record<string, string> = {
     name: 'name', description: 'description', prompt: 'prompt',
@@ -171,7 +256,8 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
     triggerConfig: 'trigger_config', scheduledAt: 'scheduled_at',
     executor: 'executor', status: 'status',
     lastRun: 'last_run', lastResult: 'last_result', errorCount: 'error_count',
-    maxRuns: 'max_runs', runCount: 'run_count', memoryEntityId: 'memory_entity_id'
+    maxRuns: 'max_runs', runCount: 'run_count', memoryEntityId: 'memory_entity_id',
+    workerId: 'worker_id', sessionContinuity: 'session_continuity', sessionId: 'session_id'
   }
 
   const fields: string[] = []
@@ -179,7 +265,10 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
 
   for (const [key, value] of Object.entries(updates)) {
     const dbField = fieldMap[key]
-    if (dbField) { fields.push(`${dbField} = ?`); values.push(value) }
+    if (dbField) {
+      fields.push(`${dbField} = ?`)
+      values.push(key === 'sessionContinuity' ? (value ? 1 : 0) : value)
+    }
   }
   if (fields.length === 0) return
 
@@ -189,7 +278,9 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
 }
 
 export function deleteTask(db: Database.Database, id: number): void {
+  const task = getTask(db, id)
   db.prepare('DELETE FROM tasks WHERE id = ?').run(id)
+  if (task?.workerId) refreshWorkerTaskCount(db, task.workerId)
 }
 
 export function pauseTask(db: Database.Database, id: number): void {
@@ -408,6 +499,9 @@ function mapTaskRow(row: Record<string, unknown>): Task {
     maxRuns: row.max_runs as number | null,
     runCount: (row.run_count as number) ?? 0,
     memoryEntityId: row.memory_entity_id as number | null,
+    workerId: row.worker_id as number | null,
+    sessionContinuity: (row.session_continuity as number) === 1,
+    sessionId: row.session_id as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string
   }
@@ -425,6 +519,162 @@ function mapTaskRunRow(row: Record<string, unknown>): TaskRun {
     errorMessage: row.error_message as string | null,
     durationMs: row.duration_ms as number | null,
     progress: row.progress as number | null,
-    progressMessage: row.progress_message as string | null
+    progressMessage: row.progress_message as string | null,
+    sessionId: row.session_id as string | null
   }
+}
+
+// ─── Session Continuity ────────────────────────────────────
+
+export function updateTaskRunSessionId(db: Database.Database, runId: number, sessionId: string): void {
+  db.prepare('UPDATE task_runs SET session_id = ? WHERE id = ?').run(sessionId, runId)
+}
+
+export function clearTaskSession(db: Database.Database, taskId: number): void {
+  db.prepare('UPDATE tasks SET session_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(taskId)
+}
+
+export function getSessionRunCount(db: Database.Database, taskId: number, sessionId: string): number {
+  const row = db.prepare(
+    'SELECT COUNT(*) as count FROM task_runs WHERE task_id = ? AND session_id = ?'
+  ).get(taskId, sessionId) as { count: number }
+  return row.count
+}
+
+export function getCrossTaskMemoryContext(db: Database.Database, taskId: number): string | null {
+  const task = getTask(db, taskId)
+  if (!task) return null
+
+  const words = task.name.split(/\s+/).filter(w => w.length >= 2)
+  const relatedMap = new Map<number, Entity>()
+  for (const word of words) {
+    for (const entity of searchEntities(db, word)) {
+      if (entity.id !== task.memoryEntityId) {
+        relatedMap.set(entity.id, entity)
+      }
+    }
+  }
+  const otherEntities = Array.from(relatedMap.values())
+  if (otherEntities.length === 0) return null
+
+  const relatedParts: string[] = []
+  for (const entity of otherEntities.slice(0, 5)) {
+    const observations = getObservations(db, entity.id)
+    if (observations.length > 0) {
+      const recent = observations.slice(0, MAX_RELATED_OBSERVATIONS)
+      const obsText = recent.map(o => o.content).join('\n')
+      relatedParts.push(`**${entity.name}** (${entity.type}):\n${obsText}`)
+    }
+  }
+  return relatedParts.length > 0 ? `## Related knowledge:\n${relatedParts.join('\n\n')}` : null
+}
+
+// ─── Embeddings ────────────────────────────────────────────
+
+export function upsertEmbedding(
+  db: Database.Database,
+  entityId: number,
+  sourceType: 'entity' | 'observation',
+  sourceId: number,
+  hash: string,
+  vector: Buffer,
+  model: string,
+  dimensions: number
+): void {
+  db.prepare(
+    `INSERT INTO embeddings (entity_id, source_type, source_id, text_hash, vector, model, dimensions)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (source_type, source_id, model) DO UPDATE SET
+       text_hash = excluded.text_hash,
+       vector = excluded.vector,
+       created_at = CURRENT_TIMESTAMP`
+  ).run(entityId, sourceType, sourceId, hash, vector, model, dimensions)
+
+  db.prepare('UPDATE entities SET embedded_at = CURRENT_TIMESTAMP WHERE id = ?').run(entityId)
+}
+
+export function getEmbeddingsForEntity(db: Database.Database, entityId: number): Array<{
+  sourceType: string; sourceId: number; vector: Buffer; textHash: string
+}> {
+  const rows = db.prepare(
+    'SELECT source_type, source_id, vector, text_hash FROM embeddings WHERE entity_id = ?'
+  ).all(entityId) as Array<Record<string, unknown>>
+  return rows.map(r => ({
+    sourceType: r.source_type as string,
+    sourceId: r.source_id as number,
+    vector: r.vector as Buffer,
+    textHash: r.text_hash as string
+  }))
+}
+
+export function getAllEmbeddings(db: Database.Database): Array<{
+  entityId: number; sourceType: string; sourceId: number; vector: Buffer
+}> {
+  const rows = db.prepare(
+    'SELECT entity_id, source_type, source_id, vector FROM embeddings'
+  ).all() as Array<Record<string, unknown>>
+  return rows.map(r => ({
+    entityId: r.entity_id as number,
+    sourceType: r.source_type as string,
+    sourceId: r.source_id as number,
+    vector: r.vector as Buffer
+  }))
+}
+
+export function deleteEmbeddingsForEntity(db: Database.Database, entityId: number): void {
+  db.prepare('DELETE FROM embeddings WHERE entity_id = ?').run(entityId)
+}
+
+export function getUnembeddedEntities(db: Database.Database, limit: number = 50): Entity[] {
+  return db.prepare(
+    'SELECT * FROM entities WHERE embedded_at IS NULL ORDER BY created_at ASC LIMIT ?'
+  ).all(limit) as Entity[]
+}
+
+// ─── Hybrid Search (FTS + Semantic) ───────────────────────
+
+export interface HybridSearchResult {
+  entity: Entity
+  ftsScore: number
+  semanticScore: number
+  combinedScore: number
+}
+
+export function hybridSearch(
+  db: Database.Database,
+  query: string,
+  semanticResults: Array<{ entityId: number; score: number }> | null,
+  limit: number = 10
+): HybridSearchResult[] {
+  // 1. FTS search
+  const ftsEntities = searchEntities(db, query)
+  const ftsMap = new Map<number, { entity: Entity; rank: number }>()
+  ftsEntities.forEach((e, i) => ftsMap.set(e.id, { entity: e, rank: i + 1 }))
+
+  // 2. Semantic results (pre-computed externally)
+  const semMap = new Map<number, number>()
+  if (semanticResults) {
+    for (const r of semanticResults) {
+      semMap.set(r.entityId, r.score)
+    }
+  }
+
+  // 3. Merge with reciprocal rank fusion
+  const allIds = new Set([...ftsMap.keys(), ...semMap.keys()])
+  const results: HybridSearchResult[] = []
+
+  for (const id of allIds) {
+    const ftsEntry = ftsMap.get(id)
+    const ftsScore = ftsEntry ? 1 / (60 + ftsEntry.rank) : 0 // RRF with k=60
+    const semanticScore = semMap.get(id) ?? 0
+
+    const entity = ftsEntry?.entity ?? getEntity(db, id)
+    if (!entity) continue
+
+    const combinedScore = ftsScore * 0.4 + semanticScore * 0.6
+    results.push({ entity, ftsScore, semanticScore, combinedScore })
+  }
+
+  results.sort((a, b) => b.combinedScore - a.combinedScore)
+  return results.slice(0, limit)
 }

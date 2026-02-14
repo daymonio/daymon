@@ -122,3 +122,40 @@ export const SCHEMA_V4 = `
 ALTER TABLE tasks ADD COLUMN memory_entity_id INTEGER REFERENCES entities(id) ON DELETE SET NULL;
 INSERT OR IGNORE INTO schema_version (version) VALUES (4);
 `
+
+export const SCHEMA_V5 = `
+CREATE TABLE IF NOT EXISTS workers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    system_prompt TEXT NOT NULL,
+    description TEXT,
+    model TEXT,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    task_count INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(name);
+
+ALTER TABLE tasks ADD COLUMN worker_id INTEGER REFERENCES workers(id) ON DELETE SET NULL;
+ALTER TABLE tasks ADD COLUMN session_continuity INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tasks ADD COLUMN session_id TEXT;
+ALTER TABLE task_runs ADD COLUMN session_id TEXT;
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_id INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+    source_type TEXT NOT NULL DEFAULT 'entity',
+    source_id INTEGER NOT NULL,
+    text_hash TEXT NOT NULL,
+    vector BLOB NOT NULL,
+    model TEXT NOT NULL DEFAULT 'all-MiniLM-L6-v2',
+    dimensions INTEGER NOT NULL DEFAULT 384,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_embeddings_entity_id ON embeddings(entity_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_embeddings_source ON embeddings(source_type, source_id, model);
+ALTER TABLE entities ADD COLUMN embedded_at DATETIME;
+
+INSERT OR IGNORE INTO schema_version (version) VALUES (5);
+`

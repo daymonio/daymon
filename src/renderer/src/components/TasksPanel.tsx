@@ -1,5 +1,5 @@
 import { usePolling } from '../hooks/usePolling'
-import type { Task, TaskRun } from '@shared/types'
+import type { Task, TaskRun, Worker } from '@shared/types'
 
 function statusBadge(task: Task): React.JSX.Element {
   const colors: Record<string, string> = {
@@ -77,6 +77,12 @@ function ProgressBar({ run }: { run: TaskRun }): React.JSX.Element {
 export function TasksPanel(): React.JSX.Element {
   const { data: tasks, refresh } = usePolling(() => window.api.tasks.list(), 5000)
   const { data: runningRuns } = usePolling(() => window.api.tasks.getRunningRuns(), 2000)
+  const { data: workers } = usePolling(() => window.api.workers.list(), 10000)
+
+  const workerMap = new Map<number, Worker>()
+  if (workers) {
+    for (const w of workers) workerMap.set(w.id, w)
+  }
 
   const runningByTaskId = new Map<number, TaskRun>()
   if (runningRuns) {
@@ -138,6 +144,16 @@ export function TasksPanel(): React.JSX.Element {
               {sourceLabel(task) && (
                 <span className="ml-1.5 text-gray-300">
                   via {sourceLabel(task)}
+                </span>
+              )}
+              {task.workerId != null && workerMap.get(task.workerId) && (
+                <span className="ml-1.5 text-purple-400">
+                  {workerMap.get(task.workerId)!.name}
+                </span>
+              )}
+              {task.sessionContinuity && (
+                <span className="ml-1.5 px-1 py-0.5 rounded bg-violet-100 text-violet-600">
+                  continuous
                 </span>
               )}
             </div>
