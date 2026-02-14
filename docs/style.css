@@ -292,7 +292,7 @@ nav a:hover {
 }
 
 .compare-table {
-  max-width: 720px;
+  max-width: 900px;
   margin: 0 auto;
   border-radius: var(--radius);
   overflow: hidden;
@@ -301,7 +301,7 @@ nav a:hover {
 
 .compare-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 140px 1fr 1fr 1fr;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 .compare-row:last-child {
@@ -329,6 +329,7 @@ nav a:hover {
 }
 
 .compare-row:not(.compare-header) > .daymon-col,
+.compare-row:not(.compare-header) > .claude-col,
 .compare-row:not(.compare-header) > .openclaw-col {
   padding: 12px 16px;
   font-size: 0.85rem;
@@ -339,6 +340,14 @@ nav a:hover {
 }
 
 .daymon-col {
+  color: #34d399;
+}
+
+.claude-col {
+  color: #d4a574;
+}
+
+.claude-col.good {
   color: #34d399;
 }
 
@@ -406,7 +415,7 @@ footer p {
   }
 
   .compare-row {
-    min-width: 480px;
+    min-width: 640px;
   }
 }
 

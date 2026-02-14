@@ -26,7 +26,7 @@
       </a>
       <nav>
         <a href="#features">Features</a>
-        <a href="#compare">vs OpenClaw</a>
+        <a href="#compare">Compare</a>
         <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a>
       </nav>
     </div>
@@ -119,57 +119,79 @@
 
     <section id="compare" class="compare">
       <div class="container">
-        <h3>Daymon vs OpenClaw</h3>
-        <p class="compare-subtitle">Love the idea of AI agents? Skip the setup headaches.</p>
+        <h3>Daymon vs Claude vs OpenClaw</h3>
+        <p class="compare-subtitle">Claude is great. Daymon makes it work when you're not looking.</p>
         <div class="compare-table">
           <div class="compare-row compare-header">
             <div></div>
             <div class="compare-col-head daymon-col">Daymon</div>
+            <div class="compare-col-head claude-col">Claude (native)</div>
             <div class="compare-col-head openclaw-col">OpenClaw</div>
           </div>
           <div class="compare-row">
             <div class="compare-label">Setup</div>
             <div class="daymon-col">Install app. Done.</div>
+            <div class="claude-col good">Nothing to install</div>
             <div class="openclaw-col">Docker, tokens, gateways, config files</div>
           </div>
           <div class="compare-row">
             <div class="compare-label">Cost</div>
             <div class="daymon-col">Free — uses your existing subscription</div>
-            <div class="openclaw-col">$50–500+/mo in API costs (easily $20+ per session)</div>
+            <div class="claude-col good">Your existing subscription</div>
+            <div class="openclaw-col">$50–500+/mo in API costs</div>
           </div>
           <div class="compare-row">
             <div class="compare-label">API keys</div>
             <div class="daymon-col">None needed</div>
+            <div class="claude-col good">None needed</div>
             <div class="openclaw-col">Required (Anthropic / OpenAI)</div>
           </div>
           <div class="compare-row">
             <div class="compare-label">Works with</div>
             <div class="daymon-col">Claude Pro / Max subscription</div>
+            <div class="claude-col good">Claude Pro / Max subscription</div>
             <div class="openclaw-col">Pay-per-token API</div>
           </div>
           <div class="compare-row">
-            <div class="compare-label">How you use it</div>
-            <div class="daymon-col">Talk to Claude directly — nothing new to set up</div>
-            <div class="openclaw-col">Telegram / Discord / WhatsApp bots (needs bot tokens &amp; API keys)</div>
+            <div class="compare-label">Scheduled tasks</div>
+            <div class="daymon-col">"Summarize my inbox every morning"</div>
+            <div class="claude-col">Not available</div>
+            <div class="openclaw-col">Requires cron + API scripting</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Background automation</div>
+            <div class="daymon-col">Runs tasks &amp; watches files while you sleep</div>
+            <div class="claude-col">Only works while you're chatting</div>
+            <div class="openclaw-col">Runs 24/7 but complex setup</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Persistent memory</div>
+            <div class="daymon-col">Structured, queryable, shared across sessions</div>
+            <div class="claude-col">Basic — not queryable</div>
+            <div class="openclaw-col">Custom DB setup required</div>
           </div>
           <div class="compare-row">
             <div class="compare-label">Integrations</div>
-            <div class="daymon-col">All of Claude's MCP tools &amp; context</div>
-            <div class="openclaw-col">100+ custom skills (each needs separate API keys)</div>
+            <div class="daymon-col">All Claude tools + scheduling, memory, file watching</div>
+            <div class="claude-col good">MCP tools &amp; built-in integrations</div>
+            <div class="openclaw-col">100+ custom skills (each needs API keys)</div>
           </div>
           <div class="compare-row">
             <div class="compare-label">Security</div>
             <div class="daymon-col">100% local, nothing exposed</div>
+            <div class="claude-col">Cloud-hosted by Anthropic</div>
             <div class="openclaw-col">135k+ instances exposed online</div>
           </div>
           <div class="compare-row">
             <div class="compare-label">Your data</div>
             <div class="daymon-col">SQLite file on your Mac</div>
+            <div class="claude-col">Stored on Anthropic's servers</div>
             <div class="openclaw-col">Cloud-dependent, plaintext creds reported</div>
           </div>
           <div class="compare-row">
             <div class="compare-label">Open source</div>
             <div class="daymon-col">Yes (MIT)</div>
+            <div class="claude-col">No</div>
             <div class="openclaw-col">Yes (MIT)</div>
           </div>
         </div>
@@ -178,7 +200,7 @@
 
     <section class="final-cta">
       <div class="container">
-        <h3>Stop paying for idle AI.</h3>
+        <h3>Your AI shouldn't sit idle.</h3>
         <p>Daymon is free, open source, and runs entirely on your machine.</p>
         <div class="cta">
           <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary">Download for Mac</a>
