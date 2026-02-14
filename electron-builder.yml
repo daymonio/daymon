@@ -1,0 +1,42 @@
+appId: io.daymon.app
+productName: Daymon
+directories:
+  buildResources: build
+  output: dist
+files:
+  - "!**/.vscode/*"
+  - "!src/*"
+  - "!electron.vite.config.{js,ts,mjs,cjs}"
+  - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
+  - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+asarUnpack:
+  - "node_modules/better-sqlite3/**"
+  - "resources/**"
+mac:
+  extendInfo:
+    - NSDocumentsFolderUsageDescription: "Daymon needs access to your Documents folder for file watching."
+    - NSDownloadsFolderUsageDescription: "Daymon needs access to your Downloads folder for file watching."
+  notarize: false
+  target:
+    - dmg
+  type: distribution
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+linux:
+  target:
+    - AppImage
+  category: Utility
+npmRebuild: true
+publish:
+  provider: github
+  owner: daymonio
+  repo: daymon

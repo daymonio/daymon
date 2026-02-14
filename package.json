@@ -1,0 +1,47 @@
+{
+  "name": "daymon",
+  "version": "0.1.0",
+  "description": "Open source autopilot for Claude and ChatGPT",
+  "main": "test-electron.js",
+  "author": "Daymon <hello@daymon.io>",
+  "homepage": "https://daymon.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/daymonio/daymon.git"
+  },
+  "license": "AGPL-3.0",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "npm run typecheck && electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "postinstall": "electron-builder install-app-deps",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:win": "npm run build && electron-builder --win",
+    "build:linux": "npm run build && electron-builder --linux"
+  },
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
+    "better-sqlite3": "^11.10.0"
+  },
+  "devDependencies": {
+    "@electron-toolkit/tsconfig": "^2.0.0",
+    "@electron/rebuild": "^4.0.3",
+    "@tailwindcss/vite": "^4.1.10",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^5.1.1",
+    "electron": "^35.2.1",
+    "electron-builder": "^26.7.0",
+    "electron-vite": "^5.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.1.10",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6"
+  }
+}

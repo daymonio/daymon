@@ -1,0 +1,54 @@
+import { ElectronAPI } from '@electron-toolkit/preload'
+import type { Entity, Observation, Relation, Task, TaskRun, Watch, CreateTaskInput, MemoryStats } from '../shared/types'
+
+interface MemoryAPI {
+  createEntity: (name: string, type?: string, category?: string) => Promise<Entity>
+  getEntity: (id: number) => Promise<Entity | null>
+  listEntities: (category?: string) => Promise<Entity[]>
+  searchEntities: (query: string) => Promise<Entity[]>
+  deleteEntity: (id: number) => Promise<void>
+  addObservation: (entityId: number, content: string, source?: string) => Promise<Observation>
+  getObservations: (entityId: number) => Promise<Observation[]>
+  deleteObservation: (id: number) => Promise<void>
+  addRelation: (fromEntity: number, toEntity: number, relationType: string) => Promise<Relation>
+  getRelations: (entityId: number) => Promise<Relation[]>
+  deleteRelation: (id: number) => Promise<void>
+  getStats: () => Promise<MemoryStats>
+}
+
+interface TasksAPI {
+  create: (task: CreateTaskInput) => Promise<Task>
+  get: (id: number) => Promise<Task | null>
+  list: (status?: string) => Promise<Task[]>
+  update: (id: number, updates: Record<string, unknown>) => Promise<void>
+  delete: (id: number) => Promise<void>
+  pause: (id: number) => Promise<void>
+  resume: (id: number) => Promise<void>
+  getRuns: (taskId: number) => Promise<TaskRun[]>
+  getLatestRun: (taskId: number) => Promise<TaskRun | null>
+}
+
+interface SettingsAPI {
+  get: (key: string) => Promise<string | null>
+  set: (key: string, value: string) => Promise<void>
+  getAll: () => Promise<Record<string, string>>
+}
+
+interface AppAPI {
+  getVersion: () => Promise<string>
+  quit: () => Promise<void>
+}
+
+interface DaymonAPI {
+  memory: MemoryAPI
+  tasks: TasksAPI
+  settings: SettingsAPI
+  app: AppAPI
+}
+
+declare global {
+  interface Window {
+    electron: ElectronAPI
+    api: DaymonAPI
+  }
+}
