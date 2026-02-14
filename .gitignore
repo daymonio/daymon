@@ -1,0 +1,22 @@
+node_modules/
+out/
+dist/
+build/
+!build/icon.icns
+*.db
+*.db-journal
+*.db-wal
+*.tsbuildinfo
+.DS_Store
+*.log
+.env
+.env.*
+
+# Internal project management (not for public repo)
+CLAUDE.md
+PROGRESS.md
+Daymon-Build-Plan-v2.md
+test-electron.js
+
+# User-specific MCP config (contains absolute paths)
+.mcp.json

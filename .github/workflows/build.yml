@@ -1,0 +1,144 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild better-sqlite3 for Node.js
+        run: npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3
+
+      - name: TypeScript check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Package macOS
+        run: npx electron-builder --mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: daymon-mac
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/latest-mac.yml
+
+      - name: Set version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.blockmap
+            dist/latest-mac.yml
+          body: |
+            ## Install
+
+            **[Download Daymon-${{ steps.version.outputs.version }}-arm64.dmg](https://github.com/daymonio/daymon/releases/download/${{ github.ref_name }}/Daymon-${{ steps.version.outputs.version }}-arm64.dmg)** — open it and drag Daymon to Applications.
+
+            Or install with Homebrew:
+            ```
+            brew install daymonio/daymon/daymon
+            ```
+
+            > The `.zip`, `.blockmap`, and `latest-mac.yml` files are for auto-updates — you don't need them.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-homebrew:
+    needs: build-mac
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: daymon-mac
+          path: dist/
+
+      - name: Compute SHA256 and update cask
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          DMG_FILE=$(ls dist/*.dmg | head -1)
+          SHA=$(shasum -a 256 "$DMG_FILE" | awk '{print $1}')
+          DMG_NAME=$(basename "$DMG_FILE")
+
+          # Clone tap repo
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/daymonio/homebrew-daymon.git" tap
+          mkdir -p tap/Casks
+
+          cat > tap/Casks/daymon.rb << CASK_EOF
+          cask "daymon" do
+            version "${VERSION}"
+            sha256 "${SHA}"
+
+            url "https://github.com/daymonio/daymon/releases/download/v#{version}/${DMG_NAME}"
+            name "Daymon"
+            desc "Open source autopilot for Claude - scheduled tasks, memory, background automation"
+            homepage "https://daymon.io"
+
+            livecheck do
+              url :url
+              strategy :github_latest
+            end
+
+            auto_updates true
+            depends_on macos: ">= :monterey"
+
+            app "Daymon.app"
+
+            uninstall quit: "io.daymon.app"
+
+            zap trash: [
+              "~/Library/Application Support/daymon",
+              "~/Library/Preferences/io.daymon.app.plist",
+              "~/Library/Saved Application State/io.daymon.app.savedState",
+            ]
+          end
+          CASK_EOF
+
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/daymon.rb
+          git diff --cached --quiet || git commit -m "Update daymon to ${VERSION}" && git push

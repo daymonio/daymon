@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-12Y9442YL6"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-12Y9442YL6');
+    gtag('config', 'AW-17597866841');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daymon — Open Source Autopilot for Claude</title>
+  <meta name="description" content="Your AI subscription only works when you do. Daymon puts it to work 24/7. Open source scheduled tasks, persistent memory, and background automation for Claude.">
+  <meta property="og:title" content="Daymon — Open Source Autopilot for Claude">
+  <meta property="og:description" content="Your AI subscription only works when you do. Daymon puts it to work 24/7.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://daymon.io">
+  <meta property="og:image" content="https://daymon.io/logo.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Daymon — Open Source Autopilot for Claude">
+  <meta name="twitter:description" content="Your AI subscription only works when you do. Daymon puts it to work 24/7.">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="container header-inner">
+      <a href="/" class="logo">
+        <img src="logo.png" alt="Daymon logo" width="40" height="40">
+        <span>Daymon</span>
+      </a>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#workers">Workers</a>
+        <a href="#compare">Compare</a>
+        <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <h1>Your AI subscription only works when you do.</h1>
+        <h2>Daymon puts it to work 24/7.</h2>
+        <p class="subtitle">
+          Open source autopilot for Claude.<br>
+          Works with Claude Desktop and Claude Code.<br>
+          Just talk to Claude — it schedules, remembers, and automates.
+        </p>
+        <div class="cta">
+          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary" onclick="trackDownload()">Download for Mac</a>
+          <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+          <a href="https://github.com/daymonio/daymon" class="btn btn-ghost" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
+        </div>
+        <div class="brew-install">
+          <code>brew install daymonio/daymon/daymon</code>
+        </div>
+        <p class="requirements">Requires macOS 12+, Apple Silicon, and <a href="https://claude.ai/download">Claude Desktop</a> or <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>.</p>
+      </div>
+    </section>
+
+    <section class="how-it-works">
+      <div class="container">
+        <h3>How it works</h3>
+        <ol class="steps">
+          <li>
+            <span class="step-num">1</span>
+            <div>
+              <strong>Install Daymon</strong>
+              <p><code class="inline-code">brew install daymonio/daymon/daymon</code> &mdash; menu bar icon appears.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <div>
+              <strong>Open Claude and talk</strong>
+              <p>Daymon auto-configures Claude Desktop and Claude Code on first launch. No setup needed.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <div>
+              <strong>"Every morning, summarize my inbox"</strong>
+              <p>Tell Claude what you want. It schedules, remembers, and watches for you.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-num">4</span>
+            <div>
+              <strong>Your subscription works while you sleep</strong>
+              <p>Wake up to results. No dashboard to check. No extra app to open.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="setup-section">
+      <div class="container">
+        <h3>Set up in 30 seconds</h3>
+        <div class="setup-options">
+          <div class="setup-option">
+            <div class="setup-option-header">
+              <span class="setup-badge">Claude Desktop</span>
+            </div>
+            <div class="setup-option-body">
+              <p class="setup-instruction">Install Daymon and open it.<br><strong>That's it.</strong></p>
+              <p class="setup-detail">Daymon auto-configures Claude Desktop on first launch. No setup, no config files, no prompts needed.</p>
+            </div>
+          </div>
+          <div class="setup-divider"><span>or</span></div>
+          <div class="setup-option">
+            <div class="setup-option-header">
+              <span class="setup-badge">Claude Code</span>
+            </div>
+            <div class="setup-option-body">
+              <p class="setup-instruction">Install Daymon and open it.<br><strong>That's it.</strong></p>
+              <p class="setup-detail">Daymon auto-configures Claude Code on first launch. Works in every project after that.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <div class="container">
+        <h3>Features</h3>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">&#9200;</div>
+            <h4>Scheduled Tasks</h4>
+            <p class="feature-example">"Every weekday at 9am, check HackerNews for AI news"</p>
+            <p>Just tell your AI. No cron syntax, no config files, no separate UI.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#129504;</div>
+            <h4>Persistent Memory</h4>
+            <p class="feature-example">"Remember I'm fundraising Series A"</p>
+            <p>Say it once — it sticks forever. Knowledge graph with semantic search.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#128100;</div>
+            <h4>Workers</h4>
+            <p class="feature-example">"Use my Chief of Staff worker for this task"</p>
+            <p>Named agent personalities with system prompts. Assign different workers to different tasks. Templates included.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#128257;</div>
+            <h4>Session Continuity</h4>
+            <p class="feature-example">"Compare today's results to yesterday's"</p>
+            <p>Tasks can resume where they left off. Each run builds on the last — no context lost.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#128193;</div>
+            <h4>File Watchers</h4>
+            <p class="feature-example">"When a new file appears in Downloads, organize it"</p>
+            <p>Tell your AI what to watch. Daymon handles the rest — no rules to configure.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#128274;</div>
+            <h4>100% Local</h4>
+            <p class="feature-example">Everything on your Mac</p>
+            <p>No cloud. No account. Your data is a SQLite file you can inspect anytime.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="workers" class="workers">
+      <div class="container">
+        <h3>Workers — give your tasks a personality</h3>
+        <p class="workers-subtitle">Named agent profiles with system prompts. 9 templates included — or write your own.</p>
+        <div class="worker-grid">
+          <div class="worker-card">
+            <div class="worker-icon">&#128188;</div>
+            <div class="worker-name">Chief of Staff</div>
+            <div class="worker-desc">Triages ruthlessly, anticipates needs, proposes actions.</div>
+          </div>
+          <div class="worker-card">
+            <div class="worker-icon">&#128270;</div>
+            <div class="worker-name">Researcher</div>
+            <div class="worker-desc">Synthesis over summarization. Every finding gets a "so what?"</div>
+          </div>
+          <div class="worker-card">
+            <div class="worker-icon">&#9993;</div>
+            <div class="worker-name">Email Assistant</div>
+            <div class="worker-desc">3-tier triage. Drafts replies. Never sends anything.</div>
+          </div>
+          <div class="worker-card">
+            <div class="worker-icon">&#128200;</div>
+            <div class="worker-name">Competitor Tracker</div>
+            <div class="worker-desc">Signal, not noise. What changed, why it matters, how to respond.</div>
+          </div>
+          <div class="worker-card">
+            <div class="worker-icon">&#128269;</div>
+            <div class="worker-name">Code Reviewer</div>
+            <div class="worker-desc">Leads with blockers, cites lines, suggests fixes. No bikeshedding.</div>
+          </div>
+          <div class="worker-card">
+            <div class="worker-icon">&#10133;</div>
+            <div class="worker-name">+ 4 more &amp; custom</div>
+            <div class="worker-desc">Writer, DevOps, Data Analyst, Tech Trends — or build your own.</div>
+          </div>
+        </div>
+        <div class="worker-flow">
+          <div class="worker-flow-step">
+            <span class="worker-flow-num">1</span>
+            <span><strong>Create</strong> — pick a template or write a system prompt</span>
+          </div>
+          <div class="worker-flow-arrow">&#8594;</div>
+          <div class="worker-flow-step">
+            <span class="worker-flow-num">2</span>
+            <span><strong>Assign</strong> — attach to any task</span>
+          </div>
+          <div class="worker-flow-arrow">&#8594;</div>
+          <div class="worker-flow-step">
+            <span class="worker-flow-num">3</span>
+            <span><strong>Run</strong> — personality injected every execution</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="compare" class="compare">
+      <div class="container">
+        <h3>How Daymon compares</h3>
+        <p class="compare-subtitle">Your AI is great. Daymon makes it work when you're not looking.</p>
+        <div class="compare-table">
+          <div class="compare-row compare-header">
+            <div></div>
+            <div class="compare-col-head daymon-col">Daymon</div>
+            <div class="compare-col-head claude-col">Claude (native)</div>
+            <div class="compare-col-head chatgpt-col">ChatGPT (native)</div>
+            <div class="compare-col-head openclaw-col">OpenClaw</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Setup</div>
+            <div class="daymon-col">Install app. Done.</div>
+            <div class="claude-col good">Nothing to install</div>
+            <div class="chatgpt-col good">Nothing to install</div>
+            <div class="openclaw-col">Docker, tokens, gateways, config files</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Cost</div>
+            <div class="daymon-col">Free — uses your existing subscription</div>
+            <div class="claude-col good">Your existing subscription</div>
+            <div class="chatgpt-col good">Your existing subscription</div>
+            <div class="openclaw-col bad">$100–2,000+/mo in API costs</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">API keys</div>
+            <div class="daymon-col">None needed</div>
+            <div class="claude-col good">None needed</div>
+            <div class="chatgpt-col good">None needed</div>
+            <div class="openclaw-col">Required (Anthropic / OpenAI)</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Works with</div>
+            <div class="daymon-col">Claude subscription (Pro / Max / Team)</div>
+            <div class="claude-col good">Claude Pro / Max</div>
+            <div class="chatgpt-col good">ChatGPT Plus / Pro</div>
+            <div class="openclaw-col bad">Pay-per-token API</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Interface</div>
+            <div class="daymon-col">Claude Desktop &amp; Claude Code</div>
+            <div class="claude-col good">Any Claude interface</div>
+            <div class="chatgpt-col good">chatgpt.com &amp; apps</div>
+            <div class="openclaw-col">Telegram / Discord / WhatsApp (needs bot tokens)</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Scheduled tasks</div>
+            <div class="daymon-col">"Summarize my inbox every morning"</div>
+            <div class="claude-col">Not available</div>
+            <div class="chatgpt-col">Not available</div>
+            <div class="openclaw-col good">Built-in cron scheduling</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Background automation</div>
+            <div class="daymon-col">Runs tasks &amp; watches files while you sleep</div>
+            <div class="claude-col">Only works while you're chatting</div>
+            <div class="chatgpt-col">Only works while you're chatting</div>
+            <div class="openclaw-col good">Runs 24/7 but complex setup</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Workers</div>
+            <div class="daymon-col">9 templates + create your own, edit anytime</div>
+            <div class="claude-col">No persistent profiles</div>
+            <div class="chatgpt-col">Custom GPTs (separate setup)</div>
+            <div class="openclaw-col">Manual SOUL.md config (no templates)</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Session continuity</div>
+            <div class="daymon-col">Tasks resume across runs</div>
+            <div class="claude-col">No scheduled tasks</div>
+            <div class="chatgpt-col">No scheduled tasks</div>
+            <div class="openclaw-col">Fresh session each run</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Persistent memory</div>
+            <div class="daymon-col">Knowledge graph + semantic search</div>
+            <div class="claude-col">Basic — per model only</div>
+            <div class="chatgpt-col">Basic — per model only</div>
+            <div class="openclaw-col">Custom DB setup required</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Cross-model</div>
+            <div class="daymon-col">Shared memory &amp; tasks across Claude Desktop &amp; Code</div>
+            <div class="claude-col">Claude only</div>
+            <div class="chatgpt-col">ChatGPT only</div>
+            <div class="openclaw-col good">Works with multiple LLMs</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Integrations</div>
+            <div class="daymon-col">All Claude tools + scheduling, memory, file watching</div>
+            <div class="claude-col good">Built-in tools &amp; integrations</div>
+            <div class="chatgpt-col good">Custom GPTs &amp; plugins</div>
+            <div class="openclaw-col">100+ custom skills (each needs API keys)</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Security</div>
+            <div class="daymon-col">Local app, talks to AI securely</div>
+            <div class="claude-col good">Enterprise-grade, secured by Anthropic</div>
+            <div class="chatgpt-col good">Enterprise-grade, secured by OpenAI</div>
+            <div class="openclaw-col">135k+ instances exposed online</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Your data</div>
+            <div class="daymon-col">SQLite file on your Mac</div>
+            <div class="claude-col">Stored on Anthropic's servers</div>
+            <div class="chatgpt-col">Stored on OpenAI's servers</div>
+            <div class="openclaw-col good">Self-hosted — you control it</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Open source</div>
+            <div class="daymon-col">Yes (MIT)</div>
+            <div class="claude-col">No</div>
+            <div class="chatgpt-col">No</div>
+            <div class="openclaw-col good">Yes (MIT)</div>
+          </div>
+        </div>
+        <p style="text-align: center; margin-top: 20px;">
+          <a href="compare.html" style="color: var(--accent-hover); font-size: 0.9rem;">See full detailed comparison &rarr;</a>
+        </p>
+      </div>
+    </section>
+
+    <section class="final-cta">
+      <div class="container">
+        <h3>Your AI shouldn't sit idle.</h3>
+        <p>Daymon is free, open source, and runs entirely on your machine.</p>
+        <div class="cta">
+          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary" onclick="trackDownload()">Download for Mac</a>
+          <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+          <a href="https://github.com/daymonio/daymon" class="btn btn-ghost" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
+        </div>
+        <div class="brew-install">
+          <code>brew install daymonio/daymon/daymon</code>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>MIT &middot; &copy; 2026 Daymon &middot; <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">github.com/daymonio/daymon</a></p>
+    </div>
+  </footer>
+
+  <script>
+    function trackDownload() {
+      gtag('event', 'conversion', {'send_to': 'AW-17597866841/bpTkCKafm_kbENnGqMdB'});
+    }
+
+  </script>
+</body>
+</html>

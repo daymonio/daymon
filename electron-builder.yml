@@ -1,0 +1,58 @@
+appId: io.daymon.app
+productName: Daymon
+directories:
+  buildResources: build
+  output: dist
+files:
+  - "!**/.vscode/*"
+  - "!src/*"
+  - "!electron.vite.config.{js,ts,mjs,cjs}"
+  - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
+  - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+asarUnpack:
+  - "node_modules/better-sqlite3/**"
+  - "node_modules/onnxruntime-node/**"
+  - "resources/**"
+extraResources:
+  - from: "out/mcp/server.js"
+    to: "mcp/server.js"
+  - from: "out/mcp/node_modules"
+    to: "mcp/node_modules"
+  - from: "resources/trayIconTemplate.png"
+    to: "resources/trayIconTemplate.png"
+  - from: "resources/trayIconTemplate@2x.png"
+    to: "resources/trayIconTemplate@2x.png"
+  - from: "resources/logo.png"
+    to: "resources/logo.png"
+mac:
+  icon: build/icon.icns
+  extendInfo:
+    NSDocumentsFolderUsageDescription: "Daymon needs access to your Documents folder for file watching."
+    NSDownloadsFolderUsageDescription: "Daymon needs access to your Downloads folder for file watching."
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  notarize: true
+  target:
+    - dmg
+    - zip
+  type: distribution
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+linux:
+  target:
+    - AppImage
+  category: Utility
+npmRebuild: true
+publish:
+  provider: github
+  owner: daymonio
+  repo: daymon
