@@ -134,13 +134,13 @@ export function executeClaudeCode(
   })
 }
 
-interface ParsedProgress {
+export interface ParsedProgress {
   fraction: number | null
   message: string
   isToolUse: boolean
 }
 
-function parseStreamEvent(event: Record<string, unknown>, toolCallCount: number): ParsedProgress | null {
+export function parseStreamEvent(event: Record<string, unknown>, toolCallCount: number): ParsedProgress | null {
   const type = event.type as string | undefined
 
   if (type === 'content_block_start') {

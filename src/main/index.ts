@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './ipc'
 import { ensureClaudeConfig } from './claude-config'
 import { startScheduler, stopScheduler } from './scheduler/cron'
 import { startAllWatches, stopAllWatches } from './file-watcher'
+import { initHttpMcpIfEnabled, stopHttpMcpServer } from './mcp-http'
 
 // Prevent multiple instances — quit if another is already running
 const gotLock = app.requestSingleInstanceLock()
@@ -31,6 +32,7 @@ app.whenReady().then(() => {
   ensureClaudeConfig()
   startScheduler()
   startAllWatches()
+  initHttpMcpIfEnabled()
 })
 
 // Tray app: stay alive when all windows close
@@ -39,6 +41,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  stopHttpMcpServer()
   stopAllWatches()
   stopScheduler()
   closeDatabase()

@@ -4,7 +4,7 @@ import { getMcpDatabase } from '../db'
 import * as queries from '../../shared/db-queries'
 import { TASK_STATUSES } from '../../shared/constants'
 
-function generateTaskName(prompt: string): string {
+export function generateTaskName(prompt: string): string {
   const cleaned = prompt.replace(/^(please |can you |i want you to |i need you to )/i, '').trim()
   const firstSentence = cleaned.split(/[.\n]/)[0].trim()
   if (firstSentence.length <= 40) return firstSentence

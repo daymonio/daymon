@@ -65,6 +65,12 @@ const api = {
     getAutoLaunch: () => ipcRenderer.invoke('app:getAutoLaunch'),
     setAutoLaunch: (enabled: boolean) => ipcRenderer.invoke('app:setAutoLaunch', enabled),
     uninstall: () => ipcRenderer.invoke('app:uninstall')
+  },
+
+  mcp: {
+    startHttp: (port?: number) => ipcRenderer.invoke('mcp:startHttp', port),
+    stopHttp: () => ipcRenderer.invoke('mcp:stopHttp'),
+    httpStatus: () => ipcRenderer.invoke('mcp:httpStatus')
   }
 }
 

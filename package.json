@@ -9,7 +9,7 @@
     "type": "git",
     "url": "https://github.com/daymonio/daymon.git"
   },
-  "license": "AGPL-3.0",
+  "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build && npm run build:mcp",
@@ -18,6 +18,8 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "test": "npm rebuild better-sqlite3 > /dev/null 2>&1 && vitest run",
+    "test:watch": "npm rebuild better-sqlite3 > /dev/null 2>&1 && vitest",
     "postinstall": "electron-builder install-app-deps",
     "build:mac": "npm run build && electron-builder --mac",
     "build:win": "npm run build && electron-builder --win",
@@ -50,6 +52,7 @@
     "react-dom": "^18.3.1",
     "tailwindcss": "^4.1.10",
     "typescript": "^5.9.3",
-    "vite": "^7.2.6"
+    "vite": "^7.2.6",
+    "vitest": "^1.6.1"
   }
 }
