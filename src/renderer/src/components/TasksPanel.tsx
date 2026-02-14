@@ -26,6 +26,19 @@ function triggerLabel(task: Task): string {
   return task.triggerType
 }
 
+function sourceLabel(task: Task): string | null {
+  if (!task.triggerConfig) return null
+  try {
+    const config = JSON.parse(task.triggerConfig)
+    if (config.source === 'claude-code') return 'Claude Code'
+    if (config.source === 'claude-desktop') return 'Claude Desktop'
+    if (config.source === 'daymon') return 'Daymon'
+    return config.source
+  } catch {
+    return null
+  }
+}
+
 function formatTime(iso: string | null): string {
   if (!iso) return 'never'
   const d = new Date(iso)
@@ -115,7 +128,14 @@ export function TasksPanel(): React.JSX.Element {
               <span className="text-xs font-medium text-gray-800 truncate">{task.name}</span>
               {statusBadge(task)}
             </div>
-            <div className="text-xs text-gray-400 mb-1">{triggerLabel(task)}</div>
+            <div className="text-xs text-gray-400 mb-1">
+              {triggerLabel(task)}
+              {sourceLabel(task) && (
+                <span className="ml-1.5 text-gray-300">
+                  via {sourceLabel(task)}
+                </span>
+              )}
+            </div>
             <div className="text-xs text-gray-400 mb-1.5">
               Last run: {formatTime(task.lastRun)}
             </div>

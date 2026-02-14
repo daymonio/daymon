@@ -50,7 +50,9 @@ export function executeClaudeCode(
 
     // Use stream-json when we have a progress callback for real-time updates
     const outputFormat = onProgress ? 'stream-json' : 'text'
-    const proc = spawn('claude', ['-p', prompt, '--output-format', outputFormat], {
+    const args = ['-p', prompt, '--output-format', outputFormat]
+    if (onProgress) args.push('--verbose')
+    const proc = spawn('claude', args, {
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: timeoutMs

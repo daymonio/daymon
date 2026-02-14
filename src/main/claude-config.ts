@@ -37,7 +37,8 @@ export function ensureClaudeConfig(): void {
       args: [mcpServerPath],
       env: {
         DAYMON_DB_PATH: dbPath,
-        DAYMON_RESULTS_DIR: resultsDir
+        DAYMON_RESULTS_DIR: resultsDir,
+        DAYMON_SOURCE: 'claude-desktop'
       }
     }
 

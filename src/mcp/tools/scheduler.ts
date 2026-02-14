@@ -1,8 +1,11 @@
+import { join } from 'path'
+import { homedir } from 'os'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { getMcpDatabase } from '../db'
 import * as queries from '../../shared/db-queries'
 import { TASK_STATUSES } from '../../shared/constants'
+import { executeTask, isTaskRunning } from '../../shared/task-runner'
 
 export function generateTaskName(prompt: string): string {
   const cleaned = prompt.replace(/^(please |can you |i want you to |i need you to )/i, '').trim()
@@ -81,6 +84,7 @@ export function registerSchedulerTools(server: McpServer): void {
         cronExpression: cronExpression ?? undefined,
         scheduledAt: scheduledAt ?? undefined,
         triggerType,
+        triggerConfig: JSON.stringify({ source: process.env.DAYMON_SOURCE || 'claude-desktop' }),
         description,
         executor: 'claude_code'
       })
@@ -162,7 +166,7 @@ export function registerSchedulerTools(server: McpServer): void {
     'daymon_run_task',
     {
       title: 'Run Task Now',
-      description: 'Manually trigger a task to run immediately, regardless of its schedule or type.',
+      description: 'Execute a task immediately and return the result. This spawns a Claude CLI process to run the task prompt.',
       inputSchema: {
         id: z.number().describe('The task ID to run')
       }
@@ -176,21 +180,35 @@ export function registerSchedulerTools(server: McpServer): void {
         }
       }
 
-      // We can't directly call executeTask from the MCP process since it runs
-      // in the Electron main process. Instead, temporarily set the task to active
-      // so the scheduler picks it up, or notify via IPC.
-      // For now, set a special flag via trigger_config to signal immediate execution.
-      queries.updateTask(db, id, {
-        status: TASK_STATUSES.ACTIVE,
-        triggerType: 'once',
-        scheduledAt: new Date().toISOString()
-      })
+      if (isTaskRunning(id)) {
+        return {
+          content: [{ type: 'text' as const, text: `Task "${task.name}" (id: ${id}) is already running.` }]
+        }
+      }
 
-      return {
-        content: [{
-          type: 'text' as const,
-          text: `Triggered task "${task.name}" (id: ${id}). It will run within 30 seconds.\nCheck progress with daymon_task_progress.`
-        }]
+      // Ensure task is active for execution
+      if (task.status !== TASK_STATUSES.ACTIVE) {
+        queries.updateTask(db, id, { status: TASK_STATUSES.ACTIVE })
+      }
+
+      const resultsDir = join(homedir(), 'Daymon', 'results')
+      const result = await executeTask(id, { db, resultsDir })
+
+      if (result.success) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Task "${task.name}" completed in ${(result.durationMs / 1000).toFixed(1)}s.\n\n${result.output}`
+          }]
+        }
+      } else {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Task "${task.name}" failed: ${result.errorMessage}\n\n${result.output}`
+          }],
+          isError: true
+        }
       }
     }
   )

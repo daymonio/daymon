@@ -1,7 +1,7 @@
 import { watch as chokidarWatch, type FSWatcher } from 'chokidar'
 import { listWatches } from './db/tasks'
 import { getDatabase } from './db'
-import { executeClaudeCode } from './executor/claude-code'
+import { executeClaudeCode } from '../shared/claude-code'
 import type { Watch } from '../shared/types'
 
 const activeWatchers = new Map<number, FSWatcher>()

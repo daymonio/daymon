@@ -6,17 +6,23 @@ import { TasksPanel } from './components/TasksPanel'
 import { ResultsPanel } from './components/ResultsPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 
-const panels: Record<Tab, () => React.JSX.Element> = {
-  status: StatusPanel,
-  memory: MemoryPanel,
-  tasks: TasksPanel,
-  results: ResultsPanel,
-  settings: SettingsPanel
-}
-
 function App(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('status')
-  const Panel = panels[tab]
+
+  function renderPanel(): React.JSX.Element {
+    switch (tab) {
+      case 'status':
+        return <StatusPanel onNavigate={(t) => setTab(t as Tab)} />
+      case 'memory':
+        return <MemoryPanel />
+      case 'tasks':
+        return <TasksPanel />
+      case 'results':
+        return <ResultsPanel />
+      case 'settings':
+        return <SettingsPanel />
+    }
+  }
 
   return (
     <div className="flex flex-col h-screen bg-white">
@@ -30,7 +36,7 @@ function App(): React.JSX.Element {
       <TabBar active={tab} onChange={setTab} />
 
       <div className="flex-1 overflow-y-auto">
-        <Panel />
+        {renderPanel()}
       </div>
     </div>
   )

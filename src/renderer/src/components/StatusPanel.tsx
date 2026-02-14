@@ -33,7 +33,7 @@ function formatTime(iso: string): string {
   return d.toLocaleDateString()
 }
 
-export function StatusPanel(): React.JSX.Element {
+export function StatusPanel({ onNavigate }: { onNavigate?: (tab: string) => void }): React.JSX.Element {
   const { data } = usePolling(fetchStatus, 3000)
 
   if (!data) {
@@ -53,14 +53,20 @@ export function StatusPanel(): React.JSX.Element {
         </div>
       </div>
 
-      <div className="p-3 bg-gray-50 rounded-lg">
+      <button
+        className="w-full text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+        onClick={() => onNavigate?.('memory')}
+      >
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-gray-600">Memory</span>
           <span className="text-xs text-gray-500">{data.entityCount} entities</span>
         </div>
-      </div>
+      </button>
 
-      <div className="p-3 bg-gray-50 rounded-lg">
+      <button
+        className="w-full text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+        onClick={() => onNavigate?.('tasks')}
+      >
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium text-gray-600">Tasks</span>
           <span className="text-xs text-gray-500">{data.tasks.length} total</span>
@@ -74,7 +80,7 @@ export function StatusPanel(): React.JSX.Element {
             <span className="text-blue-600">{completedTasks.length} completed</span>
           )}
         </div>
-      </div>
+      </button>
 
       {data.runningRuns.length > 0 && (
         <div className="p-3 bg-blue-50 rounded-lg">
@@ -103,7 +109,10 @@ export function StatusPanel(): React.JSX.Element {
         </div>
       )}
 
-      <div className="p-3 bg-gray-50 rounded-lg">
+      <button
+        className="w-full text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+        onClick={() => onNavigate?.('results')}
+      >
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium text-gray-600">Last Run</span>
         </div>
@@ -132,7 +141,7 @@ export function StatusPanel(): React.JSX.Element {
         ) : (
           <span className="text-xs text-gray-400">No runs yet</span>
         )}
-      </div>
+      </button>
     </div>
   )
 }

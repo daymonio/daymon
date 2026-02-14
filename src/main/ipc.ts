@@ -3,7 +3,7 @@ import * as memory from './db/memory'
 import * as tasks from './db/tasks'
 import { executeTask } from './scheduler/runner'
 import { getConfig, getClaudeConfigPath } from './config'
-import { checkClaudeCliAvailable } from './executor/claude-code'
+import { checkClaudeCliAvailable } from '../shared/claude-code'
 import { startWatch, stopWatch } from './file-watcher'
 import { uninstall } from './uninstall'
 import type { CreateTaskInput } from '../shared/types'
@@ -41,7 +41,10 @@ export function registerIpcHandlers(): void {
 
   // ─── Tasks ────────────────────────────────────────────
 
-  ipcMain.handle('tasks:create', (_e, task: CreateTaskInput) => tasks.createTask(task))
+  ipcMain.handle('tasks:create', (_e, task: CreateTaskInput) => {
+    task.triggerConfig = JSON.stringify({ source: 'daymon' })
+    return tasks.createTask(task)
+  })
   ipcMain.handle('tasks:get', (_e, id: number) => tasks.getTask(id))
   ipcMain.handle('tasks:list', (_e, status?: string) => tasks.listTasks(status))
   ipcMain.handle('tasks:update', (_e, id: number, updates: Record<string, unknown>) => tasks.updateTask(id, updates))
