@@ -130,6 +130,11 @@ export function TasksPanel(): React.JSX.Element {
             </div>
             <div className="text-xs text-gray-400 mb-1">
               {triggerLabel(task)}
+              {task.maxRuns != null && (
+                <span className="ml-1.5 text-gray-500">
+                  {task.runCount} / {task.maxRuns} runs
+                </span>
+              )}
               {sourceLabel(task) && (
                 <span className="ml-1.5 text-gray-300">
                   via {sourceLabel(task)}

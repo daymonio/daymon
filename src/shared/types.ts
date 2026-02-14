@@ -41,6 +41,9 @@ export interface Task {
   lastRun: string | null
   lastResult: string | null
   errorCount: number
+  maxRuns: number | null
+  runCount: number
+  memoryEntityId: number | null
   createdAt: string
   updatedAt: string
 }
@@ -54,6 +57,7 @@ export interface CreateTaskInput {
   triggerConfig?: string
   scheduledAt?: string
   executor?: string
+  maxRuns?: number
 }
 
 export interface TaskRun {

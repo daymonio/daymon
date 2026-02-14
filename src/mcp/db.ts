@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2 } from '../shared/schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from '../shared/schema'
 
 let db: Database.Database | null = null
 
@@ -42,5 +42,15 @@ function ensureSchema(database: Database.Database): void {
   if (currentVersion < 2) {
     database.exec(SCHEMA_V2)
     console.error('MCP server: database schema v2 applied (one-time tasks + progress tracking)')
+  }
+
+  if (currentVersion < 3) {
+    database.exec(SCHEMA_V3)
+    console.error('MCP server: database schema v3 applied (max runs)')
+  }
+
+  if (currentVersion < 4) {
+    database.exec(SCHEMA_V4)
+    console.error('MCP server: database schema v4 applied (memory-task integration)')
   }
 }

@@ -80,7 +80,7 @@ export function getObservation(db: Database.Database, id: number): Observation |
 
 export function getObservations(db: Database.Database, entityId: number): Observation[] {
   return db
-    .prepare('SELECT * FROM observations WHERE entity_id = ? ORDER BY created_at DESC')
+    .prepare('SELECT * FROM observations WHERE entity_id = ? ORDER BY id DESC')
     .all(entityId) as Observation[]
 }
 
@@ -130,8 +130,8 @@ export function getMemoryStats(db: Database.Database): MemoryStats {
 export function createTask(db: Database.Database, input: CreateTaskInput): Task {
   const result = db
     .prepare(
-      `INSERT INTO tasks (name, description, prompt, cron_expression, trigger_type, trigger_config, scheduled_at, executor)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tasks (name, description, prompt, cron_expression, trigger_type, trigger_config, scheduled_at, executor, max_runs)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name,
@@ -141,7 +141,8 @@ export function createTask(db: Database.Database, input: CreateTaskInput): Task 
       input.triggerType ?? 'cron',
       input.triggerConfig ?? null,
       input.scheduledAt ?? null,
-      input.executor ?? 'claude_code'
+      input.executor ?? 'claude_code',
+      input.maxRuns ?? null
     )
   return getTask(db, result.lastInsertRowid as number)!
 }
@@ -162,13 +163,15 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
   name: string; description: string; prompt: string; cronExpression: string
   triggerType: string; triggerConfig: string; scheduledAt: string; executor: string
   status: string; lastRun: string; lastResult: string; errorCount: number
+  maxRuns: number; runCount: number; memoryEntityId: number
 }>): void {
   const fieldMap: Record<string, string> = {
     name: 'name', description: 'description', prompt: 'prompt',
     cronExpression: 'cron_expression', triggerType: 'trigger_type',
     triggerConfig: 'trigger_config', scheduledAt: 'scheduled_at',
     executor: 'executor', status: 'status',
-    lastRun: 'last_run', lastResult: 'last_result', errorCount: 'error_count'
+    lastRun: 'last_run', lastResult: 'last_result', errorCount: 'error_count',
+    maxRuns: 'max_runs', runCount: 'run_count', memoryEntityId: 'memory_entity_id'
   }
 
   const fields: string[] = []
@@ -279,6 +282,112 @@ export function getRunningTaskRuns(db: Database.Database): TaskRun[] {
   return (rows as Record<string, unknown>[]).map(mapTaskRunRow)
 }
 
+// ─── Memory-Task Integration ────────────────────────────────
+
+const MAX_OWN_OBSERVATIONS = 5
+const MAX_RELATED_OBSERVATIONS = 3
+const MAX_MEMORY_LENGTH = 2000
+const MAX_OBSERVATIONS_PER_ENTITY = 10
+
+export function getTaskMemoryContext(db: Database.Database, taskId: number): string | null {
+  const task = getTask(db, taskId)
+  if (!task) return null
+
+  const sections: string[] = []
+
+  // 1. Own task's recent observations
+  if (task.memoryEntityId) {
+    const entity = getEntity(db, task.memoryEntityId)
+    if (entity) {
+      const observations = getObservations(db, entity.id)
+      if (observations.length > 0) {
+        const recent = observations.slice(0, MAX_OWN_OBSERVATIONS)
+        const obsText = recent.map(o => `[${o.created_at}] ${o.content}`).join('\n\n')
+        sections.push(`## Your previous results:\n${obsText}`)
+      }
+    }
+  }
+
+  // 2. Related knowledge from all memory (other tasks, user memories)
+  // Split task name into words and search each for broader matching
+  const words = task.name.split(/\s+/).filter(w => w.length >= 2)
+  const relatedMap = new Map<number, Entity>()
+  for (const word of words) {
+    for (const entity of searchEntities(db, word)) {
+      if (entity.id !== task.memoryEntityId) {
+        relatedMap.set(entity.id, entity)
+      }
+    }
+  }
+  const otherEntities = Array.from(relatedMap.values())
+
+  if (otherEntities.length > 0) {
+    const relatedParts: string[] = []
+    for (const entity of otherEntities.slice(0, 5)) {
+      const observations = getObservations(db, entity.id)
+      if (observations.length > 0) {
+        const recent = observations.slice(0, MAX_RELATED_OBSERVATIONS)
+        const obsText = recent.map(o => o.content).join('\n')
+        relatedParts.push(`**${entity.name}** (${entity.type}):\n${obsText}`)
+      }
+    }
+    if (relatedParts.length > 0) {
+      sections.push(`## Related knowledge:\n${relatedParts.join('\n\n')}`)
+    }
+  }
+
+  return sections.length > 0 ? sections.join('\n\n') : null
+}
+
+export function ensureTaskMemoryEntity(db: Database.Database, taskId: number): number {
+  const task = getTask(db, taskId)
+  if (!task) throw new Error(`Task ${taskId} not found`)
+
+  if (task.memoryEntityId) {
+    const existing = getEntity(db, task.memoryEntityId)
+    if (existing) return existing.id
+  }
+
+  const entity = createEntity(db, `Task: ${task.name}`, 'task_result', 'task')
+  updateTask(db, taskId, { memoryEntityId: entity.id })
+  return entity.id
+}
+
+export function storeTaskResultInMemory(
+  db: Database.Database,
+  taskId: number,
+  result: string,
+  success: boolean
+): void {
+  const entityId = ensureTaskMemoryEntity(db, taskId)
+
+  const truncated = result.length > MAX_MEMORY_LENGTH
+    ? result.substring(0, MAX_MEMORY_LENGTH) + '\n[...truncated]'
+    : result
+
+  const status = success ? 'SUCCESS' : 'FAILED'
+  const content = `[${status}] ${truncated}`
+
+  addObservation(db, entityId, content, 'task_runner')
+
+  // Prune old observations — keep last N to prevent unbounded growth
+  const observations = getObservations(db, entityId)
+  if (observations.length > MAX_OBSERVATIONS_PER_ENTITY) {
+    const toDelete = observations.slice(MAX_OBSERVATIONS_PER_ENTITY)
+    for (const obs of toDelete) {
+      deleteObservation(db, obs.id)
+    }
+  }
+}
+
+export function incrementRunCount(db: Database.Database, taskId: number): void {
+  db.prepare('UPDATE tasks SET run_count = run_count + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(taskId)
+  const task = getTask(db, taskId)
+  if (task?.maxRuns && task.runCount >= task.maxRuns) {
+    updateTask(db, taskId, { status: 'completed' })
+  }
+}
+
 // ─── Task Row Mappers ───────────────────────────────────────
 
 function mapTaskRow(row: Record<string, unknown>): Task {
@@ -296,6 +405,9 @@ function mapTaskRow(row: Record<string, unknown>): Task {
     lastRun: row.last_run as string | null,
     lastResult: row.last_result as string | null,
     errorCount: row.error_count as number,
+    maxRuns: row.max_runs as number | null,
+    runCount: (row.run_count as number) ?? 0,
+    memoryEntityId: row.memory_entity_id as number | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string
   }

@@ -111,3 +111,14 @@ CREATE INDEX IF NOT EXISTS idx_tasks_scheduled_at ON tasks(scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_trigger_type ON tasks(trigger_type);
 INSERT OR IGNORE INTO schema_version (version) VALUES (2);
 `
+
+export const SCHEMA_V3 = `
+ALTER TABLE tasks ADD COLUMN max_runs INTEGER;
+ALTER TABLE tasks ADD COLUMN run_count INTEGER NOT NULL DEFAULT 0;
+INSERT OR IGNORE INTO schema_version (version) VALUES (3);
+`
+
+export const SCHEMA_V4 = `
+ALTER TABLE tasks ADD COLUMN memory_entity_id INTEGER REFERENCES entities(id) ON DELETE SET NULL;
+INSERT OR IGNORE INTO schema_version (version) VALUES (4);
+`

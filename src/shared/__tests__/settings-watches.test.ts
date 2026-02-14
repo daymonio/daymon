@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2 } from '../schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from '../schema'
 
 let db: Database.Database
 
@@ -8,6 +8,8 @@ function initTestDb(): Database.Database {
   const d = new Database(':memory:')
   d.exec(SCHEMA_V1)
   d.exec(SCHEMA_V2)
+  d.exec(SCHEMA_V3)
+  d.exec(SCHEMA_V4)
   return d
 }
 

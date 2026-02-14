@@ -56,8 +56,19 @@ export async function executeTask(
   const run = queries.createTaskRun(db, taskId)
 
   try {
+    // Inject memory context into prompt
+    let augmentedPrompt = task.prompt
+    try {
+      const memoryContext = queries.getTaskMemoryContext(db, taskId)
+      if (memoryContext) {
+        augmentedPrompt = `${memoryContext}\n\n---\n\n${task.prompt}`
+      }
+    } catch {
+      // Non-fatal: memory injection failure should not block execution
+    }
+
     let lastProgressUpdate = 0
-    const result = await executeClaudeCode(task.prompt, undefined, (progress) => {
+    const result = await executeClaudeCode(augmentedPrompt, undefined, (progress) => {
       const now = Date.now()
       if (now - lastProgressUpdate >= DEFAULTS.PROGRESS_THROTTLE_MS) {
         queries.updateTaskRunProgress(db, run.id, progress.fraction, progress.message)
@@ -70,6 +81,8 @@ export async function executeTask(
 
     if (result.exitCode === 0 && !result.timedOut) {
       queries.completeTaskRun(db, run.id, output, resultFilePath)
+      try { queries.storeTaskResultInMemory(db, taskId, output, true) } catch { /* non-fatal */ }
+      queries.incrementRunCount(db, taskId)
       onComplete?.(task, output.slice(0, 200))
       return { success: true, output, durationMs: result.durationMs, resultFilePath }
     } else {
@@ -77,6 +90,7 @@ export async function executeTask(
         ? `Timed out after ${result.durationMs}ms`
         : `Exit code ${result.exitCode}: ${result.stderr || '(no stderr)'}`
       queries.completeTaskRun(db, run.id, output, resultFilePath, errorMsg)
+      try { queries.storeTaskResultInMemory(db, taskId, output, false) } catch { /* non-fatal */ }
       onFailed?.(task, errorMsg)
       return { success: false, output, errorMessage: errorMsg, durationMs: result.durationMs, resultFilePath }
     }

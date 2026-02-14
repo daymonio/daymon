@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2 } from '../schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from '../schema'
 import * as queries from '../db-queries'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -23,6 +23,8 @@ function initTestDb(): Database.Database {
   const d = new Database(':memory:')
   d.exec(SCHEMA_V1)
   d.exec(SCHEMA_V2)
+  d.exec(SCHEMA_V3)
+  d.exec(SCHEMA_V4)
   return d
 }
 
@@ -252,6 +254,118 @@ describe('executeTask - failure', () => {
   })
 })
 
+// ─── maxRuns Auto-Complete ─────────────────────────────────────
+
+describe('executeTask - maxRuns', () => {
+  it('increments runCount on successful execution', async () => {
+    const task = queries.createTask(db, {
+      name: 'Counted',
+      prompt: 'count me',
+      triggerType: 'manual',
+      maxRuns: 5
+    })
+    mockExecute.mockResolvedValue({
+      stdout: 'ok',
+      stderr: '',
+      exitCode: 0,
+      durationMs: 100,
+      timedOut: false
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+    expect(queries.getTask(db, task.id)!.runCount).toBe(1)
+    expect(queries.getTask(db, task.id)!.status).toBe('active')
+  })
+
+  it('auto-completes task when maxRuns is reached', async () => {
+    const task = queries.createTask(db, {
+      name: 'Limited',
+      prompt: 'run me',
+      triggerType: 'cron',
+      cronExpression: '0 9 * * *',
+      maxRuns: 2
+    })
+    mockExecute.mockResolvedValue({
+      stdout: 'done',
+      stderr: '',
+      exitCode: 0,
+      durationMs: 100,
+      timedOut: false
+    })
+
+    // First run
+    await executeTask(task.id, { db, resultsDir })
+    expect(queries.getTask(db, task.id)!.runCount).toBe(1)
+    expect(queries.getTask(db, task.id)!.status).toBe('active')
+
+    // Second run — should trigger auto-complete
+    await executeTask(task.id, { db, resultsDir })
+    expect(queries.getTask(db, task.id)!.runCount).toBe(2)
+    expect(queries.getTask(db, task.id)!.status).toBe('completed')
+  })
+
+  it('does not increment runCount on failed execution', async () => {
+    const task = queries.createTask(db, {
+      name: 'Fail Counter',
+      prompt: 'fail me',
+      triggerType: 'manual',
+      maxRuns: 3
+    })
+    mockExecute.mockResolvedValue({
+      stdout: '',
+      stderr: 'error',
+      exitCode: 1,
+      durationMs: 50,
+      timedOut: false
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+    expect(queries.getTask(db, task.id)!.runCount).toBe(0)
+    expect(queries.getTask(db, task.id)!.status).toBe('active')
+  })
+
+  it('does not auto-complete when maxRuns is null (unlimited)', async () => {
+    const task = queries.createTask(db, {
+      name: 'Unlimited',
+      prompt: 'run forever',
+      triggerType: 'manual'
+    })
+    mockExecute.mockResolvedValue({
+      stdout: 'ok',
+      stderr: '',
+      exitCode: 0,
+      durationMs: 100,
+      timedOut: false
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+    await executeTask(task.id, { db, resultsDir })
+    await executeTask(task.id, { db, resultsDir })
+    expect(queries.getTask(db, task.id)!.runCount).toBe(3)
+    expect(queries.getTask(db, task.id)!.status).toBe('active')
+  })
+
+  it('auto-completes with maxRuns=1 after a single run', async () => {
+    const task = queries.createTask(db, {
+      name: 'One Shot',
+      prompt: 'once',
+      triggerType: 'manual',
+      maxRuns: 1
+    })
+    mockExecute.mockResolvedValue({
+      stdout: 'ok',
+      stderr: '',
+      exitCode: 0,
+      durationMs: 50,
+      timedOut: false
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+    expect(queries.getTask(db, task.id)!.runCount).toBe(1)
+    expect(queries.getTask(db, task.id)!.status).toBe('completed')
+  })
+})
+
 // ─── isTaskRunning ─────────────────────────────────────────────
 
 describe('isTaskRunning', () => {
@@ -306,5 +420,98 @@ describe('result file', () => {
     const result = await executeTask(id, { db, resultsDir })
     const content = readFileSync(result.resultFilePath!, 'utf-8')
     expect(content).toContain('Failed (exit 2)')
+  })
+})
+
+// ─── Memory Integration ───────────────────────────────────────
+
+describe('executeTask - memory integration', () => {
+  it('injects memory context into prompt', async () => {
+    const task = queries.createTask(db, {
+      name: 'Memory Task',
+      prompt: 'What is new today?',
+      triggerType: 'manual',
+      executor: 'claude_code'
+    })
+    // Pre-populate memory
+    const entity = queries.createEntity(db, 'Task: Memory Task', 'task_result', 'task')
+    queries.updateTask(db, task.id, { memoryEntityId: entity.id })
+    queries.addObservation(db, entity.id, '[SUCCESS] Previous result data', 'task_runner')
+
+    mockExecute.mockResolvedValue({
+      stdout: 'New output', stderr: '', exitCode: 0, durationMs: 100, timedOut: false
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    // Verify the prompt passed to Claude includes memory context
+    const calledPrompt = mockExecute.mock.calls[0][0]
+    expect(calledPrompt).toContain('Your previous results')
+    expect(calledPrompt).toContain('Previous result data')
+    expect(calledPrompt).toContain('What is new today?')
+  })
+
+  it('stores result in memory after successful execution', async () => {
+    const id = createActiveTask('Store Result Task', 'Do work')
+    mockExecute.mockResolvedValue({
+      stdout: 'Task output for memory', stderr: '', exitCode: 0, durationMs: 100, timedOut: false
+    })
+
+    await executeTask(id, { db, resultsDir })
+
+    const task = queries.getTask(db, id)!
+    expect(task.memoryEntityId).not.toBeNull()
+    const obs = queries.getObservations(db, task.memoryEntityId!)
+    expect(obs.length).toBe(1)
+    expect(obs[0].content).toContain('[SUCCESS]')
+    expect(obs[0].content).toContain('Task output for memory')
+  })
+
+  it('stores failure in memory after failed execution', async () => {
+    const id = createActiveTask('Fail Memory Task', 'Try something')
+    mockExecute.mockResolvedValue({
+      stdout: '', stderr: 'error output', exitCode: 1, durationMs: 50, timedOut: false
+    })
+
+    await executeTask(id, { db, resultsDir })
+
+    const task = queries.getTask(db, id)!
+    expect(task.memoryEntityId).not.toBeNull()
+    const obs = queries.getObservations(db, task.memoryEntityId!)
+    expect(obs.length).toBe(1)
+    expect(obs[0].content).toContain('[FAILED]')
+  })
+
+  it('executes without memory context on first run', async () => {
+    const id = createActiveTask('Fresh Task', 'First time run')
+    mockExecute.mockResolvedValue({
+      stdout: 'First run output', stderr: '', exitCode: 0, durationMs: 100, timedOut: false
+    })
+
+    await executeTask(id, { db, resultsDir })
+
+    // Prompt should be unmodified (no memory context)
+    const calledPrompt = mockExecute.mock.calls[0][0]
+    expect(calledPrompt).toBe('First time run')
+  })
+
+  it('accumulates memory across multiple runs', async () => {
+    const id = createActiveTask('Multi Run', 'Check things')
+
+    for (let i = 0; i < 3; i++) {
+      mockExecute.mockResolvedValue({
+        stdout: `Run ${i} output`, stderr: '', exitCode: 0, durationMs: 100, timedOut: false
+      })
+      await executeTask(id, { db, resultsDir })
+    }
+
+    const task = queries.getTask(db, id)!
+    const obs = queries.getObservations(db, task.memoryEntityId!)
+    expect(obs.length).toBe(3)
+
+    // Third run should have had context from first two
+    const thirdCallPrompt = mockExecute.mock.calls[2][0]
+    expect(thirdCallPrompt).toContain('Your previous results')
+    expect(thirdCallPrompt).toContain('Run 1 output')
   })
 })

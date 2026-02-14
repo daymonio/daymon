@@ -20,6 +20,7 @@ export function updateTask(id: number, updates: Partial<{
   name: string; description: string; prompt: string; cronExpression: string
   triggerType: string; triggerConfig: string; scheduledAt: string; executor: string
   status: string; lastRun: string; lastResult: string; errorCount: number
+  maxRuns: number; runCount: number
 }>): void {
   return queries.updateTask(getDatabase(), id, updates)
 }

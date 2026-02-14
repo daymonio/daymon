@@ -43,10 +43,13 @@ export function registerSchedulerTools(server: McpServer): void {
           + '"in 30 minutes" → now + 30min as ISO-8601, "at 3pm today" → today 15:00 as ISO-8601. '
           + 'Omit for recurring or on-demand tasks.'
         ),
-        description: z.string().optional().describe('Optional description of what the task does')
+        description: z.string().optional().describe('Optional description of what the task does'),
+        maxRuns: z.number().optional().describe(
+          'Maximum number of successful runs before the task auto-completes. Omit for unlimited.'
+        )
       }
     },
-    async ({ name, prompt, cronExpression, scheduledAt, description }) => {
+    async ({ name, prompt, cronExpression, scheduledAt, description, maxRuns }) => {
       const db = getMcpDatabase()
 
       // Auto-determine trigger type
@@ -86,15 +89,17 @@ export function registerSchedulerTools(server: McpServer): void {
         triggerType,
         triggerConfig: JSON.stringify({ source: process.env.DAYMON_SOURCE || 'claude-desktop' }),
         description,
-        executor: 'claude_code'
+        executor: 'claude_code',
+        maxRuns: maxRuns ?? undefined
       })
 
       // Response varies by type
+      const maxRunsNote = maxRuns ? `\nWill auto-complete after ${maxRuns} successful run(s).` : ''
       if (triggerType === 'cron') {
         return {
           content: [{
             type: 'text' as const,
-            text: `Scheduled recurring task "${taskName}" (id: ${task.id}).\nSchedule: ${cronExpression}\nThe Daymon scheduler will pick it up within 30 seconds.`
+            text: `Scheduled recurring task "${taskName}" (id: ${task.id}).\nSchedule: ${cronExpression}${maxRunsNote}\nThe Daymon scheduler will pick it up within 30 seconds.`
           }]
         }
       } else if (triggerType === 'once') {
@@ -148,6 +153,8 @@ export function registerSchedulerTools(server: McpServer): void {
         scheduledAt: t.scheduledAt,
         lastRun: t.lastRun,
         errorCount: t.errorCount,
+        maxRuns: t.maxRuns,
+        runCount: t.runCount,
         description: t.description
       }))
 

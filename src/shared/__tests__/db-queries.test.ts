@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2 } from '../schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from '../schema'
 import * as q from '../db-queries'
 
 let db: Database.Database
@@ -9,6 +9,8 @@ function initTestDb(): Database.Database {
   const d = new Database(':memory:')
   d.exec(SCHEMA_V1)
   d.exec(SCHEMA_V2)
+  d.exec(SCHEMA_V3)
+  d.exec(SCHEMA_V4)
   return d
 }
 
@@ -270,6 +272,27 @@ describe('createTask', () => {
     expect(task.cronExpression).toBeNull()
     expect(task.scheduledAt).toBeNull()
   })
+
+  it('creates a task with maxRuns', () => {
+    const task = q.createTask(db, {
+      name: 'Limited',
+      prompt: 'Run 3 times',
+      triggerType: 'cron',
+      cronExpression: '0 9 * * *',
+      maxRuns: 3
+    })
+    expect(task.maxRuns).toBe(3)
+    expect(task.runCount).toBe(0)
+  })
+
+  it('creates a task without maxRuns (unlimited)', () => {
+    const task = q.createTask(db, {
+      name: 'Unlimited',
+      prompt: 'Run forever'
+    })
+    expect(task.maxRuns).toBeNull()
+    expect(task.runCount).toBe(0)
+  })
 })
 
 describe('getTask', () => {
@@ -333,6 +356,18 @@ describe('updateTask', () => {
     const task = q.createTask(db, { name: 'T', prompt: 'p' })
     q.updateTask(db, task.id, {})
     expect(q.getTask(db, task.id)!.name).toBe('T')
+  })
+
+  it('updates runCount', () => {
+    const task = q.createTask(db, { name: 'T', prompt: 'p', maxRuns: 5 })
+    q.updateTask(db, task.id, { runCount: 3 })
+    expect(q.getTask(db, task.id)!.runCount).toBe(3)
+  })
+
+  it('updates maxRuns', () => {
+    const task = q.createTask(db, { name: 'T', prompt: 'p' })
+    q.updateTask(db, task.id, { maxRuns: 10 })
+    expect(q.getTask(db, task.id)!.maxRuns).toBe(10)
   })
 })
 
@@ -580,6 +615,13 @@ describe('schema migration', () => {
     expect(tableNames).toContain('schema_version')
   })
 
+  it('V3 adds max_runs and run_count columns to tasks', () => {
+    const columns = db.prepare('PRAGMA table_info(tasks)').all() as { name: string }[]
+    const colNames = columns.map((c) => c.name)
+    expect(colNames).toContain('max_runs')
+    expect(colNames).toContain('run_count')
+  })
+
   it('V2 adds scheduled_at column to tasks', () => {
     const columns = db.prepare('PRAGMA table_info(tasks)').all() as { name: string }[]
     const colNames = columns.map((c) => c.name)
@@ -593,10 +635,217 @@ describe('schema migration', () => {
     expect(colNames).toContain('progress_message')
   })
 
-  it('schema_version table has versions 1 and 2', () => {
+  it('V4 adds memory_entity_id column to tasks', () => {
+    const columns = db.prepare('PRAGMA table_info(tasks)').all() as { name: string }[]
+    const colNames = columns.map((c) => c.name)
+    expect(colNames).toContain('memory_entity_id')
+  })
+
+  it('schema_version table has versions 1, 2, 3, and 4', () => {
     const versions = db
       .prepare('SELECT version FROM schema_version ORDER BY version')
       .all() as { version: number }[]
-    expect(versions.map((v) => v.version)).toEqual([1, 2])
+    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4])
+  })
+})
+
+// ─── Memory-Task Integration ────────────────────────────────────
+
+describe('getTaskMemoryContext', () => {
+  it('returns null when task has no memory entity', () => {
+    const task = q.createTask(db, { name: 'No Memory', prompt: 'p' })
+    expect(q.getTaskMemoryContext(db, task.id)).toBeNull()
+  })
+
+  it('returns null when memory entity has no observations', () => {
+    const task = q.createTask(db, { name: 'Empty Memory', prompt: 'p' })
+    const entity = q.createEntity(db, 'Task: Empty Memory', 'task_result', 'task')
+    q.updateTask(db, task.id, { memoryEntityId: entity.id })
+    expect(q.getTaskMemoryContext(db, task.id)).toBeNull()
+  })
+
+  it('returns formatted context with recent observations', () => {
+    const task = q.createTask(db, { name: 'With Memory', prompt: 'p' })
+    const entity = q.createEntity(db, 'Task: With Memory', 'task_result', 'task')
+    q.updateTask(db, task.id, { memoryEntityId: entity.id })
+    q.addObservation(db, entity.id, '[SUCCESS] First result', 'task_runner')
+    q.addObservation(db, entity.id, '[SUCCESS] Second result', 'task_runner')
+
+    const context = q.getTaskMemoryContext(db, task.id)
+    expect(context).not.toBeNull()
+    expect(context).toContain('Your previous results')
+    expect(context).toContain('First result')
+    expect(context).toContain('Second result')
+  })
+
+  it('limits own observations to 5', () => {
+    const task = q.createTask(db, { name: 'Many Results', prompt: 'p' })
+    const entity = q.createEntity(db, 'Task: Many Results', 'task_result', 'task')
+    q.updateTask(db, task.id, { memoryEntityId: entity.id })
+    for (let i = 0; i < 8; i++) {
+      q.addObservation(db, entity.id, `[SUCCESS] Result ${i}`, 'task_runner')
+    }
+
+    const context = q.getTaskMemoryContext(db, task.id)!
+    // Most recent 5 should be present (7,6,5,4,3), oldest (0,1,2) should not
+    expect(context).toContain('Result 7')
+    expect(context).toContain('Result 3')
+    expect(context).not.toContain('Result 2')
+  })
+
+  it('includes related knowledge from other entities', () => {
+    // Create a user memory about "HN"
+    const userEntity = q.createEntity(db, 'HN Preferences', 'preference', 'personal')
+    q.addObservation(db, userEntity.id, 'User prefers AI and startup stories', 'claude')
+
+    // Create a task named "HN Digest"
+    const task = q.createTask(db, { name: 'HN Digest', prompt: 'Fetch HN stories' })
+
+    const context = q.getTaskMemoryContext(db, task.id)
+    expect(context).not.toBeNull()
+    expect(context).toContain('Related knowledge')
+    expect(context).toContain('HN Preferences')
+    expect(context).toContain('AI and startup stories')
+  })
+
+  it('includes results from other tasks in related knowledge', () => {
+    // Create another task with results
+    const otherTask = q.createTask(db, { name: 'Tech News Tracker', prompt: 'p' })
+    const otherEntity = q.createEntity(db, 'Task: Tech News Tracker', 'task_result', 'task')
+    q.updateTask(db, otherTask.id, { memoryEntityId: otherEntity.id })
+    q.addObservation(db, otherEntity.id, '[SUCCESS] Top story: AI breakthrough', 'task_runner')
+
+    // Create a task that should find "Tech News" as related
+    const task = q.createTask(db, { name: 'Tech News Summary', prompt: 'Summarize tech news' })
+
+    const context = q.getTaskMemoryContext(db, task.id)
+    // Should find the other task's results as related knowledge
+    expect(context).not.toBeNull()
+    expect(context).toContain('Related knowledge')
+    expect(context).toContain('Tech News Tracker')
+  })
+
+  it('returns null for non-existent task', () => {
+    expect(q.getTaskMemoryContext(db, 999)).toBeNull()
+  })
+})
+
+describe('ensureTaskMemoryEntity', () => {
+  it('creates a new entity on first call', () => {
+    const task = q.createTask(db, { name: 'New Task', prompt: 'p' })
+    const entityId = q.ensureTaskMemoryEntity(db, task.id)
+
+    const entity = q.getEntity(db, entityId)
+    expect(entity).not.toBeNull()
+    expect(entity!.name).toBe('Task: New Task')
+    expect(entity!.type).toBe('task_result')
+    expect(entity!.category).toBe('task')
+
+    // Task should be linked
+    const updated = q.getTask(db, task.id)!
+    expect(updated.memoryEntityId).toBe(entityId)
+  })
+
+  it('reuses existing entity on subsequent calls', () => {
+    const task = q.createTask(db, { name: 'Stable Task', prompt: 'p' })
+    const id1 = q.ensureTaskMemoryEntity(db, task.id)
+    const id2 = q.ensureTaskMemoryEntity(db, task.id)
+    expect(id1).toBe(id2)
+  })
+
+  it('creates new entity if linked entity was deleted', () => {
+    const task = q.createTask(db, { name: 'Broken Link', prompt: 'p' })
+    const id1 = q.ensureTaskMemoryEntity(db, task.id)
+    q.deleteEntity(db, id1) // simulate entity deletion
+
+    const id2 = q.ensureTaskMemoryEntity(db, task.id)
+    expect(id2).not.toBe(id1)
+
+    const entity = q.getEntity(db, id2)
+    expect(entity!.name).toBe('Task: Broken Link')
+  })
+
+  it('throws for non-existent task', () => {
+    expect(() => q.ensureTaskMemoryEntity(db, 999)).toThrow('not found')
+  })
+})
+
+describe('storeTaskResultInMemory', () => {
+  it('stores successful result as observation', () => {
+    const task = q.createTask(db, { name: 'Store Test', prompt: 'p' })
+    q.storeTaskResultInMemory(db, task.id, 'Task output here', true)
+
+    const updated = q.getTask(db, task.id)!
+    expect(updated.memoryEntityId).not.toBeNull()
+
+    const obs = q.getObservations(db, updated.memoryEntityId!)
+    expect(obs).toHaveLength(1)
+    expect(obs[0].content).toContain('[SUCCESS]')
+    expect(obs[0].content).toContain('Task output here')
+    expect(obs[0].source).toBe('task_runner')
+  })
+
+  it('stores failed result with FAILED prefix', () => {
+    const task = q.createTask(db, { name: 'Fail Test', prompt: 'p' })
+    q.storeTaskResultInMemory(db, task.id, 'Error output', false)
+
+    const updated = q.getTask(db, task.id)!
+    const obs = q.getObservations(db, updated.memoryEntityId!)
+    expect(obs[0].content).toContain('[FAILED]')
+  })
+
+  it('truncates long results', () => {
+    const task = q.createTask(db, { name: 'Long Result', prompt: 'p' })
+    const longOutput = 'x'.repeat(3000)
+    q.storeTaskResultInMemory(db, task.id, longOutput, true)
+
+    const updated = q.getTask(db, task.id)!
+    const obs = q.getObservations(db, updated.memoryEntityId!)
+    expect(obs[0].content.length).toBeLessThan(2100) // ~2000 + prefix + truncation marker
+    expect(obs[0].content).toContain('[...truncated]')
+  })
+
+  it('prunes old observations beyond limit', () => {
+    const task = q.createTask(db, { name: 'Prune Test', prompt: 'p' })
+    for (let i = 0; i < 15; i++) {
+      q.storeTaskResultInMemory(db, task.id, `Result ${i}`, true)
+    }
+
+    const updated = q.getTask(db, task.id)!
+    const obs = q.getObservations(db, updated.memoryEntityId!)
+    expect(obs.length).toBe(10) // pruned to MAX_OBSERVATIONS_PER_ENTITY
+  })
+})
+
+describe('incrementRunCount', () => {
+  it('increments run count', () => {
+    const task = q.createTask(db, { name: 'Counter', prompt: 'p' })
+    expect(q.getTask(db, task.id)!.runCount).toBe(0)
+
+    q.incrementRunCount(db, task.id)
+    expect(q.getTask(db, task.id)!.runCount).toBe(1)
+
+    q.incrementRunCount(db, task.id)
+    expect(q.getTask(db, task.id)!.runCount).toBe(2)
+  })
+
+  it('auto-completes task when maxRuns reached', () => {
+    const task = q.createTask(db, { name: 'Limited', prompt: 'p', maxRuns: 2 })
+
+    q.incrementRunCount(db, task.id)
+    expect(q.getTask(db, task.id)!.status).toBe('active')
+
+    q.incrementRunCount(db, task.id)
+    expect(q.getTask(db, task.id)!.status).toBe('completed')
+  })
+
+  it('does not auto-complete when maxRuns is null', () => {
+    const task = q.createTask(db, { name: 'Unlimited', prompt: 'p' })
+
+    for (let i = 0; i < 100; i++) {
+      q.incrementRunCount(db, task.id)
+    }
+    expect(q.getTask(db, task.id)!.status).toBe('active')
+    expect(q.getTask(db, task.id)!.runCount).toBe(100)
   })
 })
