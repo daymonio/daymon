@@ -6,7 +6,6 @@ import { getConfig, getClaudeConfigPath } from './config'
 import { checkClaudeCliAvailable } from './executor/claude-code'
 import { startWatch, stopWatch } from './file-watcher'
 import { uninstall } from './uninstall'
-import { startHttpMcpServer, stopHttpMcpServer, getHttpMcpStatus } from './mcp-http'
 import type { CreateTaskInput } from '../shared/types'
 
 export function registerIpcHandlers(): void {
@@ -93,10 +92,4 @@ export function registerIpcHandlers(): void {
     app.setLoginItemSettings({ openAtLogin: enabled })
   })
   ipcMain.handle('app:uninstall', () => uninstall())
-
-  // ─── ChatGPT / HTTP MCP ─────────────────────────────────
-
-  ipcMain.handle('mcp:startHttp', (_e, port?: number) => startHttpMcpServer(port))
-  ipcMain.handle('mcp:stopHttp', () => stopHttpMcpServer())
-  ipcMain.handle('mcp:httpStatus', () => getHttpMcpStatus())
 }

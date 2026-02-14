@@ -292,7 +292,7 @@ nav a:hover {
 }
 
 .compare-table {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
   border-radius: var(--radius);
   overflow: hidden;
@@ -344,7 +344,7 @@ nav a:hover {
 }
 
 .claude-col {
-  color: #d4a574;
+  color: var(--text-muted);
 }
 
 .claude-col.good {
@@ -419,7 +419,7 @@ footer p {
   }
 
   .compare-row {
-    min-width: 640px;
+    min-width: 800px;
   }
 }
 

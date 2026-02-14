@@ -53,19 +53,12 @@ interface AppAPI {
   uninstall: () => Promise<void>
 }
 
-interface McpAPI {
-  startHttp: (port?: number) => Promise<void>
-  stopHttp: () => Promise<void>
-  httpStatus: () => Promise<{ running: boolean; port: number | null }>
-}
-
 interface DaymonAPI {
   memory: MemoryAPI
   tasks: TasksAPI
   watches: WatchesAPI
   settings: SettingsAPI
   app: AppAPI
-  mcp: McpAPI
 }
 
 declare global {

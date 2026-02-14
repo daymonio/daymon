@@ -20,12 +20,6 @@ export function SettingsPanel(): React.JSX.Element {
   const [autoLaunch, setAutoLaunch] = useState<boolean | null>(null)
   const [notifications, setNotifications] = useState<boolean>(true)
   const [confirmUninstall, setConfirmUninstall] = useState(false)
-  const [chatgptEnabled, setChatgptEnabled] = useState(false)
-  const [chatgptPort, setChatgptPort] = useState('3001')
-  const [httpStatus, setHttpStatus] = useState<{ running: boolean; port: number | null }>({
-    running: false,
-    port: null
-  })
 
   useEffect(() => {
     window.api.app.getVersion().then(setVersion)
@@ -35,13 +29,6 @@ export function SettingsPanel(): React.JSX.Element {
     window.api.settings.get('notifications_enabled').then((v) => {
       setNotifications(v !== 'false')
     })
-    window.api.settings.get('chatgpt_enabled').then((v) => {
-      setChatgptEnabled(v === 'true')
-    })
-    window.api.settings.get('chatgpt_port').then((v) => {
-      if (v) setChatgptPort(v)
-    })
-    window.api.mcp.httpStatus().then(setHttpStatus)
   }, [])
 
   async function toggleAutoLaunch(): Promise<void> {
@@ -54,25 +41,6 @@ export function SettingsPanel(): React.JSX.Element {
     const next = !notifications
     await window.api.settings.set('notifications_enabled', String(next))
     setNotifications(next)
-  }
-
-  async function toggleChatgpt(): Promise<void> {
-    const next = !chatgptEnabled
-    await window.api.settings.set('chatgpt_enabled', String(next))
-    setChatgptEnabled(next)
-    if (next) {
-      const port = parseInt(chatgptPort, 10) || 3001
-      await window.api.mcp.startHttp(port)
-    } else {
-      await window.api.mcp.stopHttp()
-    }
-    const status = await window.api.mcp.httpStatus()
-    setHttpStatus(status)
-  }
-
-  async function updatePort(value: string): Promise<void> {
-    setChatgptPort(value)
-    await window.api.settings.set('chatgpt_port', value)
   }
 
   async function handleUninstall(): Promise<void> {
@@ -143,36 +111,6 @@ export function SettingsPanel(): React.JSX.Element {
             <span className="text-gray-600">MCP Server</span>
             <span className="text-green-600">Configured</span>
           </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-xs font-semibold text-gray-700 mb-1">ChatGPT Connection</h3>
-        <div className="bg-gray-50 rounded-lg p-2 space-y-2">
-          {toggle('Enable HTTP server', chatgptEnabled, toggleChatgpt)}
-          {chatgptEnabled && (
-            <>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-600">Status</span>
-                <span className={httpStatus.running ? 'text-green-600' : 'text-red-500'}>
-                  {httpStatus.running ? `Running on port ${httpStatus.port}` : 'Stopped'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs gap-2">
-                <span className="text-gray-600">Port</span>
-                <input
-                  type="number"
-                  value={chatgptPort}
-                  onChange={(e) => updatePort(e.target.value)}
-                  className="w-20 px-1.5 py-0.5 text-xs border border-gray-200 rounded bg-white text-gray-700"
-                />
-              </div>
-              <div className="text-[10px] text-gray-400 leading-tight pt-1">
-                In ChatGPT Desktop → Settings → Connectors → Add MCP →
-                URL: <span className="font-mono text-gray-500">http://localhost:{chatgptPort}/mcp</span>
-              </div>
-            </>
-          )}
         </div>
       </div>
 

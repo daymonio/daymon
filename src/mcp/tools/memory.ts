@@ -21,16 +21,12 @@ export function registerMemoryTools(server: McpServer): void {
           .string()
           .optional()
           .describe('Category: work, personal, preference, project, person'),
-        source: z
-          .string()
-          .default('claude')
-          .describe('Source AI that created this memory: claude or chatgpt')
       }
     },
-    async ({ name, content, type, category, source }) => {
+    async ({ name, content, type, category }) => {
       const db = getMcpDatabase()
       const entity = queries.createEntity(db, name, type, category)
-      queries.addObservation(db, entity.id, content, source)
+      queries.addObservation(db, entity.id, content, 'claude')
       return {
         content: [
           {

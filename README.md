@@ -1,6 +1,6 @@
 # Daymon
 
-**Open source autopilot for Claude and ChatGPT.**
+**Open source autopilot for Claude.**
 
 Scheduled tasks, persistent memory, background automation. No API keys. No cloud. Runs on your Mac.
 
@@ -10,7 +10,7 @@ Scheduled tasks, persistent memory, background automation. No API keys. No cloud
 
 ## What is Daymon?
 
-Daymon is a macOS menu bar app that supercharges Claude and ChatGPT via the Model Context Protocol (MCP). It gives your AI persistent memory, scheduled tasks, and file watchers — all running locally on your machine.
+Daymon is a macOS menu bar app that supercharges Claude via the Model Context Protocol (MCP). It gives your AI persistent memory, scheduled tasks, and file watchers — all running locally on your machine.
 
 Your Claude subscription only works when you do. Daymon puts it to work 24/7.
 
@@ -18,7 +18,7 @@ Your Claude subscription only works when you do. Daymon puts it to work 24/7.
 
 **Scheduled Tasks** — "Every weekday at 9am, check HackerNews for AI news." Create recurring, one-time, or on-demand tasks by talking to Claude. Daymon runs them on schedule using Claude Code CLI.
 
-**Persistent Memory** — Claude and ChatGPT share one brain. Remember something in Claude, recall it in ChatGPT. Knowledge graph with entities, observations, and relations.
+**Persistent Memory** — Remember something in Claude, recall it later. Knowledge graph with entities, observations, and relations.
 
 **File Watchers** — "When a new file appears in Downloads, organize it." Daymon watches folders and acts automatically.
 
@@ -45,11 +45,11 @@ npm run build    # Production build
 ## How It Works
 
 1. **Install Daymon** — menu bar icon appears
-2. **Claude/ChatGPT gain superpowers** via MCP tools
+2. **Claude gains superpowers** via MCP tools
 3. **Schedule tasks** — "Every morning, summarize my inbox"
 4. **Your subscription works while you sleep**
 
-Daymon auto-configures Claude Desktop on first launch. For ChatGPT, enable the HTTP connection in Settings.
+Daymon auto-configures Claude Desktop on first launch. Zero setup.
 
 ## MCP Tools
 
@@ -102,7 +102,7 @@ daymon/
 │   │   ├── scheduler/  # node-cron task scheduling
 │   │   ├── executor/   # Claude Code CLI runner
 │   │   └── db/         # SQLite database layer
-│   ├── mcp/            # MCP server (stdio + HTTP)
+│   ├── mcp/            # MCP server (stdio)
 │   │   └── tools/      # Memory, scheduler, watcher tools
 │   ├── renderer/       # React + Tailwind UI
 │   └── shared/         # Types, schema, constants
@@ -114,7 +114,7 @@ daymon/
 
 - **Desktop**: Electron (menu bar / tray app)
 - **UI**: React + Tailwind CSS
-- **MCP**: TypeScript (MCP SDK) — stdio + HTTP/SSE transports
+- **MCP**: TypeScript (MCP SDK) — stdio transport
 - **Database**: better-sqlite3
 - **Scheduler**: node-cron
 - **File Watcher**: chokidar
