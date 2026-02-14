@@ -46,13 +46,13 @@
     "@vitejs/plugin-react": "^5.1.1",
     "electron": "^35.2.1",
     "electron-builder": "^26.7.0",
-    "electron-vite": "^4.0.1",
+    "electron-vite": "^5.0.0",
     "esbuild": "^0.24.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^4.1.10",
     "typescript": "^5.9.3",
-    "vite": "^6.4.1",
+    "vite": "^7.3.1",
     "vitest": "^1.6.1"
   }
 }
