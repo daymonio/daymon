@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daymon vs Claude vs OpenClaw — Detailed Comparison</title>
+  <meta name="description" content="In-depth comparison of Daymon, Claude (native), and OpenClaw. Workers, memory, scheduling, session continuity, and more.">
+  <meta property="og:title" content="Daymon vs Claude vs OpenClaw — Detailed Comparison">
+  <meta property="og:description" content="In-depth comparison of AI automation tools: workers, memory, scheduling, session continuity.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://daymon.io/compare">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .article { padding: 60px 0 80px; }
+    .article h1 {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+    .article .lead {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 48px;
+      line-height: 1.7;
+    }
+    .section { margin-bottom: 64px; }
+    .section h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--accent-hover);
+    }
+    .section .section-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+    .detail-table {
+      width: 100%;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid rgba(99, 102, 241, 0.12);
+      margin-bottom: 20px;
+    }
+    .detail-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 1fr 1fr;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row.detail-header {
+      background: var(--bg-surface);
+    }
+    .detail-row.detail-header > div {
+      padding: 14px 16px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    .detail-row:nth-child(even):not(.detail-header) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .detail-label {
+      padding: 14px 16px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: flex-start;
+    }
+    .detail-cell {
+      padding: 14px 16px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .detail-cell.yes { color: #34d399; }
+    .detail-cell.partial { color: #fbbf24; }
+    .detail-cell.no { color: #6b7280; }
+    .check { color: #34d399; font-weight: 700; }
+    .cross { color: #6b7280; }
+    .partial-mark { color: #fbbf24; }
+    .detail-note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: block;
+      margin-top: 4px;
+    }
+    .verdict {
+      background: var(--bg-surface);
+      border: 1px solid rgba(99, 102, 241, 0.15);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-top: 16px;
+    }
+    .verdict strong {
+      color: var(--accent-hover);
+      font-size: 0.9rem;
+    }
+    .verdict p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+      text-decoration: none;
+    }
+    .back-link:hover { color: var(--accent-hover); text-decoration: none; }
+    .toc {
+      background: var(--bg-surface);
+      border: 1px solid rgba(99, 102, 241, 0.12);
+      border-radius: var(--radius);
+      padding: 20px 28px;
+      margin-bottom: 48px;
+    }
+    .toc-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+    .toc ol {
+      list-style: decimal;
+      padding-left: 20px;
+    }
+    .toc li {
+      margin-bottom: 4px;
+    }
+    .toc a {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .toc a:hover {
+      color: var(--accent-hover);
+      text-decoration: none;
+    }
+    @media (max-width: 640px) {
+      .detail-row {
+        grid-template-columns: 120px 1fr 1fr 1fr;
+        min-width: 700px;
+      }
+      .detail-table {
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container header-inner">
+      <a href="/" class="logo">
+        <img src="logo.png" alt="Daymon logo" width="40" height="40">
+        <span>Daymon</span>
+      </a>
+      <nav>
+        <a href="/#features">Features</a>
+        <a href="/#compare">Compare</a>
+        <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="article">
+      <div class="container">
+        <a href="/" class="back-link">&larr; Back to Daymon</a>
+
+        <h1>Daymon vs Claude vs OpenClaw</h1>
+        <p class="lead">
+          A detailed, feature-by-feature comparison of three approaches to AI automation:
+          Daymon (desktop autopilot), Claude (native capabilities), and OpenClaw (self-hosted agent gateway).
+        </p>
+
+        <div class="toc">
+          <div class="toc-title">Contents</div>
+          <ol>
+            <li><a href="#workers">Workers &amp; Agent Personalities</a></li>
+            <li><a href="#sessions">Session Continuity</a></li>
+            <li><a href="#memory">Memory &amp; Semantic Search</a></li>
+            <li><a href="#scheduling">Task Scheduling</a></li>
+            <li><a href="#execution">Task Execution</a></li>
+            <li><a href="#mcp">MCP Integration</a></li>
+            <li><a href="#setup">Setup &amp; Cost</a></li>
+          </ol>
+        </div>
+
+        <!-- 1. Workers -->
+        <div id="workers" class="section">
+          <h2>1. Workers &amp; Agent Personalities</h2>
+          <p class="section-desc">How each tool lets you define agent behavior, personalities, and system prompts.</p>
+          <div class="detail-table">
+            <div class="detail-row detail-header">
+              <div></div>
+              <div class="daymon-col">Daymon</div>
+              <div class="claude-col">Claude</div>
+              <div class="openclaw-col">OpenClaw</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Named agents</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Workers with name, description, system prompt</span></div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Single assistant per conversation</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Per-agent configs with identity files</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">System prompts</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Per-worker, passed via --system-prompt flag</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Limited</span><span class="detail-note">Projects/custom instructions only</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">SOUL.md + 15+ configurable prompt sections</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Default worker</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Fallback when task has no worker</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span><span class="detail-note">Main agent is always active</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Worker templates</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Researcher, Code Reviewer, Writer, Data Analyst, DevOps</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">soulcraft interview generates SOUL.md</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Multi-agent</div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">One worker per task</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Sub-agent spawning, inter-agent messaging</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Self-evolving personality</div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Soul Evolution mutates SOUL.md over time</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Manage via UI</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Workers panel: create, edit, delete, set default</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Edit markdown files manually</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Manage via chat</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">MCP tools: create/list/update/delete workers</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Agent can edit its own files</span></div>
+            </div>
+          </div>
+          <div class="verdict">
+            <strong>Verdict</strong>
+            <p>OpenClaw has the deepest agent identity system with multi-agent coordination and self-evolving personalities. Daymon offers practical worker management — create via UI or chat, assign to tasks, use templates for quick starts. Claude has no concept of persistent agent profiles.</p>
+          </div>
+        </div>
+
+        <!-- 2. Sessions -->
+        <div id="sessions" class="section">
+          <h2>2. Session Continuity</h2>
+          <p class="section-desc">Can scheduled tasks remember what happened in previous runs?</p>
+          <div class="detail-table">
+            <div class="detail-row detail-header">
+              <div></div>
+              <div class="daymon-col">Daymon</div>
+              <div class="claude-col">Claude</div>
+              <div class="openclaw-col">OpenClaw</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Session resume across task runs</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Opt-in via sessionContinuity flag, uses --resume</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span><span class="detail-note">No scheduled tasks</span></div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Cron jobs get fresh sessions by design</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Session rotation</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Fresh session after 20 runs (prevents context overflow)</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Error recovery</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Retry without session on resume failure</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Exponential backoff on cron failure</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Manual session reset</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">daymon_reset_session MCP tool</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">/new and /reset for chat sessions</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Context-aware memory injection</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">First run: full context. Later runs: cross-task only (session has own history)</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Memory files indexed but not injected per-cron-run</span></div>
+            </div>
+          </div>
+          <div class="verdict">
+            <strong>Verdict</strong>
+            <p>Daymon is the only tool that offers session continuity for scheduled tasks. A task that runs daily can pick up where it left off — useful for iterative work like monitoring, analysis, or multi-step projects. OpenClaw deliberately isolates cron runs. Claude doesn't have scheduling at all.</p>
+          </div>
+        </div>
+
+        <!-- 3. Memory -->
+        <div id="memory" class="section">
+          <h2>3. Memory &amp; Semantic Search</h2>
+          <p class="section-desc">How each tool stores knowledge and retrieves it when needed.</p>
+          <div class="detail-table">
+            <div class="detail-row detail-header">
+              <div></div>
+              <div class="daymon-col">Daymon</div>
+              <div class="claude-col">Claude</div>
+              <div class="openclaw-col">OpenClaw</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Persistent memory</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Entity/observation graph in SQLite</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Basic</span><span class="detail-note">Per-model memory, limited control</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Markdown files indexed into SQLite</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Keyword search</div>
+              <div class="detail-cell yes"><span class="check">FTS5</span><span class="detail-note">Full-text search with ranking</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">FTS5</span><span class="detail-note">BM25 ranking</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Semantic search</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Local embeddings via Hugging Face Transformers</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">OpenAI, Gemini, Voyage, or local llama</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Hybrid search</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">FTS + cosine similarity, reciprocal rank fusion</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Vector + BM25 weighted combination</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Embedding model</div>
+              <div class="detail-cell yes"><span class="check">Local only</span><span class="detail-note">all-MiniLM-L6-v2 (384 dims, ~12MB, no API key)</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell yes"><span class="check">Multiple</span><span class="detail-note">4 providers + local llama (needs API keys for remote)</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Task-memory integration</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Auto-inject context before run, store results after</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Memory search available to agents but not auto-injected</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Cross-task knowledge</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Tasks discover each other's results via recall</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Agents can search shared memory files</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Manage via chat</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">remember, recall, forget, memory_list</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Limited</span><span class="detail-note">"Remember this" (no search/delete)</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Search only</span><span class="detail-note">memory_search / memory_get (no write tool)</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Requires API keys</div>
+              <div class="detail-cell yes"><span class="check">No</span><span class="detail-note">100% local embeddings</span></div>
+              <div class="detail-cell yes"><span class="check">No</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Optional</span><span class="detail-note">Local works without keys; remote providers need keys</span></div>
+            </div>
+          </div>
+          <div class="verdict">
+            <strong>Verdict</strong>
+            <p>Both Daymon and OpenClaw have hybrid search with embeddings. Daymon's advantage is task-memory integration: tasks automatically build knowledge over time, and that knowledge is shared across tasks. OpenClaw has more embedding providers but requires API keys for the best ones. Daymon runs 100% locally with no keys.</p>
+          </div>
+        </div>
+
+        <!-- 4. Scheduling -->
+        <div id="scheduling" class="section">
+          <h2>4. Task Scheduling</h2>
+          <p class="section-desc">How each tool handles recurring, one-time, and on-demand tasks.</p>
+          <div class="detail-table">
+            <div class="detail-row detail-header">
+              <div></div>
+              <div class="daymon-col">Daymon</div>
+              <div class="claude-col">Claude</div>
+              <div class="openclaw-col">OpenClaw</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Cron scheduling</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">node-cron, natural language via Claude</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">croner library with timezone support</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">One-time tasks</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">scheduledAt datetime</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">"at" schedule type</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">On-demand tasks</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Manual trigger type + daymon_run_task</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">"run" action on existing jobs only</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Max runs / auto-complete</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Auto-completes after N successful runs</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Runs indefinitely or once</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Real-time progress</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">daymon_task_progress via stream-json</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Post-completion logs only</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">File watchers</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">chokidar + custom action prompts</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Error handling</div>
+              <div class="detail-cell partial"><span class="partial-mark">Basic</span><span class="detail-note">Error count tracking, status update</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell yes"><span class="check">Advanced</span><span class="detail-note">Exponential backoff, concurrency limits</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Delivery routing</div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Results saved to ~/Daymon/results/</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Announce to Telegram, Slack, WhatsApp, etc.</span></div>
+            </div>
+          </div>
+          <div class="verdict">
+            <strong>Verdict</strong>
+            <p>Daymon has more scheduling flexibility (on-demand tasks, max runs, file watchers, real-time progress). OpenClaw has better operational robustness (backoff, concurrency, delivery routing to chat channels). Claude has no scheduling at all.</p>
+          </div>
+        </div>
+
+        <!-- 5. Execution -->
+        <div id="execution" class="section">
+          <h2>5. Task Execution</h2>
+          <p class="section-desc">How each tool actually runs AI tasks.</p>
+          <div class="detail-table">
+            <div class="detail-row detail-header">
+              <div></div>
+              <div class="daymon-col">Daymon</div>
+              <div class="claude-col">Claude</div>
+              <div class="openclaw-col">OpenClaw</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Execution method</div>
+              <div class="detail-cell yes"><span class="check">Claude CLI</span><span class="detail-note">Spawns claude -p "prompt" as subprocess</span></div>
+              <div class="detail-cell yes"><span class="check">Native</span><span class="detail-note">Direct API calls within the app</span></div>
+              <div class="detail-cell yes"><span class="check">In-process</span><span class="detail-note">Embedded agent runtime, direct LLM API calls</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">API keys required</div>
+              <div class="detail-cell yes"><span class="check">None</span><span class="detail-note">Uses your Claude subscription</span></div>
+              <div class="detail-cell yes"><span class="check">None</span><span class="detail-note">Your subscription</span></div>
+              <div class="detail-cell no"><span class="cross">Required</span><span class="detail-note">Anthropic / OpenAI API keys ($50-500+/mo)</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Worker system prompt</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">--system-prompt flag per task</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">SOUL.md + bootstrap files</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Memory context injection</div>
+              <div class="detail-cell yes"><span class="check">Auto</span><span class="detail-note">Own history + cross-task knowledge prepended</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Manual</span><span class="detail-note">Agent must call memory_search explicitly</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Result storage</div>
+              <div class="detail-cell yes"><span class="check">Auto</span><span class="detail-note">Saved to memory + ~/Daymon/results/</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Run logs, session transcripts</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Sandboxing</div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Docker containers per session</span></div>
+            </div>
+          </div>
+          <div class="verdict">
+            <strong>Verdict</strong>
+            <p>Daymon's key advantage: zero API keys and zero infrastructure. It uses your existing Claude subscription through the CLI. OpenClaw runs its own agent runtime, which is more powerful but requires API keys and significant setup. Both inject system prompts, but only Daymon automatically injects memory context and stores results.</p>
+          </div>
+        </div>
+
+        <!-- 6. MCP -->
+        <div id="mcp" class="section">
+          <h2>6. MCP Integration</h2>
+          <p class="section-desc">Model Context Protocol — the standard for extending AI tools.</p>
+          <div class="detail-table">
+            <div class="detail-row detail-header">
+              <div></div>
+              <div class="daymon-col">Daymon</div>
+              <div class="claude-col">Claude</div>
+              <div class="openclaw-col">OpenClaw</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">MCP server</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Native stdio + HTTP, 20+ tools</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span><span class="detail-note">MCP client, not server</span></div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">PRs rejected, community workarounds only</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Works with Claude Desktop</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Auto-configured on first launch</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Works with Claude Code</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">.mcp.json in project root</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Setup effort</div>
+              <div class="detail-cell yes"><span class="check">Zero</span><span class="detail-note">Install app, it auto-patches configs</span></div>
+              <div class="detail-cell yes"><span class="check">Zero</span></div>
+              <div class="detail-cell no"><span class="cross">High</span><span class="detail-note">Docker, tokens, gateway setup</span></div>
+            </div>
+          </div>
+          <div class="verdict">
+            <strong>Verdict</strong>
+            <p>Daymon is MCP-native — it works seamlessly with Claude Desktop and Claude Code with zero configuration. OpenClaw chose not to implement MCP, building its own skills ecosystem instead. If you're in the Claude ecosystem, Daymon integrates naturally.</p>
+          </div>
+        </div>
+
+        <!-- 7. Setup -->
+        <div id="setup" class="section">
+          <h2>7. Setup &amp; Cost</h2>
+          <p class="section-desc">What it takes to get started.</p>
+          <div class="detail-table">
+            <div class="detail-row detail-header">
+              <div></div>
+              <div class="daymon-col">Daymon</div>
+              <div class="claude-col">Claude</div>
+              <div class="openclaw-col">OpenClaw</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Install</div>
+              <div class="detail-cell yes"><span class="check">One app</span><span class="detail-note">Download DMG, drag to Applications</span></div>
+              <div class="detail-cell yes"><span class="check">Nothing</span><span class="detail-note">Already installed</span></div>
+              <div class="detail-cell no"><span class="cross">Complex</span><span class="detail-note">Docker, Node.js, config files, tokens</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Monthly cost</div>
+              <div class="detail-cell yes"><span class="check">Free</span><span class="detail-note">Uses your existing Claude subscription</span></div>
+              <div class="detail-cell yes"><span class="check">$20/mo</span><span class="detail-note">Claude Pro subscription</span></div>
+              <div class="detail-cell no"><span class="cross">$50-500+/mo</span><span class="detail-note">Pay-per-token API costs</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">API keys</div>
+              <div class="detail-cell yes"><span class="check">None</span></div>
+              <div class="detail-cell yes"><span class="check">None</span></div>
+              <div class="detail-cell no"><span class="cross">Required</span><span class="detail-note">LLM + optional embedding providers</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Data location</div>
+              <div class="detail-cell yes"><span class="check">Local</span><span class="detail-note">SQLite on your Mac</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Cloud</span><span class="detail-note">Anthropic's servers</span></div>
+              <div class="detail-cell yes"><span class="check">Local</span><span class="detail-note">Self-hosted</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Open source</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">MIT license</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">MIT license</span></div>
+            </div>
+          </div>
+          <div class="verdict">
+            <strong>Verdict</strong>
+            <p>Daymon is the simplest path to AI automation: install one app, and your existing Claude subscription gains scheduling, memory, workers, and file watching. OpenClaw is powerful but requires significant infrastructure and ongoing API costs. Claude works out of the box but lacks automation capabilities.</p>
+          </div>
+        </div>
+
+        <!-- Final CTA -->
+        <div style="text-align: center; margin-top: 64px;">
+          <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 12px;">Ready to put your Claude subscription to work?</h2>
+          <p style="color: var(--text-muted); margin-bottom: 28px;">Free, open source, 100% local.</p>
+          <div class="cta">
+            <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary">Download for Mac</a>
+            <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>MIT &middot; &copy; 2026 Daymon &middot; <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">github.com/daymonio/daymon</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>

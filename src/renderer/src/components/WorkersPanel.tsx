@@ -2,6 +2,39 @@ import { useState } from 'react'
 import { usePolling } from '../hooks/usePolling'
 import type { Worker } from '@shared/types'
 
+const WORKER_TEMPLATES = [
+  {
+    name: 'Researcher',
+    description: 'Web research and summarization',
+    systemPrompt:
+      'You are a research assistant. Search the web thoroughly, cross-reference multiple sources, and provide concise summaries with key findings and source links. Prioritize accuracy over speed.'
+  },
+  {
+    name: 'Code Reviewer',
+    description: 'Code quality and security review',
+    systemPrompt:
+      'You are a senior code reviewer. Analyze code for bugs, security vulnerabilities, performance issues, and style problems. Be specific — cite line numbers and suggest concrete fixes. Flag critical issues first.'
+  },
+  {
+    name: 'Writer',
+    description: 'Content writing and editing',
+    systemPrompt:
+      'You are a professional writer. Write clear, engaging content tailored to the target audience. Match the tone and style specified. Edit ruthlessly — every sentence should earn its place.'
+  },
+  {
+    name: 'Data Analyst',
+    description: 'Data processing and insights',
+    systemPrompt:
+      'You are a data analyst. Process data files, compute statistics, identify trends, and generate clear reports. Use tables and charts where helpful. Always show your methodology and flag data quality issues.'
+  },
+  {
+    name: 'DevOps',
+    description: 'Infrastructure and deployment',
+    systemPrompt:
+      'You are a DevOps engineer. Manage CI/CD pipelines, Docker configs, cloud infrastructure, and deployment scripts. Prioritize reliability, security, and reproducibility. Document changes clearly.'
+  }
+]
+
 export function WorkersPanel(): React.JSX.Element {
   const { data: workers, refresh } = usePolling(() => window.api.workers.list(), 5000)
   const [expandedId, setExpandedId] = useState<number | null>(null)
@@ -60,6 +93,13 @@ export function WorkersPanel(): React.JSX.Element {
     refresh()
   }
 
+  function useTemplate(t: (typeof WORKER_TEMPLATES)[number]): void {
+    setCreateName(t.name)
+    setCreateDesc(t.description)
+    setCreatePrompt(t.systemPrompt)
+    setShowCreate(true)
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 border-b border-gray-200 flex items-center justify-between">
@@ -109,8 +149,22 @@ export function WorkersPanel(): React.JSX.Element {
 
       <div className="flex-1 overflow-y-auto">
         {!workers || workers.length === 0 ? (
-          <div className="p-4 text-center text-xs text-gray-400">
-            No workers yet. Create one above or via MCP.
+          <div className="p-4 space-y-3">
+            <div className="text-center text-xs text-gray-400">
+              No workers yet. Create one above or start from a template.
+            </div>
+            <div className="space-y-1.5">
+              {WORKER_TEMPLATES.map((t) => (
+                <button
+                  key={t.name}
+                  onClick={() => useTemplate(t)}
+                  className="w-full text-left px-3 py-2 rounded border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="text-xs font-medium text-gray-700">{t.name}</div>
+                  <div className="text-xs text-gray-400">{t.description}</div>
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
