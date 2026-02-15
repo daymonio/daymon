@@ -8,6 +8,7 @@
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'G-12Y9442YL6');
+    gtag('config', 'AW-17597866841');
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -52,7 +53,7 @@
           Just talk to Claude — it schedules, remembers, and automates.
         </p>
         <div class="cta">
-          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary">Download for Mac</a>
+          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary" onclick="trackDownload()">Download for Mac</a>
           <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
         </div>
         <div class="brew-install">
@@ -357,7 +358,7 @@
         <h3>Your AI shouldn't sit idle.</h3>
         <p>Daymon is free, open source, and runs entirely on your machine.</p>
         <div class="cta">
-          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary">Download for Mac</a>
+          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary" onclick="trackDownload()">Download for Mac</a>
           <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
           <a href="https://github.com/daymonio/daymon" class="btn btn-ghost" target="_blank" rel="noopener">Star on GitHub</a>
         </div>
@@ -375,6 +376,10 @@
   </footer>
 
   <script>
+    function trackDownload() {
+      gtag('event', 'conversion', {'send_to': 'AW-17597866841/bpTkCKafm_kbENnGqMdB'});
+    }
+
     function copyPrompt(el) {
       var text = el.querySelector('.prompt-text').textContent;
       navigator.clipboard.writeText(text).then(function() {
