@@ -205,34 +205,85 @@ nav a:hover {
   color: var(--accent-hover);
 }
 
-/* === Copy Prompt === */
-.copy-prompt {
-  padding: 60px 0;
+/* === Setup Section === */
+.setup-section {
+  padding: 80px 0;
   border-top: 1px solid rgba(99, 102, 241, 0.1);
 }
 
-.copy-prompt h3 {
+.setup-section h3 {
   font-size: 1.5rem;
   font-weight: 700;
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 40px;
 }
 
-.copy-prompt-subtitle {
-  text-align: center;
+.setup-options {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.setup-option {
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.setup-option-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.setup-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-hover);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.setup-option-body {
+  padding: 24px;
+}
+
+.setup-instruction {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.setup-detail {
+  font-size: 0.85rem;
   color: var(--text-muted);
-  margin-bottom: 24px;
-  font-size: 0.95rem;
+  margin-top: 12px;
+}
+
+.setup-divider {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.setup-divider span {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .prompt-box {
   position: relative;
-  background: var(--bg-surface);
+  background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: var(--radius);
-  padding: 20px 80px 20px 24px;
-  max-width: 700px;
-  margin: 0 auto;
+  border-radius: 8px;
+  padding: 16px 72px 16px 16px;
   cursor: pointer;
   transition: border-color 0.2s;
 }
@@ -242,7 +293,7 @@ nav a:hover {
 }
 
 .prompt-text {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   line-height: 1.6;
   color: var(--text);
 }
@@ -250,14 +301,14 @@ nav a:hover {
 .copy-btn {
   position: absolute;
   top: 50%;
-  right: 16px;
+  right: 12px;
   transform: translateY(-50%);
   background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 6px;
-  padding: 6px 14px;
-  font-size: 0.8rem;
+  padding: 6px 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
@@ -267,11 +318,14 @@ nav a:hover {
   background: var(--accent-hover);
 }
 
-.copy-prompt-note {
-  text-align: center;
-  color: var(--text-muted);
-  margin-top: 16px;
-  font-size: 0.85rem;
+@media (max-width: 640px) {
+  .setup-options {
+    flex-direction: column;
+  }
+  .setup-divider {
+    justify-content: center;
+    padding: 4px 0;
+  }
 }
 
 /* === How it works === */

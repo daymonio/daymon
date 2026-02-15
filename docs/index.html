@@ -98,15 +98,34 @@
       </div>
     </section>
 
-    <section class="copy-prompt">
+    <section class="setup-section">
       <div class="container">
-        <h3>Copy &amp; paste to Claude Code</h3>
-        <p class="copy-prompt-subtitle">After installing Daymon, paste this into Claude Code to connect it globally:</p>
-        <div class="prompt-box" onclick="copyPrompt(this)">
-          <span class="prompt-text">Add Daymon as a global MCP server (user scope, so it works in every project). The stdio server command is: node /Applications/Daymon.app/Contents/Resources/mcp/server.js — with env vars DAYMON_DB_PATH=~/Library/Application Support/daymon/daymon.db and DAYMON_SOURCE=claude-code.</span>
-          <span class="copy-btn" title="Copy to clipboard">Copy</span>
+        <h3>Set up in 30 seconds</h3>
+        <div class="setup-options">
+          <div class="setup-option">
+            <div class="setup-option-header">
+              <span class="setup-badge">Claude Desktop</span>
+            </div>
+            <div class="setup-option-body">
+              <p class="setup-instruction">Install Daymon and open it.<br><strong>That's it.</strong></p>
+              <p class="setup-detail">Daymon auto-configures Claude Desktop on first launch. No setup, no config files, no prompts needed.</p>
+            </div>
+          </div>
+          <div class="setup-divider"><span>or</span></div>
+          <div class="setup-option">
+            <div class="setup-option-header">
+              <span class="setup-badge">Claude Code</span>
+            </div>
+            <div class="setup-option-body">
+              <p class="setup-instruction">Install Daymon, then paste this to Claude Code:</p>
+              <div class="prompt-box" onclick="copyPrompt(this)">
+                <span class="prompt-text">Add Daymon as a global MCP server (user scope, so it works in every project). The stdio server command is: node /Applications/Daymon.app/Contents/Resources/mcp/server.js — with env vars DAYMON_DB_PATH=~/Library/Application Support/daymon/daymon.db and DAYMON_SOURCE=claude-code.</span>
+                <span class="copy-btn" title="Copy to clipboard">Copy</span>
+              </div>
+              <p class="setup-detail">One-time setup. Works in every project after that.</p>
+            </div>
+          </div>
         </div>
-        <p class="copy-prompt-note">Claude Desktop? Just open Daymon &mdash; it auto-configures. No prompt needed.</p>
       </div>
     </section>
 
