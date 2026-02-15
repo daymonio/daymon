@@ -471,6 +471,11 @@ nav a:hover {
   color: #34d399;
 }
 
+.claude-col.bad,
+.openclaw-col.bad {
+  color: #f87171;
+}
+
 .compare-row:nth-child(even) {
   background: rgba(255, 255, 255, 0.02);
 }
