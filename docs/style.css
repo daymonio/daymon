@@ -185,6 +185,16 @@ nav a:hover {
   user-select: all;
 }
 
+.requirements {
+  margin-top: 14px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.requirements a {
+  color: var(--accent-hover);
+}
+
 /* === How it works === */
 .how-it-works {
   padding: 80px 0;
