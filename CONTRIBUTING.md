@@ -13,7 +13,7 @@ npm run dev
 
 ## Development
 
-- `npm run dev` — Start Electron in dev mode
+- `npm run dev` — Start dev mode
 - `npm test` — Run the test suite
 - `npm run typecheck` — TypeScript type checking
 - `npm run build` — Full production build
@@ -35,7 +35,7 @@ npm run dev
 ## Code Style
 
 - TypeScript throughout
-- Shared logic goes in `src/shared/` (no Electron dependencies)
+- Shared logic goes in `src/shared/` (no platform dependencies)
 - MCP tools go in `src/mcp/tools/`
 - Keep it simple — avoid over-engineering
 

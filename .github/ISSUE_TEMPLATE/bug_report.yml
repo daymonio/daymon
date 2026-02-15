@@ -54,11 +54,11 @@ body:
     validations:
       required: true
   - type: input
-    id: electron_version
+    id: daymon_version
     attributes:
-      label: Electron version
-      description: Electron version in use.
-      placeholder: 35.7.5
+      label: Daymon version
+      description: Daymon version in use.
+      placeholder: 0.1.6
     validations:
       required: true
   - type: input

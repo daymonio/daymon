@@ -169,7 +169,7 @@ Create workers in the Daymon UI or via Claude: "Create a worker called 'My Analy
 ## Development
 
 ```bash
-npm run dev          # Start Electron in dev mode
+npm run dev          # Start dev mode
 npm run build        # Full build (main + renderer + MCP)
 npm test             # Run test suite
 npm run typecheck    # TypeScript type checking
@@ -182,7 +182,7 @@ npm run build:mac    # Build + package macOS DMG
 ```
 daymon/
 ├── src/
-│   ├── main/           # Electron main process
+│   ├── main/           # Main process
 │   │   ├── scheduler/  # node-cron task scheduling
 │   │   └── db/         # SQLite database layer
 │   ├── mcp/            # MCP server (stdio)
@@ -193,7 +193,7 @@ daymon/
 └── resources/          # App icons
 ```
 
-**Tech stack**: Electron 35, React 18, Tailwind CSS 4, TypeScript, Vite 7, better-sqlite3, node-cron, chokidar, zod, MCP SDK, HuggingFace Transformers (local embeddings), electron-updater, electron-builder, Vitest
+**Tech stack**: React 18, Tailwind CSS 4, TypeScript, Vite 7, better-sqlite3, node-cron, chokidar, zod, MCP SDK, HuggingFace Transformers (local embeddings), Vitest
 
 </details>
 
