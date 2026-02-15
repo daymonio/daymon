@@ -21,7 +21,7 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "test": "npm run rebuild:native:node && vitest run --pool=forks",
     "test:watch": "npm run rebuild:native:node && vitest --pool=forks",
-    "rebuild:native:node": "node -e \"try{require('better-sqlite3')}catch{process.exit(1)}\" || npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3 > /dev/null 2>&1",
+    "rebuild:native:node": "node -e \"try{require('better-sqlite3')(':memory:').close()}catch{process.exit(1)}\" || npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3 > /dev/null 2>&1",
     "rebuild:native:electron": "npm_config_devdir=./.electron-gyp npx electron-builder install-app-deps && bash scripts/patch-dev-electron.sh",
     "postinstall": "npm run rebuild:native:electron",
     "build:mac": "npm run build && electron-builder --mac",
