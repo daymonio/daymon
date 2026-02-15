@@ -2,7 +2,7 @@ import { app, BrowserWindow, Menu, Tray, nativeImage, screen, shell } from 'elec
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
-import { DEFAULTS } from '../shared/constants'
+import { APP_NAME, DEFAULTS } from '../shared/constants'
 
 let tray: Tray | null = null
 let popoverWindow: BrowserWindow | null = null
@@ -115,9 +115,13 @@ export function showPopoverWindowFromDock(): void {
     popoverWindow.focus()
     return
   }
-  popoverWindow.center()
-  popoverWindow.show()
-  popoverWindow.focus()
+  if (tray) {
+    showPopover()
+  } else {
+    popoverWindow.center()
+    popoverWindow.show()
+    popoverWindow.focus()
+  }
 }
 
 function togglePopover(): void {
@@ -134,13 +138,14 @@ export function createTray(): BrowserWindow {
   const resizedIcon = icon.resize({ width: 22, height: 22 })
 
   tray = new Tray(resizedIcon)
-  tray.setToolTip('Daymon')
+  tray.setToolTip(APP_NAME)
 
   popoverWindow = createPopoverWindow()
 
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Show Daymon', click: () => showPopover() },
     { type: 'separator' },
+    { label: 'Star on GitHub', click: () => shell.openExternal('https://github.com/daymonio/daymon') },
     { label: 'Report Bug', click: () => shell.openExternal('https://github.com/daymonio/daymon/issues/new') },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() }
@@ -154,18 +159,12 @@ export function createTray(): BrowserWindow {
 
 function loadTrayIcon(): Electron.NativeImage {
   const iconFile = process.platform === 'darwin' && app.isPackaged ? 'trayIconTemplate.png' : 'logo.png'
-  const roots = [
-    app.isPackaged ? process.resourcesPath : app.getAppPath(),
-    process.cwd(),
-    join(__dirname, '../../../')
-  ]
+  const root = app.isPackaged ? process.resourcesPath : app.getAppPath()
+  const iconPath = join(root, 'resources', iconFile)
 
-  for (const root of roots) {
-    const candidate = join(root, 'resources', iconFile)
-    if (!existsSync(candidate)) continue
-    const image = nativeImage.createFromPath(candidate)
+  if (existsSync(iconPath)) {
+    const image = nativeImage.createFromPath(iconPath)
     if (!image.isEmpty()) {
-      console.log(`Tray icon loaded from: ${candidate}`)
       if (process.platform === 'darwin' && app.isPackaged) {
         image.setTemplateImage(true)
       }
@@ -173,10 +172,6 @@ function loadTrayIcon(): Electron.NativeImage {
     }
   }
 
-  console.warn('Tray icon not found or invalid; using fallback logo icon.')
-  const fallback = nativeImage.createFromPath(join(process.cwd(), 'resources', 'logo.png'))
-  if (process.platform === 'darwin' && app.isPackaged && !fallback.isEmpty()) {
-    fallback.setTemplateImage(true)
-  }
-  return fallback
+  console.warn(`Tray icon not found at ${iconPath}; using empty fallback.`)
+  return nativeImage.createEmpty()
 }

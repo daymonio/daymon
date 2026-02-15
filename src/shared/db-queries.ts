@@ -152,6 +152,11 @@ export function listWorkers(db: Database.Database): Worker[] {
   return (rows as Record<string, unknown>[]).map(mapWorkerRow)
 }
 
+export function getWorkerCount(db: Database.Database): number {
+  const row = db.prepare('SELECT count(*) as cnt FROM workers').get() as { cnt: number }
+  return row.cnt
+}
+
 export function updateWorker(db: Database.Database, id: number, updates: Partial<{
   name: string; systemPrompt: string; description: string; model: string; isDefault: boolean
 }>): void {
@@ -315,6 +320,13 @@ export function listWatches(db: Database.Database, status?: string): Watch[] {
     ? db.prepare('SELECT * FROM watches WHERE status = ? ORDER BY created_at DESC').all(status)
     : db.prepare('SELECT * FROM watches ORDER BY created_at DESC').all()
   return (rows as Record<string, unknown>[]).map(mapWatchRow)
+}
+
+export function getWatchCount(db: Database.Database, status?: string): number {
+  const row = status
+    ? db.prepare('SELECT count(*) as cnt FROM watches WHERE status = ?').get(status) as { cnt: number }
+    : db.prepare('SELECT count(*) as cnt FROM watches').get() as { cnt: number }
+  return row.cnt
 }
 
 export function deleteWatch(db: Database.Database, id: number): void {

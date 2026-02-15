@@ -91,13 +91,13 @@ describe('notifications', () => {
     }
   })
 
-  it('returns failure reason when native notification fails', async () => {
-    mocked.state.showMode = 'failed'
+  it('returns failure when show() throws', async () => {
+    mocked.state.showError = new Error('permission denied')
 
     const result = await testNotification()
 
     expect(result.shown).toBe(false)
-    expect(result.reason).toContain('native delivery failed')
+    expect(result.reason).toContain('permission denied')
   })
 
   it('does not create notifications for completed tasks when notifications are disabled', () => {

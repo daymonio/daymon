@@ -29,7 +29,8 @@ const api = {
     update: (id: number, updates: Record<string, unknown>) =>
       ipcRenderer.invoke('workers:update', id, updates),
     delete: (id: number) => ipcRenderer.invoke('workers:delete', id),
-    getDefault: () => ipcRenderer.invoke('workers:getDefault')
+    getDefault: () => ipcRenderer.invoke('workers:getDefault'),
+    count: () => ipcRenderer.invoke('workers:count') as Promise<number>
   },
 
   tasks: {
@@ -52,7 +53,8 @@ const api = {
     create: (path: string, description?: string, actionPrompt?: string) =>
       ipcRenderer.invoke('watches:create', path, description, actionPrompt),
     list: (status?: string) => ipcRenderer.invoke('watches:list', status),
-    delete: (id: number) => ipcRenderer.invoke('watches:delete', id)
+    delete: (id: number) => ipcRenderer.invoke('watches:delete', id),
+    count: (status?: string) => ipcRenderer.invoke('watches:count', status) as Promise<number>
   },
 
   settings: {

@@ -9,11 +9,24 @@ export function WatchesPanel(): React.JSX.Element {
   const [description, setDescription] = useState('')
   const [actionPrompt, setActionPrompt] = useState('')
   const [createError, setCreateError] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+
+  function validatePath(p: string): string | null {
+    const trimmed = p.trim()
+    if (!trimmed) return 'Path is required.'
+    if (!trimmed.startsWith('/')) return 'Path must be absolute (start with /).'
+    return null
+  }
 
   async function createWatch(): Promise<void> {
+    const pathError = validatePath(path)
+    if (pathError) {
+      setCreateError(pathError)
+      return
+    }
     setCreateError(null)
     try {
-      await window.api.watches.create(path, description || undefined, actionPrompt || undefined)
+      await window.api.watches.create(path.trim(), description || undefined, actionPrompt || undefined)
       setPath('')
       setDescription('')
       setActionPrompt('')
@@ -25,6 +38,11 @@ export function WatchesPanel(): React.JSX.Element {
   }
 
   async function deleteWatch(id: number): Promise<void> {
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id)
+      return
+    }
+    setConfirmDeleteId(null)
     try {
       await window.api.watches.delete(id)
       refresh()
@@ -46,7 +64,7 @@ export function WatchesPanel(): React.JSX.Element {
         <input
           type="text"
           value={path}
-          onChange={(e) => setPath(e.target.value)}
+          onChange={(e) => { setPath(e.target.value); setCreateError(null) }}
           placeholder="Absolute path (e.g. /Users/me/Downloads)"
           className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white"
         />
@@ -97,9 +115,14 @@ export function WatchesPanel(): React.JSX.Element {
               </div>
               <button
                 onClick={() => deleteWatch(watch.id)}
-                className="text-xs text-red-400 hover:text-red-600 shrink-0"
+                onBlur={() => setConfirmDeleteId(null)}
+                className={`text-xs shrink-0 ${
+                  confirmDeleteId === watch.id
+                    ? 'text-red-600 font-medium'
+                    : 'text-red-400 hover:text-red-600'
+                }`}
               >
-                Delete
+                {confirmDeleteId === watch.id ? 'Confirm?' : 'Delete'}
               </button>
             </div>
             <div className="mt-1 text-xs text-gray-400">

@@ -5,7 +5,7 @@ import cron from 'node-cron'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { getMcpDatabase } from '../db'
 import * as queries from '../../shared/db-queries'
-import { TASK_STATUSES } from '../../shared/constants'
+import { APP_NAME, TASK_STATUSES } from '../../shared/constants'
 import { executeTask, isTaskRunning } from '../../shared/task-runner'
 
 export function generateTaskName(prompt: string): string {
@@ -249,7 +249,7 @@ export function registerSchedulerTools(server: McpServer): void {
         queries.updateTask(db, id, { status: TASK_STATUSES.ACTIVE })
       }
 
-      const resultsDir = process.env.DAYMON_RESULTS_DIR || join(homedir(), 'Daymon', 'results')
+      const resultsDir = process.env.DAYMON_RESULTS_DIR || join(homedir(), APP_NAME, 'results')
       const result = await executeTask(id, { db, resultsDir })
 
       // Restore original status if it was changed for ad-hoc execution

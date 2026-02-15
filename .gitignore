@@ -2,6 +2,7 @@ node_modules/
 out/
 dist/
 build/
+!build/icon.icns
 *.db
 *.db-journal
 *.db-wal

@@ -1,3 +1,6 @@
+export const APP_NAME = 'Daymon'
+export const APP_ID = 'io.daymon.app'
+
 export const DEFAULTS = {
   EXECUTOR: 'claude_code',
   TRIGGER_TYPE: 'cron',

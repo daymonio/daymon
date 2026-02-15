@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './ipc'
 import { ensureClaudeConfig } from './claude-config'
 import { startScheduler, stopScheduler } from './scheduler/cron'
 import { startAllWatches, stopAllWatches } from './file-watcher'
+import { APP_NAME, APP_ID } from '../shared/constants'
 
 function isBrokenPipeError(error: unknown): boolean {
   if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'EPIPE') {
@@ -48,6 +49,8 @@ function installBrokenPipeGuards(): void {
 
   process.on('uncaughtException', (err) => {
     if (isBrokenPipeError(err)) {
+      // Log but don't crash — EPIPE in child processes or during shutdown is non-fatal
+      safeLog('Ignoring EPIPE in uncaughtException', err)
       return
     }
     fatalMainError('Uncaught exception in main process', err)
@@ -55,6 +58,7 @@ function installBrokenPipeGuards(): void {
 
   process.on('unhandledRejection', (reason) => {
     if (isBrokenPipeError(reason)) {
+      safeLog('Ignoring EPIPE in unhandledRejection', reason)
       return
     }
     fatalMainError('Unhandled promise rejection in main process', reason)
@@ -63,10 +67,10 @@ function installBrokenPipeGuards(): void {
 
 function bootstrap(): void {
   // Set app identity before instance lock for consistent lock scope and app attribution.
-  app.setName('Daymon')
-  electronApp.setAppUserModelId('io.daymon.app')
+  app.setName(APP_NAME)
+  electronApp.setAppUserModelId(APP_ID)
 
-  // Prevent duplicate Dock icons and split state from multiple instances.
+  // Prevent duplicate instances. If another instance holds the lock, focus it and exit.
   const gotLock = app.requestSingleInstanceLock()
   if (!gotLock) {
     app.exit(0)

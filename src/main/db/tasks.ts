@@ -17,6 +17,10 @@ export function listWorkers(): Worker[] {
   return queries.listWorkers(getDatabase())
 }
 
+export function getWorkerCount(): number {
+  return queries.getWorkerCount(getDatabase())
+}
+
 export function updateWorker(id: number, updates: Partial<{
   name: string; systemPrompt: string; description: string; model: string; isDefault: boolean
 }>): void {
@@ -115,6 +119,10 @@ export function getWatch(id: number): Watch | null {
 
 export function listWatches(status?: string): Watch[] {
   return queries.listWatches(getDatabase(), status)
+}
+
+export function getWatchCount(status?: string): number {
+  return queries.getWatchCount(getDatabase(), status)
 }
 
 export function deleteWatch(id: number): void {

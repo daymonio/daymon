@@ -35,6 +35,7 @@ interface WatchesAPI {
   create: (path: string, description?: string, actionPrompt?: string) => Promise<Watch>
   list: (status?: string) => Promise<Watch[]>
   delete: (id: number) => Promise<void>
+  count: (status?: string) => Promise<number>
 }
 
 interface SettingsAPI {
@@ -63,6 +64,7 @@ interface WorkersAPI {
   update: (id: number, updates: Record<string, unknown>) => Promise<void>
   delete: (id: number) => Promise<void>
   getDefault: () => Promise<Worker | null>
+  count: () => Promise<number>
 }
 
 interface DaymonAPI {

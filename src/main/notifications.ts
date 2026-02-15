@@ -13,15 +13,27 @@ export interface NotificationDispatchResult {
 
 export function notifyTaskComplete(taskName: string, summary?: string): void {
   if (!shouldNotify()) return
-  void showNotification(
+  showNotification(
     `Task completed: ${taskName}`,
     summary ? truncate(summary, 200) : 'Task finished successfully.'
-  )
+  ).then((result) => {
+    if (!result.shown) {
+      console.warn(`Notification not shown for task "${taskName}": ${result.reason ?? 'unknown'}`)
+    }
+  }).catch(() => {
+    // Non-fatal — notification failure should never crash the app
+  })
 }
 
 export function notifyTaskFailed(taskName: string, error: string): void {
   if (!shouldNotify()) return
-  void showNotification(`Task failed: ${taskName}`, truncate(error, 200))
+  showNotification(`Task failed: ${taskName}`, truncate(error, 200)).then((result) => {
+    if (!result.shown) {
+      console.warn(`Notification not shown for failed task "${taskName}": ${result.reason ?? 'unknown'}`)
+    }
+  }).catch(() => {
+    // Non-fatal
+  })
 }
 
 export function testNotification(): Promise<NotificationDispatchResult> {
@@ -53,6 +65,31 @@ async function showNotification(title: string, body: string): Promise<Notificati
     return { shown: false, reason }
   }
 
+  // On macOS, Electron's Notification 'show' event does not fire reliably
+  // (especially in dev mode). Since macOS handles delivery natively via
+  // NSUserNotificationCenter / UNUserNotificationCenter, treat a successful
+  // .show() call as success. Actual display depends on macOS notification
+  // settings (System Settings > Notifications > Daymon).
+  if (process.platform === 'darwin') {
+    activeNotifications.add(notification)
+    notification.once('close', () => activeNotifications.delete(notification))
+    notification.once('failed', (_event, error) => {
+      console.error('Notification failed to display:', error)
+      activeNotifications.delete(notification)
+    })
+
+    try {
+      notification.show()
+      return { shown: true }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      console.error('Notification show() threw:', error)
+      activeNotifications.delete(notification)
+      return { shown: false, reason }
+    }
+  }
+
+  // Non-macOS: wait for the 'show' event to confirm delivery.
   return await new Promise<NotificationDispatchResult>((resolve) => {
     let settled = false
     let shown = false
@@ -68,9 +105,7 @@ async function showNotification(title: string, body: string): Promise<Notificati
     const timeout = setTimeout(() => {
       finish({
         shown: false,
-        reason: process.platform === 'darwin'
-          ? 'Timed out waiting for macOS notification. Check System Settings > Notifications > Daymon.'
-          : 'Timed out waiting for notification display.'
+        reason: 'Timed out waiting for notification display.'
       })
     }, NOTIFICATION_SHOW_TIMEOUT_MS)
 

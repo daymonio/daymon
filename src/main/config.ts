@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { mkdirSync, existsSync } from 'fs'
+import { APP_NAME } from '../shared/constants'
 
 export interface DaymonConfig {
   dbPath: string
@@ -30,7 +31,7 @@ export function getConfig(): DaymonConfig {
   const dataDir = app.getPath('userData')
 
   // ~/Daymon/
-  const userDir = join(app.getPath('home'), 'Daymon')
+  const userDir = join(app.getPath('home'), APP_NAME)
   const resultsDir = join(userDir, 'results')
   const dbPath = join(dataDir, 'daymon.db')
 

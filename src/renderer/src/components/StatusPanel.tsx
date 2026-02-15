@@ -17,14 +17,14 @@ async function fetchStatus(): Promise<StatusData> {
     throw new Error('IPC bridge is unavailable. Please restart Daymon.')
   }
 
-  const [stats, tasks, runs, runningRuns, scheduler, workers, watches] = await Promise.all([
+  const [stats, tasks, runs, runningRuns, scheduler, workerCount, watchCount] = await Promise.all([
     window.api.memory.getStats(),
     window.api.tasks.list(),
     window.api.tasks.listAllRuns(1),
     window.api.tasks.getRunningRuns(),
     window.api.app.getSchedulerStatus(),
-    window.api.workers.list(),
-    window.api.watches.list()
+    window.api.workers.count(),
+    window.api.watches.count()
   ])
   return {
     entityCount: stats.entityCount,
@@ -32,8 +32,8 @@ async function fetchStatus(): Promise<StatusData> {
     latestRun: runs[0] ?? null,
     runningRuns,
     scheduler,
-    workerCount: workers.length,
-    watchCount: watches.length
+    workerCount,
+    watchCount
   }
 }
 
@@ -185,6 +185,16 @@ export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): Rea
         ) : (
           <span className="text-xs text-gray-400">No runs yet</span>
         )}
+      </button>
+
+      <button
+        className="w-full text-left p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer"
+        onClick={() => window.open('https://github.com/daymonio/daymon')}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm">&#11088;</span>
+          <span className="text-xs font-medium text-yellow-700">Star Daymon on GitHub</span>
+        </div>
       </button>
     </div>
   )

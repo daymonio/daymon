@@ -76,6 +76,7 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle('workers:delete', (_e, id: number) => tasks.deleteWorker(parseOrThrow(idSchema, id)))
   ipcMain.handle('workers:getDefault', () => tasks.getDefaultWorker())
+  ipcMain.handle('workers:count', () => tasks.getWorkerCount())
 
   // ─── Tasks ────────────────────────────────────────────
 
@@ -134,6 +135,10 @@ export function registerIpcHandlers(): void {
     const validatedId = parseOrThrow(idSchema, id)
     stopWatch(validatedId)
     tasks.deleteWatch(validatedId)
+  })
+  ipcMain.handle('watches:count', (_e, status?: string) => {
+    const validatedStatus = parseOrThrow(z.enum(['active']).optional(), status)
+    return tasks.getWatchCount(validatedStatus)
   })
 
   // ─── App ──────────────────────────────────────────────
