@@ -14,10 +14,10 @@ asarUnpack:
   - "node_modules/onnxruntime-node/**"
   - "resources/**"
 extraResources:
-  - from: "out/mcp"
-    to: "mcp"
-    filter:
-      - "**/*"
+  - from: "out/mcp/server.js"
+    to: "mcp/server.js"
+  - from: "out/mcp/node_modules"
+    to: "mcp/node_modules"
   - from: "resources/trayIconTemplate.png"
     to: "resources/trayIconTemplate.png"
   - from: "resources/trayIconTemplate@2x.png"

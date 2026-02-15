@@ -1,6 +1,6 @@
 {
   "name": "daymon",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Open source autopilot for Claude",
   "main": "./out/main/index.js",
   "author": "Daymon <hello@daymon.io>",
@@ -14,7 +14,7 @@
     "dev": "npm run dev:clean && npm run rebuild:native:electron && unset ELECTRON_RUN_AS_NODE && electron-vite dev",
     "dev:clean": "bash scripts/dev-clean.sh",
     "build": "npm run typecheck && electron-vite build && npm run build:mcp",
-    "build:mcp": "esbuild src/mcp/server.ts --bundle --platform=node --target=node18 --outfile=out/mcp/server.js --external:better-sqlite3 --external:@huggingface/transformers --external:onnxruntime-node && cd out/mcp && npm install better-sqlite3@11.10.0 @huggingface/transformers",
+    "build:mcp": "node scripts/build-mcp.js",
     "start": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
