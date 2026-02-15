@@ -295,74 +295,92 @@ nav a:hover {
 .worker-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 40px;
+  gap: 14px;
+  margin-bottom: 32px;
 }
 
 .worker-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-left: 3px solid var(--accent);
   border-radius: var(--radius);
-  padding: 20px 24px;
-  transition: border-color 0.3s;
+  padding: 18px 20px;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 .worker-card:hover {
   border-color: rgba(99, 102, 241, 0.4);
+  border-left-color: var(--accent-hover);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.worker-icon {
+  font-size: 1.4rem;
+  margin-bottom: 8px;
 }
 
 .worker-name {
   font-weight: 700;
-  font-size: 0.95rem;
-  margin-bottom: 8px;
-  color: var(--accent-hover);
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+  color: var(--text);
 }
 
 .worker-desc {
   color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.worker-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.worker-flow-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 0.85rem;
-  line-height: 1.5;
-}
-
-.worker-how {
-  background: var(--bg-surface);
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  border-radius: var(--radius);
-  padding: 28px 32px;
-}
-
-.worker-how-title {
-  font-weight: 700;
-  font-size: 1rem;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.worker-steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-.worker-step-label {
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--accent-hover);
-  margin-bottom: 6px;
-}
-
-.worker-step-text {
   color: var(--text-muted);
-  font-size: 0.85rem;
-  line-height: 1.5;
+}
+
+.worker-flow-step strong {
+  color: var(--text);
+}
+
+.worker-flow-num {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--accent-hover);
+}
+
+.worker-flow-arrow {
+  color: rgba(99, 102, 241, 0.4);
+  font-size: 1.2rem;
 }
 
 @media (max-width: 640px) {
   .worker-grid {
     grid-template-columns: 1fr;
   }
-  .worker-steps {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .worker-flow {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .worker-flow-arrow {
+    transform: rotate(90deg);
   }
 }
 
