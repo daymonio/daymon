@@ -279,13 +279,15 @@ nav a:hover {
 }
 
 .prompt-box {
-  position: relative;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: 8px;
-  padding: 16px 72px 16px 16px;
+  padding: 16px;
   cursor: pointer;
   transition: border-color 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .prompt-box:hover {
@@ -299,19 +301,17 @@ nav a:hover {
 }
 
 .copy-btn {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
+  align-self: flex-end;
   background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 6px;
-  padding: 6px 12px;
+  padding: 6px 16px;
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  flex-shrink: 0;
 }
 
 .prompt-box:hover .copy-btn {
