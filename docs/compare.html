@@ -251,7 +251,7 @@
         <!-- 2. Security -->
         <div id="security" class="section">
           <h2>2. Security</h2>
-          <p class="section-desc">How much attack surface does each tool expose? Self-hosted infra is powerful — but one misconfiguration can leak your API keys or open your machine to the internet.</p>
+          <p class="section-desc">How much attack surface does each tool expose? In February 2026, security researchers found <strong>135,000+ OpenClaw instances exposed to the internet</strong> — 15,000 vulnerable to remote code execution, 53,000 linked to prior breach activity. Self-hosted infra is powerful, but one misconfiguration can be catastrophic.</p>
           <div class="detail-table">
             <div class="detail-row detail-header">
               <div></div>
@@ -263,42 +263,60 @@
               <div class="detail-label">Attack surface</div>
               <div class="detail-cell yes"><span class="check">None</span><span class="detail-note">Local app, no open ports, no server</span></div>
               <div class="detail-cell yes"><span class="check">Minimal</span><span class="detail-note">Anthropic manages infrastructure</span></div>
-              <div class="detail-cell"><span class="bad">Large</span><span class="detail-note">HTTP server, Docker, exposed gateway — must be locked down manually</span></div>
+              <div class="detail-cell"><span class="bad">135K+ exposed</span><span class="detail-note">135,000+ instances found internet-facing (SecurityScorecard, Feb 2026)</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Remote code execution</div>
+              <div class="detail-cell yes"><span class="check">N/A</span><span class="detail-note">No server to exploit</span></div>
+              <div class="detail-cell yes"><span class="check">N/A</span></div>
+              <div class="detail-cell"><span class="bad">15K+ vulnerable</span><span class="detail-note">3 critical CVEs with public exploits: one-click RCE, SSH injection, Docker sandbox escape</span></div>
             </div>
             <div class="detail-row">
               <div class="detail-label">API key exposure</div>
               <div class="detail-cell yes"><span class="check">No keys</span><span class="detail-note">Uses Claude subscription, nothing to leak</span></div>
               <div class="detail-cell yes"><span class="check">No keys</span></div>
-              <div class="detail-cell"><span class="bad">High risk</span><span class="detail-note">Keys in .env files — leaked key = someone else runs up your bill</span></div>
+              <div class="detail-cell"><span class="bad">High risk</span><span class="detail-note">Keys in .env files — leaked key = someone runs up your $2K+/mo bill</span></div>
             </div>
             <div class="detail-row">
-              <div class="detail-label">Network exposure</div>
-              <div class="detail-cell yes"><span class="check">Zero</span><span class="detail-note">No ports opened, no inbound connections</span></div>
-              <div class="detail-cell yes"><span class="check">N/A</span><span class="detail-note">Cloud service</span></div>
-              <div class="detail-cell"><span class="bad">HTTP port</span><span class="detail-note">Gateway listens on a port — without firewall, accessible from network</span></div>
+              <div class="detail-label">Default config</div>
+              <div class="detail-cell yes"><span class="check">Local only</span><span class="detail-note">No network listeners</span></div>
+              <div class="detail-cell yes"><span class="check">Cloud</span></div>
+              <div class="detail-cell"><span class="bad">Binds 0.0.0.0</span><span class="detail-note">Default listens on all interfaces (port 18789) — exposed unless you change it</span></div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Auth &amp; access control</div>
               <div class="detail-cell yes"><span class="check">N/A</span><span class="detail-note">Local app — you are the only user</span></div>
               <div class="detail-cell yes"><span class="check">Built-in</span><span class="detail-note">Anthropic SSO + account auth</span></div>
-              <div class="detail-cell"><span class="bad">DIY</span><span class="detail-note">Must configure tokens, CORS, reverse proxy yourself</span></div>
+              <div class="detail-cell"><span class="bad">DIY</span><span class="detail-note">Accepts trivial passwords like "a" — no enforced complexity</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Malicious plugins</div>
+              <div class="detail-cell yes"><span class="check">N/A</span><span class="detail-note">No plugin marketplace</span></div>
+              <div class="detail-cell yes"><span class="check">N/A</span></div>
+              <div class="detail-cell"><span class="bad">~900 found</span><span class="detail-note">20% of ClawHub packages flagged malicious — includes Atomic Stealer malware</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Breach history</div>
+              <div class="detail-cell yes"><span class="check">None</span></div>
+              <div class="detail-cell yes"><span class="check">None</span></div>
+              <div class="detail-cell"><span class="bad">53K+ linked</span><span class="detail-note">53,000+ instances correlated with prior breach activity</span></div>
             </div>
             <div class="detail-row">
               <div class="detail-label">TLS / encryption</div>
               <div class="detail-cell yes"><span class="check">N/A</span><span class="detail-note">Data never leaves your machine</span></div>
               <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">HTTPS by default</span></div>
-              <div class="detail-cell"><span class="bad">Manual</span><span class="detail-note">Must set up TLS yourself — defaults to plain HTTP</span></div>
+              <div class="detail-cell"><span class="bad">Manual</span><span class="detail-note">Defaults to plain HTTP — must set up TLS yourself</span></div>
             </div>
             <div class="detail-row">
-              <div class="detail-label">Misconfiguration risk</div>
-              <div class="detail-cell yes"><span class="check">Low</span><span class="detail-note">Nothing to configure</span></div>
-              <div class="detail-cell yes"><span class="check">Low</span></div>
-              <div class="detail-cell"><span class="bad">High</span><span class="detail-note">Default configs often insecure — easy for beginners to leave open</span></div>
+              <div class="detail-label">Time to first attack</div>
+              <div class="detail-cell yes"><span class="check">N/A</span><span class="detail-note">Nothing to attack</span></div>
+              <div class="detail-cell yes"><span class="check">N/A</span></div>
+              <div class="detail-cell"><span class="bad">Minutes</span><span class="detail-note">"First probes arrived within minutes" of deployment (Bitsight honeypot)</span></div>
             </div>
           </div>
           <div class="verdict">
             <strong>Verdict</strong>
-            <p>Daymon has zero attack surface — it's a local desktop app with no open ports, no API keys, and no server to misconfigure. OpenClaw requires Docker, an HTTP gateway, API keys in .env files, and manual TLS setup. An inexperienced user who skips these steps can accidentally expose their API keys to the internet or leave the gateway open to unauthorized access. If you're not comfortable hardening a self-hosted server, the risk is real.</p>
+            <p>This is not theoretical risk. In February 2026, SecurityScorecard found 135,000+ OpenClaw instances exposed to the internet — 15,000 vulnerable to remote code execution, 53,000 linked to prior breaches. The default config binds to all network interfaces. ~900 malicious plugins were found on ClawHub (20% of all packages), including the ClawHavoc campaign that installs Atomic Stealer malware. Bitsight's honeypot was probed within minutes of going live. Daymon avoids all of this: it's a local desktop app with no open ports, no API keys, no plugin marketplace, and no server to misconfigure.</p>
           </div>
         </div>
 
