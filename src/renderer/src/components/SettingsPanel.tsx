@@ -14,9 +14,8 @@ interface ClaudeCliStatus {
 }
 
 interface ClaudeIntegrationStatus {
-  configured: boolean
-  configPath: string
-  expectedPath: string
+  claudeDesktop: { configured: boolean; configPath: string }
+  claudeCode: { configured: boolean; configPath: string }
 }
 
 interface SettingsPanelProps {
@@ -138,9 +137,15 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
             </span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-600">Claude Integration</span>
-            <span className={integrationStatus?.configured ? 'text-green-600' : 'text-red-500'}>
-              {integrationStatus == null ? '...' : integrationStatus.configured ? 'Configured' : 'Not configured'}
+            <span className="text-gray-600">Claude Desktop</span>
+            <span className={integrationStatus?.claudeDesktop.configured ? 'text-green-600' : 'text-gray-400'}>
+              {integrationStatus == null ? '...' : integrationStatus.claudeDesktop.configured ? 'Connected' : 'Not found'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-600">Claude Code</span>
+            <span className={integrationStatus?.claudeCode.configured ? 'text-green-600' : 'text-gray-400'}>
+              {integrationStatus == null ? '...' : integrationStatus.claudeCode.configured ? 'Connected' : 'Not found'}
             </span>
           </div>
         </div>

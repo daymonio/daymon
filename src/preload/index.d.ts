@@ -49,7 +49,10 @@ interface AppAPI {
   quit: () => Promise<void>
   getPaths: () => Promise<{ dbPath: string; resultsDir: string; dataDir: string; claudeConfigPath: string }>
   checkClaude: () => Promise<{ available: boolean; version?: string; error?: string }>
-  getClaudeIntegration: () => Promise<{ configured: boolean; configPath: string; expectedPath: string }>
+  getClaudeIntegration: () => Promise<{
+    claudeDesktop: { configured: boolean; configPath: string }
+    claudeCode: { configured: boolean; configPath: string }
+  }>
   getSchedulerStatus: () => Promise<{ running: boolean; jobCount: number; jobs: Array<{ taskId: number }> }>
   testNotification: () => Promise<{ shown: boolean; reason?: string }>
   getAutoLaunch: () => Promise<boolean>

@@ -118,12 +118,8 @@
               <span class="setup-badge">Claude Code</span>
             </div>
             <div class="setup-option-body">
-              <p class="setup-instruction">Install Daymon, then paste this to Claude Code:</p>
-              <div class="prompt-box" onclick="copyPrompt(this)">
-                <span class="prompt-text">Add Daymon as a global MCP server. Command: node /Applications/Daymon.app/Contents/Resources/mcp/server.js — env DAYMON_DB_PATH=~/Library/Application Support/daymon/daymon.db and DAYMON_SOURCE=claude-code</span>
-                <span class="copy-btn" title="Copy to clipboard">Copy</span>
-              </div>
-              <p class="setup-detail">One-time setup. Works in every project after that.</p>
+              <p class="setup-instruction">Install Daymon and open it.<br><strong>That's it.</strong></p>
+              <p class="setup-detail">Daymon auto-configures Claude Code on first launch. Works in every project after that.</p>
             </div>
           </div>
         </div>
@@ -380,14 +376,6 @@
       gtag('event', 'conversion', {'send_to': 'AW-17597866841/bpTkCKafm_kbENnGqMdB'});
     }
 
-    function copyPrompt(el) {
-      var text = el.querySelector('.prompt-text').textContent;
-      navigator.clipboard.writeText(text).then(function() {
-        var btn = el.querySelector('.copy-btn');
-        btn.textContent = 'Copied!';
-        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
-      });
-    }
   </script>
 </body>
 </html>
