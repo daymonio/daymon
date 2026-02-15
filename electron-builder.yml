@@ -18,6 +18,10 @@ extraResources:
     to: "mcp"
     filter:
       - "**/*"
+  - from: "resources/trayIconTemplate.png"
+    to: "resources/trayIconTemplate.png"
+  - from: "resources/logo.png"
+    to: "resources/logo.png"
 mac:
   icon: build/icon.icns
   extendInfo:
