@@ -184,6 +184,7 @@
           <div class="toc-title">Contents</div>
           <ol>
             <li><a href="#setup">Setup &amp; Cost</a></li>
+            <li><a href="#security">Security</a></li>
             <li><a href="#sessions">Session Continuity</a></li>
             <li><a href="#memory">Memory &amp; Semantic Search</a></li>
             <li><a href="#scheduling">Task Scheduling</a></li>
@@ -247,9 +248,63 @@
           </div>
         </div>
 
-        <!-- 2. Sessions -->
+        <!-- 2. Security -->
+        <div id="security" class="section">
+          <h2>2. Security</h2>
+          <p class="section-desc">How much attack surface does each tool expose? Self-hosted infra is powerful — but one misconfiguration can leak your API keys or open your machine to the internet.</p>
+          <div class="detail-table">
+            <div class="detail-row detail-header">
+              <div></div>
+              <div class="daymon-col">Daymon</div>
+              <div class="claude-col">Claude</div>
+              <div class="openclaw-col">OpenClaw</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Attack surface</div>
+              <div class="detail-cell yes"><span class="check">None</span><span class="detail-note">Local app, no open ports, no server</span></div>
+              <div class="detail-cell yes"><span class="check">Minimal</span><span class="detail-note">Anthropic manages infrastructure</span></div>
+              <div class="detail-cell"><span class="bad">Large</span><span class="detail-note">HTTP server, Docker, exposed gateway — must be locked down manually</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">API key exposure</div>
+              <div class="detail-cell yes"><span class="check">No keys</span><span class="detail-note">Uses Claude subscription, nothing to leak</span></div>
+              <div class="detail-cell yes"><span class="check">No keys</span></div>
+              <div class="detail-cell"><span class="bad">High risk</span><span class="detail-note">Keys in .env files — leaked key = someone else runs up your bill</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Network exposure</div>
+              <div class="detail-cell yes"><span class="check">Zero</span><span class="detail-note">No ports opened, no inbound connections</span></div>
+              <div class="detail-cell yes"><span class="check">N/A</span><span class="detail-note">Cloud service</span></div>
+              <div class="detail-cell"><span class="bad">HTTP port</span><span class="detail-note">Gateway listens on a port — without firewall, accessible from network</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Auth &amp; access control</div>
+              <div class="detail-cell yes"><span class="check">N/A</span><span class="detail-note">Local app — you are the only user</span></div>
+              <div class="detail-cell yes"><span class="check">Built-in</span><span class="detail-note">Anthropic SSO + account auth</span></div>
+              <div class="detail-cell"><span class="bad">DIY</span><span class="detail-note">Must configure tokens, CORS, reverse proxy yourself</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">TLS / encryption</div>
+              <div class="detail-cell yes"><span class="check">N/A</span><span class="detail-note">Data never leaves your machine</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">HTTPS by default</span></div>
+              <div class="detail-cell"><span class="bad">Manual</span><span class="detail-note">Must set up TLS yourself — defaults to plain HTTP</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Misconfiguration risk</div>
+              <div class="detail-cell yes"><span class="check">Low</span><span class="detail-note">Nothing to configure</span></div>
+              <div class="detail-cell yes"><span class="check">Low</span></div>
+              <div class="detail-cell"><span class="bad">High</span><span class="detail-note">Default configs often insecure — easy for beginners to leave open</span></div>
+            </div>
+          </div>
+          <div class="verdict">
+            <strong>Verdict</strong>
+            <p>Daymon has zero attack surface — it's a local desktop app with no open ports, no API keys, and no server to misconfigure. OpenClaw requires Docker, an HTTP gateway, API keys in .env files, and manual TLS setup. An inexperienced user who skips these steps can accidentally expose their API keys to the internet or leave the gateway open to unauthorized access. If you're not comfortable hardening a self-hosted server, the risk is real.</p>
+          </div>
+        </div>
+
+        <!-- 3. Sessions -->
         <div id="sessions" class="section">
-          <h2>2. Session Continuity</h2>
+          <h2>3. Session Continuity</h2>
           <p class="section-desc">Can scheduled tasks remember what happened in previous runs?</p>
           <div class="detail-table">
             <div class="detail-row detail-header">
@@ -295,9 +350,9 @@
           </div>
         </div>
 
-        <!-- 3. Memory -->
+        <!-- 4. Memory -->
         <div id="memory" class="section">
-          <h2>3. Memory &amp; Semantic Search</h2>
+          <h2>4. Memory &amp; Semantic Search</h2>
           <p class="section-desc">How each tool stores knowledge and retrieves it when needed.</p>
           <div class="detail-table">
             <div class="detail-row detail-header">
@@ -367,9 +422,9 @@
           </div>
         </div>
 
-        <!-- 4. Scheduling -->
+        <!-- 5. Scheduling -->
         <div id="scheduling" class="section">
-          <h2>4. Task Scheduling</h2>
+          <h2>5. Task Scheduling</h2>
           <p class="section-desc">How each tool handles recurring, one-time, and on-demand tasks.</p>
           <div class="detail-table">
             <div class="detail-row detail-header">
@@ -433,9 +488,9 @@
           </div>
         </div>
 
-        <!-- 5. Execution -->
+        <!-- 6. Execution -->
         <div id="execution" class="section">
-          <h2>5. Task Execution</h2>
+          <h2>6. Task Execution</h2>
           <p class="section-desc">How each tool actually runs AI tasks.</p>
           <div class="detail-table">
             <div class="detail-row detail-header">
@@ -487,9 +542,9 @@
           </div>
         </div>
 
-        <!-- 6. MCP -->
+        <!-- 7. MCP -->
         <div id="mcp" class="section">
-          <h2>6. Claude Integration</h2>
+          <h2>7. Claude Integration</h2>
           <p class="section-desc">How each tool connects to Claude Desktop and Claude Code.</p>
           <div class="detail-table">
             <div class="detail-row detail-header">
@@ -529,9 +584,9 @@
           </div>
         </div>
 
-        <!-- 7. Workers -->
+        <!-- 8. Workers -->
         <div id="workers" class="section">
-          <h2>7. Workers &amp; Agent Personalities</h2>
+          <h2>8. Workers &amp; Agent Personalities</h2>
           <p class="section-desc">Can you create specialized agents with different behaviors and system prompts?</p>
           <div class="detail-table">
             <div class="detail-row detail-header">
