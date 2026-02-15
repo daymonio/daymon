@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import { getConfig } from '../config'
 import { runMigrations } from '../../shared/db-migrations'
+import { cleanupAllRunningRuns } from '../../shared/db-queries'
 
 let db: Database.Database | null = null
 
@@ -23,6 +24,11 @@ export function initDatabase(): Database.Database {
   db.pragma('busy_timeout = 5000')
 
   runMigrations(db)
+
+  const cleaned = cleanupAllRunningRuns(db)
+  if (cleaned > 0) {
+    console.log(`Cleaned up ${cleaned} stale task run(s)`)
+  }
 
   return db
 }

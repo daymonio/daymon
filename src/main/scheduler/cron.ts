@@ -1,5 +1,5 @@
 import cron from 'node-cron'
-import { listTasks, getDueOnceTasks, updateTask } from '../db/tasks'
+import { listTasks, getDueOnceTasks, updateTask, cleanupStaleRuns } from '../db/tasks'
 import { executeTask } from './runner'
 import { getDatabase } from '../db'
 import { indexPendingEmbeddings } from '../../shared/embedding-indexer'
@@ -41,6 +41,16 @@ export function stopScheduler(): void {
 }
 
 export function syncWithDatabase(): void {
+  // Clean up any stale runs (process died, timeout exceeded)
+  try {
+    const cleaned = cleanupStaleRuns()
+    if (cleaned > 0) {
+      console.log(`Scheduler: cleaned up ${cleaned} stale task run(s)`)
+    }
+  } catch {
+    // non-fatal
+  }
+
   const activeTasks = listTasks('active')
   const activeTaskIds = new Set(activeTasks.map((t) => t.id))
 

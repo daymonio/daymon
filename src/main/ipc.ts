@@ -109,6 +109,12 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle('tasks:runNow', (_e, id: number) => executeTask(parseOrThrow(idSchema, id)))
   ipcMain.handle('tasks:getRunningRuns', () => tasks.getRunningTaskRuns())
+  ipcMain.handle('tasks:getConsoleLogs', (_e, runId: number, afterSeq?: number, limit?: number) => {
+    const validatedRunId = parseOrThrow(idSchema, runId)
+    const validatedAfterSeq = parseOrThrow(z.number().int().min(0).optional().default(0), afterSeq)
+    const validatedLimit = parseOrThrow(z.number().int().min(1).max(500).optional().default(100), limit)
+    return tasks.getConsoleLogs(validatedRunId, validatedAfterSeq, validatedLimit)
+  })
 
   // ─── Settings ─────────────────────────────────────────
 

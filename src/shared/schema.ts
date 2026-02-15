@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS entities (
     name TEXT NOT NULL,
     type TEXT NOT NULL DEFAULT 'fact',
     category TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT (datetime('now','localtime')),
+    updated_at DATETIME DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_entities_category ON entities(category);
 CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS observations (
     entity_id INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     source TEXT NOT NULL DEFAULT 'claude',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_observations_entity_id ON observations(entity_id);
 
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS relations (
     from_entity INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
     to_entity INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
     relation_type TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_relations_from ON relations(from_entity);
 CREATE INDEX IF NOT EXISTS idx_relations_to ON relations(to_entity);
@@ -60,15 +60,15 @@ CREATE TABLE IF NOT EXISTS tasks (
     last_run DATETIME,
     last_result TEXT,
     error_count INTEGER NOT NULL DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT (datetime('now','localtime')),
+    updated_at DATETIME DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 
 CREATE TABLE IF NOT EXISTS task_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    started_at DATETIME DEFAULT (datetime('now','localtime')),
     finished_at DATETIME,
     status TEXT NOT NULL DEFAULT 'running',
     result TEXT,
@@ -87,18 +87,18 @@ CREATE TABLE IF NOT EXISTS watches (
     status TEXT NOT NULL DEFAULT 'active',
     last_triggered DATETIME,
     trigger_count INTEGER NOT NULL DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT (datetime('now','localtime'))
 );
 
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT (datetime('now','localtime'))
 );
 
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY,
-    applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    applied_at DATETIME DEFAULT (datetime('now','localtime'))
 );
 INSERT OR IGNORE INTO schema_version (version) VALUES (1);
 `
@@ -132,8 +132,8 @@ CREATE TABLE IF NOT EXISTS workers (
     model TEXT,
     is_default INTEGER NOT NULL DEFAULT 0,
     task_count INTEGER NOT NULL DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT (datetime('now','localtime')),
+    updated_at DATETIME DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(name);
 
@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS embeddings (
     vector BLOB NOT NULL,
     model TEXT NOT NULL DEFAULT 'all-MiniLM-L6-v2',
     dimensions INTEGER NOT NULL DEFAULT 384,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_embeddings_entity_id ON embeddings(entity_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_embeddings_source ON embeddings(source_type, source_id, model);
@@ -168,4 +168,17 @@ INSERT OR IGNORE INTO schema_version (version) VALUES (6);
 export const SCHEMA_V7 = `
 CREATE INDEX IF NOT EXISTS idx_task_runs_status ON task_runs(status);
 INSERT OR IGNORE INTO schema_version (version) VALUES (7);
+`
+
+export const SCHEMA_V8 = `
+CREATE TABLE IF NOT EXISTS console_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL REFERENCES task_runs(id) ON DELETE CASCADE,
+    seq INTEGER NOT NULL,
+    entry_type TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_console_logs_run_seq ON console_logs(run_id, seq);
+INSERT OR IGNORE INTO schema_version (version) VALUES (8);
 `

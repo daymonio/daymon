@@ -46,7 +46,9 @@ const api = {
     getLatestRun: (taskId: number) => ipcRenderer.invoke('tasks:getLatestRun', taskId),
     listAllRuns: (limit?: number) => ipcRenderer.invoke('tasks:listAllRuns', limit ?? 20),
     runNow: (id: number) => ipcRenderer.invoke('tasks:runNow', id),
-    getRunningRuns: () => ipcRenderer.invoke('tasks:getRunningRuns')
+    getRunningRuns: () => ipcRenderer.invoke('tasks:getRunningRuns'),
+    getConsoleLogs: (runId: number, afterSeq?: number, limit?: number) =>
+      ipcRenderer.invoke('tasks:getConsoleLogs', runId, afterSeq, limit)
   },
 
   watches: {

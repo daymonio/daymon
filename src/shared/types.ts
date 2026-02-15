@@ -111,6 +111,17 @@ export interface TaskRun {
   sessionId: string | null
 }
 
+// ─── Console Log Types ──────────────────────────────────────
+
+export interface ConsoleLogEntry {
+  id: number
+  runId: number
+  seq: number
+  entryType: string
+  content: string
+  createdAt: string
+}
+
 // ─── Watch Types ────────────────────────────────────────────
 
 export interface Watch {

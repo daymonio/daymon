@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7 } from './schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, SCHEMA_V8 } from './schema'
 
 const MIGRATIONS: Array<{ version: number; sql: string; label: string }> = [
   { version: 1, sql: SCHEMA_V1, label: 'initial schema' },
@@ -8,7 +8,8 @@ const MIGRATIONS: Array<{ version: number; sql: string; label: string }> = [
   { version: 4, sql: SCHEMA_V4, label: 'memory-task integration' },
   { version: 5, sql: SCHEMA_V5, label: 'workers, sessions, embeddings' },
   { version: 6, sql: SCHEMA_V6, label: 'task timeout' },
-  { version: 7, sql: SCHEMA_V7, label: 'task_runs status index' }
+  { version: 7, sql: SCHEMA_V7, label: 'task_runs status index' },
+  { version: 8, sql: SCHEMA_V8, label: 'console logs for task runs' }
 ]
 
 export function runMigrations(database: Database.Database, log: (msg: string) => void = console.log): void {

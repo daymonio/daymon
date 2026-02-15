@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { Entity, Observation, Relation, Task, TaskRun, Watch, CreateTaskInput, MemoryStats, Worker, CreateWorkerInput } from '../shared/types'
+import type { Entity, Observation, Relation, Task, TaskRun, Watch, CreateTaskInput, MemoryStats, Worker, CreateWorkerInput, ConsoleLogEntry } from '../shared/types'
 
 interface MemoryAPI {
   createEntity: (name: string, type?: string, category?: string) => Promise<Entity>
@@ -29,6 +29,7 @@ interface TasksAPI {
   listAllRuns: (limit?: number) => Promise<TaskRun[]>
   runNow: (id: number) => Promise<void>
   getRunningRuns: () => Promise<TaskRun[]>
+  getConsoleLogs: (runId: number, afterSeq?: number, limit?: number) => Promise<ConsoleLogEntry[]>
 }
 
 interface WatchesAPI {

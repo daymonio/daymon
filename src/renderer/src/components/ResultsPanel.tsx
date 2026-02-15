@@ -1,7 +1,62 @@
 import { useState, useEffect } from 'react'
 import { usePolling } from '../hooks/usePolling'
-import type { TaskRun, Task } from '@shared/types'
+import type { TaskRun, Task, ConsoleLogEntry } from '@shared/types'
 import { formatDateTimeShort } from '../utils/time'
+
+const CONSOLE_ENTRY_COLORS: Record<string, string> = {
+  tool_call: 'text-yellow-400',
+  assistant_text: 'text-green-300',
+  tool_result: 'text-gray-400',
+  result: 'text-blue-400',
+  error: 'text-red-400'
+}
+
+function ConsoleLogHistory({ runId }: { runId: number }): React.JSX.Element {
+  const [entries, setEntries] = useState<ConsoleLogEntry[] | null>(null)
+  const [showConsole, setShowConsole] = useState(false)
+
+  useEffect(() => {
+    if (!showConsole) return
+    window.api.tasks.getConsoleLogs(runId, 0, 200).then(setEntries).catch(() => setEntries([]))
+  }, [runId, showConsole])
+
+  if (!showConsole) {
+    return (
+      <button
+        onClick={() => setShowConsole(true)}
+        className="text-xs text-gray-400 hover:text-gray-600 mt-1"
+      >
+        Show console log
+      </button>
+    )
+  }
+
+  if (!entries) {
+    return <div className="text-xs text-gray-400 mt-1">Loading...</div>
+  }
+
+  if (entries.length === 0) {
+    return <div className="text-xs text-gray-400 mt-1">No console logs for this run.</div>
+  }
+
+  return (
+    <div className="mt-1">
+      <button
+        onClick={() => setShowConsole(false)}
+        className="text-xs text-gray-400 hover:text-gray-600 mb-1"
+      >
+        Hide console log
+      </button>
+      <div className="max-h-48 overflow-y-auto bg-gray-900 rounded p-2 font-mono text-xs leading-relaxed">
+        {entries.map((e) => (
+          <div key={e.seq} className={CONSOLE_ENTRY_COLORS[e.entryType] ?? 'text-gray-300'}>
+            {e.content}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export function ResultsPanel(): React.JSX.Element {
   const [expandedId, setExpandedId] = useState<number | null>(null)
@@ -73,6 +128,7 @@ export function ResultsPanel(): React.JSX.Element {
               {!run.result && !run.errorMessage && (
                 <div className="text-xs text-gray-400 py-1">No output</div>
               )}
+              <ConsoleLogHistory runId={run.id} />
             </div>
           )}
         </div>

@@ -84,7 +84,7 @@ async function handleTrigger(watchId: number, actionPrompt: string, filePath: st
   // Update trigger stats in DB
   try {
     const db = getDatabase()
-    db.prepare('UPDATE watches SET last_triggered = CURRENT_TIMESTAMP, trigger_count = trigger_count + 1 WHERE id = ?').run(watchId)
+    db.prepare("UPDATE watches SET last_triggered = datetime('now','localtime'), trigger_count = trigger_count + 1 WHERE id = ?").run(watchId)
   } catch {
     // non-fatal
   }

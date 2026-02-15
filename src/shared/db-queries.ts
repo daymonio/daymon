@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import type { Entity, Observation, Relation, MemoryStats, Task, CreateTaskInput, TaskRun, Worker, CreateWorkerInput, TriggerType, TaskStatus, Watch } from './types'
+import type { Entity, Observation, Relation, MemoryStats, Task, CreateTaskInput, TaskRun, Worker, CreateWorkerInput, TriggerType, TaskStatus, Watch, ConsoleLogEntry } from './types'
 
 // ─── Entities ───────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ export function updateEntity(db: Database.Database, id: number, updates: { name?
   if (updates.category !== undefined) { fields.push('category = ?'); values.push(updates.category) }
   if (fields.length === 0) return
 
-  fields.push('updated_at = CURRENT_TIMESTAMP')
+  fields.push("updated_at = datetime('now','localtime')")
   values.push(id)
   db.prepare(`UPDATE entities SET ${fields.join(', ')} WHERE id = ?`).run(...values)
 }
@@ -71,7 +71,7 @@ export function addObservation(db: Database.Database, entityId: number, content:
   const result = db
     .prepare('INSERT INTO observations (entity_id, content, source) VALUES (?, ?, ?)')
     .run(entityId, content, source)
-  db.prepare('UPDATE entities SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(entityId)
+  db.prepare("UPDATE entities SET updated_at = datetime('now','localtime') WHERE id = ?").run(entityId)
   return getObservation(db, result.lastInsertRowid as number)!
 }
 
@@ -179,7 +179,7 @@ export function updateWorker(db: Database.Database, id: number, updates: Partial
   }
   if (fields.length === 0) return
 
-  fields.push('updated_at = CURRENT_TIMESTAMP')
+  fields.push("updated_at = datetime('now','localtime')")
   values.push(id)
   db.prepare(`UPDATE workers SET ${fields.join(', ')} WHERE id = ?`).run(...values)
 }
@@ -282,7 +282,7 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
   }
   if (fields.length === 0) return
 
-  fields.push('updated_at = CURRENT_TIMESTAMP')
+  fields.push("updated_at = datetime('now','localtime')")
   values.push(id)
   db.prepare(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`).run(...values)
 }
@@ -345,8 +345,8 @@ export function getSetting(db: Database.Database, key: string): string | null {
 export function setSetting(db: Database.Database, key: string, value: string): void {
   db
     .prepare(
-      `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
-       ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP`
+      `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now','localtime'))
+       ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime('now','localtime')`
     )
     .run(key, value, value)
 }
@@ -361,7 +361,7 @@ export function getAllSettings(db: Database.Database): Record<string, string> {
 // ─── Task Runs ──────────────────────────────────────────────
 
 export function createTaskRun(db: Database.Database, taskId: number): TaskRun {
-  const result = db.prepare('INSERT INTO task_runs (task_id) VALUES (?)').run(taskId)
+  const result = db.prepare("INSERT INTO task_runs (task_id, started_at) VALUES (?, datetime('now','localtime'))").run(taskId)
   return getTaskRun(db, result.lastInsertRowid as number)!
 }
 
@@ -378,16 +378,16 @@ export function completeTaskRun(db: Database.Database, id: number, result: strin
   const durationMs = Date.now() - new Date(run.startedAt).getTime()
 
   db.prepare(
-    `UPDATE task_runs SET finished_at = CURRENT_TIMESTAMP, status = ?, result = ?,
+    `UPDATE task_runs SET finished_at = datetime('now','localtime'), status = ?, result = ?,
      result_file = ?, error_message = ?, duration_ms = ? WHERE id = ?`
   ).run(status, result, resultFile ?? null, errorMessage ?? null, durationMs, id)
 
   const task = getTask(db, run.taskId)
-  updateTask(db, run.taskId, {
-    lastRun: new Date().toISOString(),
-    lastResult: result,
-    errorCount: errorMessage ? (task?.errorCount ?? 0) + 1 : 0
-  })
+  const newErrorCount = errorMessage ? (task?.errorCount ?? 0) + 1 : 0
+  db.prepare(
+    `UPDATE tasks SET last_run = datetime('now','localtime'), last_result = ?,
+     error_count = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+  ).run(result, newErrorCount, run.taskId)
 }
 
 export function getTaskRuns(db: Database.Database, taskId: number, limit: number = 20): TaskRun[] {
@@ -438,6 +438,85 @@ export function getRunningTaskRuns(db: Database.Database): TaskRun[] {
     .prepare("SELECT * FROM task_runs WHERE status = 'running' ORDER BY started_at DESC")
     .all()
   return (rows as Record<string, unknown>[]).map(mapTaskRunRow)
+}
+
+// ─── Stale Run Cleanup ─────────────────────────────────────
+
+const DEFAULT_TIMEOUT_MINUTES = 30
+
+/**
+ * Mark ALL "running" runs as failed. Use on startup — if the process restarted,
+ * no run can still be legitimately running.
+ */
+export function cleanupAllRunningRuns(db: Database.Database): number {
+  const result = db.prepare(`
+    UPDATE task_runs SET
+      status = 'failed',
+      finished_at = datetime('now','localtime'),
+      error_message = 'Stale run: process restarted'
+    WHERE status = 'running'
+  `).run()
+  return result.changes
+}
+
+/**
+ * Mark "running" runs as failed if they've exceeded their timeout.
+ * Use in periodic scheduler checks (where a run might legitimately be in progress).
+ */
+export function cleanupStaleRuns(db: Database.Database): number {
+  const result = db.prepare(`
+    UPDATE task_runs SET
+      status = 'failed',
+      finished_at = datetime('now','localtime'),
+      error_message = 'Stale run: exceeded timeout'
+    WHERE status = 'running'
+      AND (julianday('now','localtime') - julianday(started_at)) * 24 * 60 >
+        COALESCE(
+          (SELECT timeout_minutes FROM tasks WHERE tasks.id = task_runs.task_id),
+          ?
+        )
+  `).run(DEFAULT_TIMEOUT_MINUTES)
+  return result.changes
+}
+
+// ─── Console Logs ──────────────────────────────────────────
+
+export function insertConsoleLogs(
+  db: Database.Database,
+  entries: Array<{ runId: number; seq: number; entryType: string; content: string }>
+): void {
+  const stmt = db.prepare(
+    'INSERT INTO console_logs (run_id, seq, entry_type, content) VALUES (?, ?, ?, ?)'
+  )
+  const insertMany = db.transaction((items: typeof entries) => {
+    for (const e of items) {
+      stmt.run(e.runId, e.seq, e.entryType, e.content)
+    }
+  })
+  insertMany(entries)
+}
+
+export function getConsoleLogs(
+  db: Database.Database,
+  runId: number,
+  afterSeq: number = 0,
+  limit: number = 100
+): ConsoleLogEntry[] {
+  const rows = db
+    .prepare('SELECT * FROM console_logs WHERE run_id = ? AND seq > ? ORDER BY seq ASC LIMIT ?')
+    .all(runId, afterSeq, limit)
+  return (rows as Record<string, unknown>[]).map(mapConsoleLogRow)
+}
+
+function mapConsoleLogRow(row: Record<string, unknown>): ConsoleLogEntry {
+  return {
+    id: row.id as number,
+    runId: row.run_id as number,
+    seq: row.seq as number,
+    entryType: row.entry_type as string,
+    content: row.content as string,
+    createdAt: row.created_at as string
+  }
 }
 
 // ─── Memory-Task Integration ────────────────────────────────
@@ -545,7 +624,7 @@ export function incrementRunCount(db: Database.Database, taskId: number): void {
     `UPDATE tasks SET
        run_count = run_count + 1,
        status = CASE WHEN max_runs IS NOT NULL AND run_count + 1 >= max_runs THEN 'completed' ELSE status END,
-       updated_at = CURRENT_TIMESTAMP
+       updated_at = datetime('now','localtime')
      WHERE id = ?`
   ).run(taskId)
 }
@@ -616,7 +695,7 @@ export function updateTaskRunSessionId(db: Database.Database, runId: number, ses
 }
 
 export function clearTaskSession(db: Database.Database, taskId: number): void {
-  db.prepare('UPDATE tasks SET session_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(taskId)
+  db.prepare("UPDATE tasks SET session_id = NULL, updated_at = datetime('now','localtime') WHERE id = ?").run(taskId)
 }
 
 export function getSessionRunCount(db: Database.Database, taskId: number, sessionId: string): number {
@@ -650,10 +729,10 @@ export function upsertEmbedding(
      ON CONFLICT (source_type, source_id, model) DO UPDATE SET
        text_hash = excluded.text_hash,
        vector = excluded.vector,
-       created_at = CURRENT_TIMESTAMP`
+       created_at = datetime('now','localtime')`
   ).run(entityId, sourceType, sourceId, hash, vector, model, dimensions)
 
-  db.prepare('UPDATE entities SET embedded_at = CURRENT_TIMESTAMP WHERE id = ?').run(entityId)
+  db.prepare("UPDATE entities SET embedded_at = datetime('now','localtime') WHERE id = ?").run(entityId)
 }
 
 export function getEmbeddingsForEntity(db: Database.Database, entityId: number): Array<{

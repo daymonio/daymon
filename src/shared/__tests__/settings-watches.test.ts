@@ -22,8 +22,8 @@ describe('settings', () => {
 
   function setSetting(key: string, value: string): void {
     db.prepare(
-      `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
-       ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP`
+      `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now','localtime'))
+       ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime('now','localtime')`
     ).run(key, value, value)
   }
 

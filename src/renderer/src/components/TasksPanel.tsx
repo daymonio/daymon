@@ -1,7 +1,7 @@
 import { usePolling } from '../hooks/usePolling'
-import type { Task, TaskRun, Worker } from '@shared/types'
+import type { Task, TaskRun, Worker, ConsoleLogEntry } from '@shared/types'
 import { formatRelativeTime } from '../utils/time'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 function statusBadge(task: Task): React.JSX.Element {
   const colors: Record<string, string> = {
@@ -65,8 +65,65 @@ function ProgressBar({ run }: { run: TaskRun }): React.JSX.Element {
   )
 }
 
+const CONSOLE_ENTRY_COLORS: Record<string, string> = {
+  tool_call: 'text-yellow-400',
+  assistant_text: 'text-green-300',
+  tool_result: 'text-gray-400',
+  result: 'text-blue-400',
+  error: 'text-red-400'
+}
+
+function ConsoleView({ runId }: { runId: number }): React.JSX.Element {
+  const [entries, setEntries] = useState<ConsoleLogEntry[]>([])
+  const lastSeqRef = useRef(0)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let mounted = true
+    lastSeqRef.current = 0
+    setEntries([])
+
+    const poll = async (): Promise<void> => {
+      if (!mounted) return
+      try {
+        const newEntries = await window.api.tasks.getConsoleLogs(runId, lastSeqRef.current, 50)
+        if (newEntries.length > 0 && mounted) {
+          lastSeqRef.current = newEntries[newEntries.length - 1].seq
+          setEntries(prev => [...prev.slice(-150), ...newEntries])
+        }
+      } catch {
+        // non-fatal
+      }
+    }
+    poll()
+    const timer = setInterval(poll, 1500)
+    return () => { mounted = false; clearInterval(timer) }
+  }, [runId])
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight)
+  }, [entries])
+
+  return (
+    <div
+      ref={scrollRef}
+      className="max-h-48 overflow-y-auto bg-gray-900 rounded p-2 mt-1 font-mono text-xs leading-relaxed"
+    >
+      {entries.map((e) => (
+        <div key={e.seq} className={CONSOLE_ENTRY_COLORS[e.entryType] ?? 'text-gray-300'}>
+          {e.content}
+        </div>
+      ))}
+      {entries.length === 0 && (
+        <div className="text-gray-500">Waiting for output...</div>
+      )}
+    </div>
+  )
+}
+
 export function TasksPanel(): React.JSX.Element {
   const [actionError, setActionError] = useState<string | null>(null)
+  const [consoleTaskId, setConsoleTaskId] = useState<number | null>(null)
   const { data: tasks, refresh, error: tasksError, isLoading } = usePolling(() => window.api.tasks.list(), 5000)
   const { data: runningRuns } = usePolling(() => window.api.tasks.getRunningRuns(), 2000)
   const { data: workers } = usePolling(() => window.api.workers.list(), 10000)
@@ -183,7 +240,18 @@ export function TasksPanel(): React.JSX.Element {
               Last run: {formatRelativeTime(task.lastRun)}
             </div>
             {activeRun && <ProgressBar run={activeRun} />}
+            {activeRun && consoleTaskId === task.id && (
+              <ConsoleView runId={activeRun.id} />
+            )}
             <div className="flex gap-2">
+              {activeRun && (
+                <button
+                  onClick={() => setConsoleTaskId(consoleTaskId === task.id ? null : task.id)}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  {consoleTaskId === task.id ? 'Hide Console' : 'Console'}
+                </button>
+              )}
               <button
                 onClick={() => runNow(task.id)}
                 className="text-xs text-blue-500 hover:text-blue-700"

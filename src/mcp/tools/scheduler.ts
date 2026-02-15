@@ -215,7 +215,7 @@ export function registerSchedulerTools(server: McpServer): void {
     'daymon_run_task',
     {
       title: 'Run Task Now',
-      description: 'Execute a task immediately and return the result. This spawns a Claude CLI process to run the task prompt.',
+      description: 'Execute a task immediately. Returns right away — use daymon_task_progress to check status.',
       inputSchema: {
         id: z.number().describe('The task ID to run')
       }
@@ -231,7 +231,7 @@ export function registerSchedulerTools(server: McpServer): void {
 
       if (isTaskRunning(id)) {
         return {
-          content: [{ type: 'text' as const, text: `Task "${task.name}" (id: ${id}) is already running.` }]
+          content: [{ type: 'text' as const, text: `Task "${task.name}" is already running. Use daymon_task_progress to check status.` }]
         }
       }
 
@@ -242,32 +242,38 @@ export function registerSchedulerTools(server: McpServer): void {
       }
 
       const resultsDir = process.env.DAYMON_RESULTS_DIR || join(homedir(), APP_NAME, 'results')
-      const result = await executeTask(id, { db, resultsDir })
 
-      // Restore original status if it was changed for ad-hoc execution
-      if (originalStatus !== TASK_STATUSES.ACTIVE) {
-        const currentTask = queries.getTask(db, id)
-        // Only restore if incrementRunCount hasn't already changed it to 'completed'
-        if (currentTask && currentTask.status === TASK_STATUSES.ACTIVE) {
-          queries.updateTask(db, id, { status: originalStatus })
-        }
-      }
+      // Fire and forget — execute in background
+      executeTask(id, { db, resultsDir })
+        .then((result) => {
+          // Restore original status if it was changed for ad-hoc execution
+          if (originalStatus !== TASK_STATUSES.ACTIVE) {
+            const currentTask = queries.getTask(db, id)
+            if (currentTask && currentTask.status === TASK_STATUSES.ACTIVE) {
+              queries.updateTask(db, id, { status: originalStatus })
+            }
+          }
+          if (!result.success) {
+            console.error(`Task ${id} ("${task.name}") failed: ${result.errorMessage}`)
+          }
+        })
+        .catch((err) => {
+          console.error(`Task ${id} ("${task.name}") execution error:`, err)
+          if (originalStatus !== TASK_STATUSES.ACTIVE) {
+            try {
+              const currentTask = queries.getTask(db, id)
+              if (currentTask && currentTask.status === TASK_STATUSES.ACTIVE) {
+                queries.updateTask(db, id, { status: originalStatus })
+              }
+            } catch { /* non-fatal */ }
+          }
+        })
 
-      if (result.success) {
-        return {
-          content: [{
-            type: 'text' as const,
-            text: `Task "${task.name}" completed.\n\n${result.output}`
-          }]
-        }
-      } else {
-        return {
-          content: [{
-            type: 'text' as const,
-            text: `Task "${task.name}" failed: ${result.errorMessage}\n\n${result.output}`
-          }],
-          isError: true
-        }
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Task "${task.name}" started. Use daymon_task_progress to check status.`
+        }]
       }
     }
   )
@@ -436,6 +442,7 @@ export function registerSchedulerTools(server: McpServer): void {
       }
 
       if (latestRun.status !== 'running') {
+        const consoleLogs = queries.getConsoleLogs(db, latestRun.id, 0, 10)
         return {
           content: [{
             type: 'text' as const,
@@ -446,13 +453,15 @@ export function registerSchedulerTools(server: McpServer): void {
               progress: latestRun.progress,
               progressMessage: latestRun.progressMessage,
               finishedAt: latestRun.finishedAt,
-              durationMs: latestRun.durationMs
+              durationMs: latestRun.durationMs,
+              recentConsoleLogs: consoleLogs.map(l => ({ type: l.entryType, content: l.content }))
             }, null, 2)
           }]
         }
       }
 
       const elapsedMs = Date.now() - new Date(latestRun.startedAt).getTime()
+      const consoleLogs = queries.getConsoleLogs(db, latestRun.id, 0, 10)
       return {
         content: [{
           type: 'text' as const,
@@ -463,7 +472,8 @@ export function registerSchedulerTools(server: McpServer): void {
             progress: latestRun.progress,
             progressMessage: latestRun.progressMessage,
             elapsedMs,
-            elapsedFormatted: `${(elapsedMs / 1000).toFixed(1)}s`
+            elapsedFormatted: `${(elapsedMs / 1000).toFixed(1)}s`,
+            recentConsoleLogs: consoleLogs.map(l => ({ type: l.entryType, content: l.content }))
           }, null, 2)
         }]
       }

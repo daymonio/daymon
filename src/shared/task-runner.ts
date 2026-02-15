@@ -1,6 +1,7 @@
 import { join } from 'path'
 import { writeFileSync, mkdirSync, existsSync } from 'fs'
 import { executeClaudeCode } from './claude-code'
+import type { ConsoleLogCallback } from './claude-code'
 import * as queries from './db-queries'
 import { DEFAULTS } from './constants'
 import type Database from 'better-sqlite3'
@@ -24,6 +25,39 @@ export interface TaskExecutionResult {
 const runningTasks = new Set<number>()
 
 const SESSION_MAX_RUNS = 20
+const CONSOLE_LOG_FLUSH_INTERVAL_MS = 1000
+
+function createConsoleLogBuffer(db: Database.Database, runId: number): {
+  onConsoleLog: ConsoleLogCallback
+  flush: () => void
+} {
+  let seq = 0
+  let lastFlush = 0
+  const buffer: Array<{ runId: number; seq: number; entryType: string; content: string }> = []
+
+  function flush(): void {
+    if (buffer.length === 0) return
+    try {
+      const toWrite = buffer.splice(0)
+      queries.insertConsoleLogs(db, toWrite)
+    } catch (err) {
+      console.warn('Non-fatal: console log flush failed:', err)
+    }
+    lastFlush = Date.now()
+  }
+
+  return {
+    onConsoleLog: (entry) => {
+      seq++
+      buffer.push({ runId, seq, entryType: entry.entryType, content: entry.content })
+      const now = Date.now()
+      if (now - lastFlush >= CONSOLE_LOG_FLUSH_INTERVAL_MS) {
+        flush()
+      }
+    },
+    flush
+  }
+}
 
 export function isTaskRunning(taskId: number): boolean {
   return runningTasks.has(taskId)
@@ -120,12 +154,14 @@ export async function executeTask(
     // Resolve timeout: task-specific > default (30 min)
     const timeoutMs = task.timeoutMinutes != null ? task.timeoutMinutes * 60 * 1000 : undefined
 
+    const consoleLog = createConsoleLogBuffer(db, run.id)
     let lastProgressUpdate = 0
     const result = await executeClaudeCode(augmentedPrompt, {
       systemPrompt,
       model,
       resumeSessionId,
       timeoutMs,
+      onConsoleLog: consoleLog.onConsoleLog,
       onProgress: (progress) => {
         const now = Date.now()
         if (now - lastProgressUpdate >= DEFAULTS.PROGRESS_THROTTLE_MS) {
@@ -134,6 +170,7 @@ export async function executeTask(
         }
       }
     })
+    consoleLog.flush()
 
     // If resume failed, retry without session
     if (result.exitCode !== 0 && resumeSessionId) {
@@ -150,11 +187,13 @@ export async function executeTask(
         }
       } catch (err) { console.warn('Non-fatal: memory context retry failed:', err) }
 
+      const retryConsoleLog = createConsoleLogBuffer(db, run.id)
       lastProgressUpdate = 0
       const retryResult = await executeClaudeCode(retryPrompt, {
         systemPrompt,
         model,
         timeoutMs,
+        onConsoleLog: retryConsoleLog.onConsoleLog,
         onProgress: (progress) => {
           const now = Date.now()
           if (now - lastProgressUpdate >= DEFAULTS.PROGRESS_THROTTLE_MS) {
@@ -163,6 +202,7 @@ export async function executeTask(
           }
         }
       })
+      retryConsoleLog.flush()
 
       return finishRun(db, run.id, taskId, task, retryResult, resultsDir, onComplete, onFailed)
     }

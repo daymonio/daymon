@@ -3,9 +3,17 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 
+export interface ConsoleLogEvent {
+  entryType: 'tool_call' | 'assistant_text' | 'tool_result' | 'result' | 'error'
+  content: string
+}
+
+export type ConsoleLogCallback = (entry: ConsoleLogEvent) => void
+
 export interface ExecutionOptions {
   timeoutMs?: number
   onProgress?: ProgressCallback
+  onConsoleLog?: ConsoleLogCallback
   resumeSessionId?: string
   systemPrompt?: string
   model?: string
@@ -149,6 +157,29 @@ export function executeClaudeCode(
 
     let buffer = ''
     let toolCallCount = 0
+    const onConsoleLog = options?.onConsoleLog
+
+    // Block accumulation state for console logging
+    let currentBlockType: 'text' | 'tool_result' | null = null
+    let blockAccumulator = ''
+
+    function flushBlock(): void {
+      if (!onConsoleLog || !currentBlockType || !blockAccumulator) {
+        currentBlockType = null
+        blockAccumulator = ''
+        return
+      }
+      const maxLen = currentBlockType === 'text' ? 2000 : 500
+      const content = blockAccumulator.length > maxLen
+        ? blockAccumulator.slice(0, maxLen) + '...'
+        : blockAccumulator
+      onConsoleLog({
+        entryType: currentBlockType === 'text' ? 'assistant_text' : 'tool_result',
+        content
+      })
+      currentBlockType = null
+      blockAccumulator = ''
+    }
 
     proc.stdout!.on('data', (data: Buffer) => {
       const chunk = data.toString()
@@ -161,17 +192,58 @@ export function executeClaudeCode(
         if (!line.trim()) continue
         try {
           const event = JSON.parse(line)
+          const type = event.type as string | undefined
 
           // Capture session_id from result event
-          if (event.type === 'result') {
+          if (type === 'result') {
+            flushBlock()
             if (event.result) lastResultText = event.result
             if (event.session_id) capturedSessionId = event.session_id as string
+            if (onConsoleLog && event.result) {
+              const text = String(event.result)
+              onConsoleLog({
+                entryType: 'result',
+                content: text.length > 2000 ? text.slice(0, 2000) + '...' : text
+              })
+            }
+          }
+
+          // Console log: track block starts
+          if (type === 'content_block_start') {
+            flushBlock()
+            const block = event.content_block as Record<string, unknown> | undefined
+            if (block?.type === 'text') {
+              currentBlockType = 'text'
+              blockAccumulator = ''
+            } else if (block?.type === 'tool_result') {
+              currentBlockType = 'tool_result'
+              blockAccumulator = typeof block.content === 'string' ? block.content : ''
+            }
+          }
+
+          // Console log: accumulate deltas
+          if (type === 'content_block_delta') {
+            const delta = event.delta as Record<string, unknown> | undefined
+            if (delta?.type === 'text_delta' && typeof delta.text === 'string') {
+              blockAccumulator += delta.text
+            }
+          }
+
+          // Console log: flush on block stop
+          if (type === 'content_block_stop') {
+            flushBlock()
           }
 
           if (onProgress) {
             const progress = parseStreamEvent(event, toolCallCount)
             if (progress) {
-              if (progress.isToolUse) toolCallCount++
+              if (progress.isToolUse) {
+                toolCallCount++
+                // Also emit console log for tool calls
+                if (onConsoleLog) {
+                  onConsoleLog({ entryType: 'tool_call', content: progress.message })
+                }
+              }
               onProgress({ fraction: progress.fraction, message: progress.message })
             }
           }

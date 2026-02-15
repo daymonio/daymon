@@ -103,6 +103,18 @@ export function getRunningTaskRuns(): TaskRun[] {
   return queries.getRunningTaskRuns(getDatabase())
 }
 
+// ─── Stale Run Cleanup ──────────────────────────────────────
+
+export function cleanupStaleRuns(): number {
+  return queries.cleanupStaleRuns(getDatabase())
+}
+
+// ─── Console Logs ───────────────────────────────────────────
+
+export function getConsoleLogs(runId: number, afterSeq: number = 0, limit: number = 100) {
+  return queries.getConsoleLogs(getDatabase(), runId, afterSeq, limit)
+}
+
 // ─── Watches ────────────────────────────────────────────────
 
 export function createWatch(path: string, description?: string, actionPrompt?: string): Watch {
