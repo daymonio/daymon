@@ -1,10 +1,31 @@
+<p align="center">
+  <a href="https://daymon.io">
+    <img src="docs/banner.png" alt="Daymon — Your AI subscription only works when you do. Daymon puts it to work 24/7." width="100%">
+  </a>
+</p>
+
 # Daymon
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![macOS](https://img.shields.io/badge/macOS-12%2B-blue)](https://github.com/daymonio/daymon/releases/latest)
+[![GitHub release](https://img.shields.io/github/v/release/daymonio/daymon)](https://github.com/daymonio/daymon/releases/latest)
+[![GitHub stars](https://img.shields.io/github/stars/daymonio/daymon)](https://github.com/daymonio/daymon/stargazers)
 
 **Open source autopilot for Claude.**
 
 Scheduled tasks, persistent memory, background automation. No API keys. No cloud. Runs on your Mac.
 
 [daymon.io](https://daymon.io)
+
+---
+
+## Why Daymon?
+
+You pay for Claude Pro or Max — but it only works when you're actively chatting. The other 23 hours a day, your subscription sits idle.
+
+Daymon changes that. It gives Claude the ability to run tasks on a schedule, remember things across conversations, watch files for changes, and work in the background — all while you sleep, commute, or focus on other things.
+
+No API keys. No token costs. No cloud. Just your existing Claude subscription, working harder.
 
 ---
 
