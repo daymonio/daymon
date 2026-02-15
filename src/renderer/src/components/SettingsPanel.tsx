@@ -13,18 +13,27 @@ interface ClaudeCliStatus {
   error?: string
 }
 
+interface ClaudeIntegrationStatus {
+  configured: boolean
+  configPath: string
+  expectedPath: string
+}
+
 export function SettingsPanel(): React.JSX.Element {
   const [version, setVersion] = useState('')
   const [paths, setPaths] = useState<PathsInfo | null>(null)
   const [cliStatus, setCliStatus] = useState<ClaudeCliStatus | null>(null)
+  const [integrationStatus, setIntegrationStatus] = useState<ClaudeIntegrationStatus | null>(null)
   const [autoLaunch, setAutoLaunch] = useState<boolean | null>(null)
   const [notifications, setNotifications] = useState<boolean>(true)
   const [confirmUninstall, setConfirmUninstall] = useState(false)
+  const [notificationTestMessage, setNotificationTestMessage] = useState<string | null>(null)
 
   useEffect(() => {
     window.api.app.getVersion().then(setVersion)
     window.api.app.getPaths().then(setPaths)
     window.api.app.checkClaude().then(setCliStatus)
+    window.api.app.getClaudeIntegration().then(setIntegrationStatus)
     window.api.app.getAutoLaunch().then(setAutoLaunch)
     window.api.settings.get('notifications_enabled').then((v) => {
       setNotifications(v !== 'false')
@@ -49,6 +58,16 @@ export function SettingsPanel(): React.JSX.Element {
       return
     }
     await window.api.app.uninstall()
+  }
+
+  async function handleTestNotification(): Promise<void> {
+    try {
+      const shown = await window.api.app.testNotification()
+      setNotificationTestMessage(shown ? 'Test notification dispatched.' : 'Notification dispatch failed.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to send test notification.'
+      setNotificationTestMessage(message)
+    }
   }
 
   function row(label: string, value: string | null): React.JSX.Element {
@@ -109,7 +128,20 @@ export function SettingsPanel(): React.JSX.Element {
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-600">Claude Integration</span>
-            <span className="text-green-600">Configured</span>
+            <span className={integrationStatus?.configured ? 'text-green-600' : 'text-red-500'}>
+              {integrationStatus == null ? '...' : integrationStatus.configured ? 'Configured' : 'Not configured'}
+            </span>
+          </div>
+          <div className="pt-1">
+            <button
+              onClick={handleTestNotification}
+              className="text-xs text-blue-500 hover:text-blue-700"
+            >
+              Send Test Notification
+            </button>
+            {notificationTestMessage && (
+              <div className="text-xs text-gray-400 mt-0.5">{notificationTestMessage}</div>
+            )}
           </div>
         </div>
       </div>
@@ -135,6 +167,12 @@ export function SettingsPanel(): React.JSX.Element {
       </div>
 
       <div className="space-y-2">
+        <button
+          onClick={() => window.open('https://github.com/daymonio/daymon/issues/new')}
+          className="w-full py-1.5 text-xs text-blue-500 hover:text-blue-700 border border-blue-200 hover:border-blue-300 rounded transition-colors"
+        >
+          Report Bug
+        </button>
         <button
           onClick={() => window.api.app.quit()}
           className="w-full py-1.5 text-xs text-gray-600 hover:text-gray-800 border border-gray-200 hover:border-gray-300 rounded transition-colors"

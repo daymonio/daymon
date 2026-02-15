@@ -1,43 +1,40 @@
 import { usePolling } from '../hooks/usePolling'
 import type { Task, TaskRun } from '@shared/types'
+import { formatRelativeTime } from '../utils/time'
 
 interface StatusData {
   entityCount: number
   tasks: Task[]
   latestRun: TaskRun | null
   runningRuns: TaskRun[]
+  scheduler: { running: boolean; jobCount: number }
 }
 
 async function fetchStatus(): Promise<StatusData> {
-  const [stats, tasks, runs, runningRuns] = await Promise.all([
+  const [stats, tasks, runs, runningRuns, scheduler] = await Promise.all([
     window.api.memory.getStats(),
     window.api.tasks.list(),
     window.api.tasks.listAllRuns(1),
-    window.api.tasks.getRunningRuns()
+    window.api.tasks.getRunningRuns(),
+    window.api.app.getSchedulerStatus()
   ])
   return {
     entityCount: stats.entityCount,
     tasks,
     latestRun: runs[0] ?? null,
-    runningRuns
+    runningRuns,
+    scheduler
   }
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  if (diffMs < 60000) return 'just now'
-  if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)}m ago`
-  if (diffMs < 86400000) return `${Math.floor(diffMs / 3600000)}h ago`
-  return d.toLocaleDateString()
-}
-
 export function StatusPanel({ onNavigate }: { onNavigate?: (tab: string) => void }): React.JSX.Element {
-  const { data } = usePolling(fetchStatus, 3000)
+  const { data, error, isLoading } = usePolling(fetchStatus, 3000)
 
-  if (!data) {
+  if (isLoading && !data) {
     return <div className="p-4 text-xs text-gray-400">Loading...</div>
+  }
+  if (!data) {
+    return <div className="p-4 text-xs text-red-500">{error ?? 'Failed to load status.'}</div>
   }
 
   const activeTasks = data.tasks.filter((t) => t.status === 'active')
@@ -49,9 +46,17 @@ export function StatusPanel({ onNavigate }: { onNavigate?: (tab: string) => void
       <div className="p-3 bg-gray-50 rounded-lg">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-gray-600">Scheduler</span>
-          <span className="text-xs text-green-600 font-medium">Running</span>
+          <span className={`text-xs font-medium ${data.scheduler.running ? 'text-green-600' : 'text-red-500'}`}>
+            {data.scheduler.running ? `Running (${data.scheduler.jobCount} cron)` : 'Stopped'}
+          </span>
         </div>
       </div>
+
+      {error && (
+        <div className="px-3 py-2 text-xs text-yellow-700 bg-yellow-50 rounded-lg">
+          Temporary data refresh issue: {error}
+        </div>
+      )}
 
       <button
         className="w-full text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
@@ -130,7 +135,7 @@ export function StatusPanel({ onNavigate }: { onNavigate?: (tab: string) => void
               {data.latestRun.status}
             </span>
             {' — '}
-            {formatTime(data.latestRun.startedAt)}
+            {formatRelativeTime(data.latestRun.startedAt)}
             {data.latestRun.durationMs != null && (
               <span className="text-gray-400">
                 {' '}

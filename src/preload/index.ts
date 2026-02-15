@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { CreateTaskInput, CreateWorkerInput } from '../shared/types'
 
 const api = {
   memory: {
@@ -21,7 +22,7 @@ const api = {
   },
 
   workers: {
-    create: (input: { name: string; systemPrompt: string; description?: string; model?: string; isDefault?: boolean }) =>
+    create: (input: CreateWorkerInput) =>
       ipcRenderer.invoke('workers:create', input),
     get: (id: number) => ipcRenderer.invoke('workers:get', id),
     list: () => ipcRenderer.invoke('workers:list'),
@@ -32,15 +33,7 @@ const api = {
   },
 
   tasks: {
-    create: (task: {
-      name: string
-      description?: string
-      prompt: string
-      cronExpression?: string
-      triggerType?: string
-      triggerConfig?: string
-      executor?: string
-    }) => ipcRenderer.invoke('tasks:create', task),
+    create: (task: CreateTaskInput) => ipcRenderer.invoke('tasks:create', task),
     get: (id: number) => ipcRenderer.invoke('tasks:get', id),
     list: (status?: string) => ipcRenderer.invoke('tasks:list', status),
     update: (id: number, updates: Record<string, unknown>) =>
@@ -73,6 +66,9 @@ const api = {
     quit: () => ipcRenderer.invoke('app:quit'),
     getPaths: () => ipcRenderer.invoke('app:getPaths'),
     checkClaude: () => ipcRenderer.invoke('app:checkClaude'),
+    getClaudeIntegration: () => ipcRenderer.invoke('app:getClaudeIntegration'),
+    getSchedulerStatus: () => ipcRenderer.invoke('app:getSchedulerStatus'),
+    testNotification: () => ipcRenderer.invoke('app:testNotification'),
     getAutoLaunch: () => ipcRenderer.invoke('app:getAutoLaunch'),
     setAutoLaunch: (enabled: boolean) => ipcRenderer.invoke('app:setAutoLaunch', enabled),
     uninstall: () => ipcRenderer.invoke('app:uninstall')

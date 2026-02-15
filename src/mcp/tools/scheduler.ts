@@ -68,12 +68,12 @@ export function registerSchedulerTools(server: McpServer): void {
       const db = getMcpDatabase()
 
       // Auto-determine trigger type
-      let triggerType = 'manual'
+      let triggerType: 'cron' | 'once' | 'manual' = 'manual'
       if (cronExpression) triggerType = 'cron'
       if (scheduledAt) triggerType = 'once'
 
       // Auto-generate name if not provided
-      const taskName = name || generateTaskName(prompt)
+      const taskName = (name || generateTaskName(prompt) || 'Untitled task').trim()
 
       // Validate cron expression
       if (triggerType === 'cron' && cronExpression && !cron.validate(cronExpression)) {
@@ -102,6 +102,19 @@ export function registerSchedulerTools(server: McpServer): void {
               type: 'text' as const,
               text: `Scheduled time "${scheduledAt}" is in the past. Please provide a future datetime.`
             }]
+          }
+        }
+      }
+
+      if (workerId) {
+        const worker = queries.getWorker(db, workerId)
+        if (!worker) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: `No worker found with id ${workerId}. Use daymon_list_workers to see valid IDs.`
+            }],
+            isError: true
           }
         }
       }
@@ -236,7 +249,7 @@ export function registerSchedulerTools(server: McpServer): void {
         queries.updateTask(db, id, { status: TASK_STATUSES.ACTIVE })
       }
 
-      const resultsDir = join(homedir(), 'Daymon', 'results')
+      const resultsDir = process.env.DAYMON_RESULTS_DIR || join(homedir(), 'Daymon', 'results')
       const result = await executeTask(id, { db, resultsDir })
 
       // Restore original status if it was changed for ad-hoc execution

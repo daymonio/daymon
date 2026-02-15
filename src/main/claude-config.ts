@@ -13,14 +13,35 @@ function getNodePath(): string {
   }
 }
 
+interface DaymonMcpEntry {
+  command: string
+  args: string[]
+  env: {
+    DAYMON_DB_PATH: string
+    DAYMON_RESULTS_DIR: string
+    DAYMON_SOURCE: string
+  }
+}
+
+function getExpectedMcpEntry(): DaymonMcpEntry {
+  const mcpServerPath = getMcpServerPath()
+  const nodePath = getNodePath()
+  const appConfig = getConfig()
+  return {
+    command: nodePath,
+    args: [mcpServerPath],
+    env: {
+      DAYMON_DB_PATH: appConfig.dbPath,
+      DAYMON_RESULTS_DIR: appConfig.resultsDir,
+      DAYMON_SOURCE: 'claude-desktop'
+    }
+  }
+}
+
 export function ensureClaudeConfig(): void {
   try {
     const configPath = getClaudeConfigPath()
-    const mcpServerPath = getMcpServerPath()
-    const nodePath = getNodePath()
-    const appConfig = getConfig()
-    const dbPath = appConfig.dbPath
-    const resultsDir = appConfig.resultsDir
+    const expectedEntry = getExpectedMcpEntry()
 
     // Read existing config or start fresh
     let config: Record<string, unknown> = {}
@@ -32,22 +53,12 @@ export function ensureClaudeConfig(): void {
     }
 
     // Build expected entry
-    const expectedEntry = {
-      command: nodePath,
-      args: [mcpServerPath],
-      env: {
-        DAYMON_DB_PATH: dbPath,
-        DAYMON_RESULTS_DIR: resultsDir,
-        DAYMON_SOURCE: 'claude-desktop'
-      }
-    }
-
     // Check if daymon is already configured with correct command + path
     const mcpServers = (config.mcpServers as Record<string, unknown>) ?? {}
     if (mcpServers.daymon) {
       const existing = mcpServers.daymon as Record<string, unknown>
       const existingArgs = existing.args as string[] | undefined
-      if (existing.command === nodePath && existingArgs?.[0] === mcpServerPath) {
+      if (existing.command === expectedEntry.command && existingArgs?.[0] === expectedEntry.args[0]) {
         return // Already up to date
       }
     }
@@ -66,6 +77,31 @@ export function ensureClaudeConfig(): void {
   } catch (error) {
     // Non-fatal — app still works, user can manually configure
     console.error('Failed to patch Claude Desktop config:', error)
+  }
+}
+
+export function getClaudeIntegrationStatus(): { configured: boolean; configPath: string; expectedPath: string } {
+  const configPath = getClaudeConfigPath()
+  const expectedEntry = getExpectedMcpEntry()
+
+  try {
+    if (!existsSync(configPath)) {
+      return { configured: false, configPath, expectedPath: expectedEntry.args[0] }
+    }
+
+    const raw = readFileSync(configPath, 'utf-8')
+    const config = JSON.parse(raw) as Record<string, unknown>
+    const mcpServers = (config.mcpServers as Record<string, unknown>) ?? {}
+    const daymon = mcpServers.daymon as Record<string, unknown> | undefined
+    if (!daymon) {
+      return { configured: false, configPath, expectedPath: expectedEntry.args[0] }
+    }
+
+    const args = daymon.args as string[] | undefined
+    const configured = daymon.command === expectedEntry.command && args?.[0] === expectedEntry.args[0]
+    return { configured, configPath, expectedPath: expectedEntry.args[0] }
+  } catch {
+    return { configured: false, configPath, expectedPath: expectedEntry.args[0] }
   }
 }
 

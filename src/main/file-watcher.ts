@@ -5,6 +5,9 @@ import { executeClaudeCode } from '../shared/claude-code'
 import type { Watch } from '../shared/types'
 
 const activeWatchers = new Map<number, FSWatcher>()
+let syncTimer: ReturnType<typeof setInterval> | null = null
+const WATCH_SYNC_INTERVAL_MS = 30_000
+let lastLoggedWatchCount: number | null = null
 
 export function startWatch(watch: Watch): void {
   if (activeWatchers.has(watch.id)) return
@@ -48,21 +51,24 @@ export function stopWatch(id: number): void {
 }
 
 export function startAllWatches(): void {
-  const watches = listWatches('active')
-  for (const watch of watches) {
-    startWatch(watch)
+  if (syncTimer) {
+    clearInterval(syncTimer)
   }
-  if (watches.length > 0) {
-    console.log(`Started ${watches.length} file watcher(s)`)
-  }
+  syncWatchesWithDatabase()
+  syncTimer = setInterval(syncWatchesWithDatabase, WATCH_SYNC_INTERVAL_MS)
 }
 
 export function stopAllWatches(): void {
+  if (syncTimer) {
+    clearInterval(syncTimer)
+    syncTimer = null
+  }
   for (const [id, watcher] of activeWatchers) {
     watcher.close()
     console.log(`Stopped file watch ${id}`)
   }
   activeWatchers.clear()
+  lastLoggedWatchCount = null
 }
 
 // Debounce triggers per watch to avoid rapid re-execution
@@ -97,5 +103,27 @@ async function handleTrigger(watchId: number, actionPrompt: string, filePath: st
     }
   } catch (err) {
     console.error(`Watch ${watchId} action error:`, err)
+  }
+}
+
+function syncWatchesWithDatabase(): void {
+  const activeWatches = listWatches('active')
+  const activeIds = new Set(activeWatches.map((watch) => watch.id))
+
+  for (const [watchId] of activeWatchers) {
+    if (!activeIds.has(watchId)) {
+      stopWatch(watchId)
+    }
+  }
+
+  for (const watch of activeWatches) {
+    if (!activeWatchers.has(watch.id)) {
+      startWatch(watch)
+    }
+  }
+
+  if (lastLoggedWatchCount !== activeWatches.length) {
+    console.log(`File watchers synced: ${activeWatches.length} active watch(es)`)
+    lastLoggedWatchCount = activeWatches.length
   }
 }

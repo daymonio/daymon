@@ -4,6 +4,7 @@ import { StatusPanel } from './components/StatusPanel'
 import { MemoryPanel } from './components/MemoryPanel'
 import { WorkersPanel } from './components/WorkersPanel'
 import { TasksPanel } from './components/TasksPanel'
+import { WatchesPanel } from './components/WatchesPanel'
 import { ResultsPanel } from './components/ResultsPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 
@@ -20,6 +21,8 @@ function App(): React.JSX.Element {
         return <WorkersPanel />
       case 'tasks':
         return <TasksPanel />
+      case 'watches':
+        return <WatchesPanel />
       case 'results':
         return <ResultsPanel />
       case 'settings':

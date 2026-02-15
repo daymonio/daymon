@@ -10,7 +10,7 @@ Scheduled tasks, persistent memory, background automation. No API keys. No cloud
 
 ## What is Daymon?
 
-Daymon is a macOS menu bar app that gives Claude superpowers. Persistent memory, scheduled tasks, workers, and file watchers — all running locally on your machine. Works with Claude Desktop and Claude Code.
+Daymon is a macOS app that lives in your menu bar and Dock. Persistent memory, scheduled tasks, workers, and file watchers — all running locally on your machine. Works with Claude Desktop and Claude Code.
 
 Your Claude subscription only works when you do. Daymon puts it to work 24/7.
 
@@ -48,7 +48,7 @@ npm run build    # Production build
 
 ## How It Works
 
-1. **Install Daymon** — menu bar icon appears
+1. **Install Daymon** — menu bar + Dock icon appear
 2. **Claude gains superpowers** — memory, scheduling, workers, file watching
 3. **Schedule tasks** — "Every morning, summarize my inbox"
 4. **Your subscription works while you sleep**
@@ -140,11 +140,29 @@ Useful for iterative tasks like daily monitoring, trend analysis, or multi-step 
 
 ```bash
 npm run dev          # Start Electron in dev mode
+npm run dev:clean    # Kill stale Daymon/Electron/MCP dev processes
+npm run rebuild:native:electron  # Rebuild better-sqlite3 for Electron runtime
 npm run build        # Full build (main + renderer + MCP)
 npm test             # Run test suite
 npm run typecheck    # TypeScript type checking
 npm run build:mac    # Build + package macOS DMG
 ```
+
+`npm run dev` now performs `dev:clean` and Electron native dependency rebuild automatically before launch.
+
+### Native Module Troubleshooting
+
+If you see errors like:
+
+`better-sqlite3.node was compiled against a different Node.js version`
+
+run:
+
+```bash
+npm run rebuild:native:electron
+```
+
+This rebuilds native modules for the Electron ABI used by Daymon.
 
 ### Project Structure
 
@@ -153,7 +171,6 @@ daymon/
 ├── src/
 │   ├── main/           # Electron main process
 │   │   ├── scheduler/  # node-cron task scheduling
-│   │   ├── executor/   # Claude Code CLI runner
 │   │   └── db/         # SQLite database layer
 │   ├── mcp/            # MCP server (stdio)
 │   │   └── tools/      # Memory, scheduler, watcher tools

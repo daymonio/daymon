@@ -1,21 +1,12 @@
 import { useState, useEffect } from 'react'
 import { usePolling } from '../hooks/usePolling'
 import type { TaskRun, Task } from '@shared/types'
-
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+import { formatDateTimeShort } from '../utils/time'
 
 export function ResultsPanel(): React.JSX.Element {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [taskNames, setTaskNames] = useState<Record<number, string>>({})
-  const { data: runs } = usePolling(() => window.api.tasks.listAllRuns(30), 5000)
+  const { data: runs, error, isLoading } = usePolling(() => window.api.tasks.listAllRuns(30), 5000)
 
   useEffect(() => {
     window.api.tasks.list().then((tasks: Task[]) => {
@@ -25,8 +16,11 @@ export function ResultsPanel(): React.JSX.Element {
     })
   }, [])
 
-  if (!runs) {
+  if (isLoading && !runs) {
     return <div className="p-4 text-xs text-gray-400">Loading...</div>
+  }
+  if (!runs) {
+    return <div className="p-4 text-xs text-red-500">{error ?? 'Failed to load runs.'}</div>
   }
 
   if (runs.length === 0) {
@@ -37,6 +31,11 @@ export function ResultsPanel(): React.JSX.Element {
 
   return (
     <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+      {error && (
+        <div className="px-3 py-2 text-xs text-yellow-700 bg-yellow-50">
+          Temporary refresh issue: {error}
+        </div>
+      )}
       {runs.map((run: TaskRun) => (
         <div key={run.id}>
           <div
@@ -54,7 +53,7 @@ export function ResultsPanel(): React.JSX.Element {
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-gray-400">
-              <span>{formatTime(run.startedAt)}</span>
+              <span>{formatDateTimeShort(run.startedAt)}</span>
               {run.durationMs != null && <span>{(run.durationMs / 1000).toFixed(1)}s</span>}
             </div>
           </div>

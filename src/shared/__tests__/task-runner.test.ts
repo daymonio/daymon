@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7 } from '../schema'
 import * as queries from '../db-queries'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { mkdtempSync, existsSync, readFileSync, rmSync } from 'fs'
+import { initTestDb } from './helpers/test-db'
 
 // Mock executeClaudeCode before importing task-runner
 vi.mock('../claude-code', () => ({
@@ -18,18 +18,6 @@ const mockExecute = vi.mocked(executeClaudeCode)
 
 let db: Database.Database
 let resultsDir: string
-
-function initTestDb(): Database.Database {
-  const d = new Database(':memory:')
-  d.exec(SCHEMA_V1)
-  d.exec(SCHEMA_V2)
-  d.exec(SCHEMA_V3)
-  d.exec(SCHEMA_V4)
-  d.exec(SCHEMA_V5)
-  d.exec(SCHEMA_V6)
-  d.exec(SCHEMA_V7)
-  return d
-}
 
 function createActiveTask(name = 'Test Task', prompt = 'Do something'): number {
   const task = queries.createTask(db, {
@@ -557,6 +545,30 @@ describe('executeTask - worker system prompt', () => {
 
     expect(mockExecute).toHaveBeenCalledWith('Do work', expect.objectContaining({
       systemPrompt: 'You are a bot.'
+    }))
+  })
+
+  it('passes worker model to executor when configured', async () => {
+    const worker = queries.createWorker(db, {
+      name: 'Model Worker',
+      systemPrompt: 'You are focused.',
+      model: 'claude-opus-4-1'
+    })
+    const task = queries.createTask(db, {
+      name: 'Model Task',
+      prompt: 'Do model-specific work',
+      triggerType: 'manual',
+      workerId: worker.id
+    })
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    expect(mockExecute).toHaveBeenCalledWith('Do model-specific work', expect.objectContaining({
+      model: 'claude-opus-4-1'
     }))
   })
 

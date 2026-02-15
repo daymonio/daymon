@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage, screen, shell } from 'electron'
 import { join } from 'path'
+import { existsSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
 import { DEFAULTS } from '../shared/constants'
 
@@ -33,7 +34,11 @@ function createPopoverWindow(): BrowserWindow {
   })
 
   window.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    if (isSafeExternalUrl(details.url)) {
+      shell.openExternal(details.url)
+    } else {
+      console.warn(`Blocked external URL with disallowed protocol: ${details.url}`)
+    }
     return { action: 'deny' }
   })
 
@@ -49,7 +54,24 @@ function createPopoverWindow(): BrowserWindow {
     window.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
+  window.webContents.on('did-finish-load', () => {
+    console.log('Tray popover webContents loaded')
+  })
+
+  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    console.error(`Tray popover failed to load (${errorCode}): ${errorDescription}`)
+  })
+
   return window
+}
+
+function isSafeExternalUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw)
+    return url.protocol === 'https:' || url.protocol === 'http:' || url.protocol === 'mailto:'
+  } catch {
+    return false
+  }
 }
 
 function showPopover(): void {
@@ -73,6 +95,20 @@ function showPopover(): void {
   popoverWindow.focus()
 }
 
+export function showPopoverWindow(): void {
+  if (!popoverWindow) return
+  if (popoverWindow.isVisible()) {
+    popoverWindow.focus()
+    return
+  }
+  if (tray) {
+    showPopover()
+    return
+  }
+  popoverWindow.show()
+  popoverWindow.focus()
+}
+
 function togglePopover(): void {
   if (!popoverWindow) return
   if (popoverWindow.isVisible()) {
@@ -83,13 +119,7 @@ function togglePopover(): void {
 }
 
 export function createTray(): BrowserWindow {
-  const iconPath = join(
-    app.isPackaged ? process.resourcesPath : app.getAppPath(),
-    'resources',
-    'logo.png'
-  )
-
-  const icon = nativeImage.createFromPath(iconPath)
+  const icon = loadTrayIcon()
   const resizedIcon = icon.resize({ width: 22, height: 22 })
 
   tray = new Tray(resizedIcon)
@@ -100,6 +130,8 @@ export function createTray(): BrowserWindow {
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Show Daymon', click: () => showPopover() },
     { type: 'separator' },
+    { label: 'Report Bug', click: () => shell.openExternal('https://github.com/daymonio/daymon/issues/new') },
+    { type: 'separator' },
     { label: 'Quit', click: () => app.quit() }
   ])
 
@@ -107,4 +139,33 @@ export function createTray(): BrowserWindow {
   tray.on('right-click', () => tray!.popUpContextMenu(contextMenu))
 
   return popoverWindow
+}
+
+function loadTrayIcon(): Electron.NativeImage {
+  const iconFile = process.platform === 'darwin' && app.isPackaged ? 'trayIconTemplate.png' : 'logo.png'
+  const roots = [
+    app.isPackaged ? process.resourcesPath : app.getAppPath(),
+    process.cwd(),
+    join(__dirname, '../../../')
+  ]
+
+  for (const root of roots) {
+    const candidate = join(root, 'resources', iconFile)
+    if (!existsSync(candidate)) continue
+    const image = nativeImage.createFromPath(candidate)
+    if (!image.isEmpty()) {
+      console.log(`Tray icon loaded from: ${candidate}`)
+      if (process.platform === 'darwin' && app.isPackaged) {
+        image.setTemplateImage(true)
+      }
+      return image
+    }
+  }
+
+  console.warn('Tray icon not found or invalid; using fallback logo icon.')
+  const fallback = nativeImage.createFromPath(join(process.cwd(), 'resources', 'logo.png'))
+  if (process.platform === 'darwin' && app.isPackaged && !fallback.isEmpty()) {
+    fallback.setTemplateImage(true)
+  }
+  return fallback
 }

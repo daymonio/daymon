@@ -61,14 +61,21 @@ export async function executeTask(
   try {
     // Resolve worker system prompt: task's workerId > default worker > none
     let systemPrompt: string | undefined
+    let model: string | undefined
     try {
       if (task.workerId) {
         const worker = queries.getWorker(db, task.workerId)
-        if (worker) systemPrompt = worker.systemPrompt
+        if (worker) {
+          systemPrompt = worker.systemPrompt
+          model = worker.model ?? undefined
+        }
       }
       if (!systemPrompt) {
         const defaultWorker = queries.getDefaultWorker(db)
-        if (defaultWorker) systemPrompt = defaultWorker.systemPrompt
+        if (defaultWorker) {
+          systemPrompt = defaultWorker.systemPrompt
+          if (!model) model = defaultWorker.model ?? undefined
+        }
       }
     } catch (err) {
       console.warn('Non-fatal: worker resolution failed:', err)
@@ -116,6 +123,7 @@ export async function executeTask(
     let lastProgressUpdate = 0
     const result = await executeClaudeCode(augmentedPrompt, {
       systemPrompt,
+      model,
       resumeSessionId,
       timeoutMs,
       onProgress: (progress) => {
@@ -145,6 +153,7 @@ export async function executeTask(
       lastProgressUpdate = 0
       const retryResult = await executeClaudeCode(retryPrompt, {
         systemPrompt,
+        model,
         timeoutMs,
         onProgress: (progress) => {
           const now = Date.now()

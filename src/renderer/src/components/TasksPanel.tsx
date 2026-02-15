@@ -1,5 +1,7 @@
 import { usePolling } from '../hooks/usePolling'
 import type { Task, TaskRun, Worker } from '@shared/types'
+import { formatRelativeTime } from '../utils/time'
+import { useState } from 'react'
 
 function statusBadge(task: Task): React.JSX.Element {
   const colors: Record<string, string> = {
@@ -39,17 +41,6 @@ function sourceLabel(task: Task): string | null {
   }
 }
 
-function formatTime(iso: string | null): string {
-  if (!iso) return 'never'
-  const d = new Date(iso)
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  if (diffMs < 60000) return 'just now'
-  if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)}m ago`
-  if (diffMs < 86400000) return `${Math.floor(diffMs / 3600000)}h ago`
-  return d.toLocaleDateString()
-}
-
 function ProgressBar({ run }: { run: TaskRun }): React.JSX.Element {
   return (
     <div className="mt-1">
@@ -75,7 +66,8 @@ function ProgressBar({ run }: { run: TaskRun }): React.JSX.Element {
 }
 
 export function TasksPanel(): React.JSX.Element {
-  const { data: tasks, refresh } = usePolling(() => window.api.tasks.list(), 5000)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const { data: tasks, refresh, error: tasksError, isLoading } = usePolling(() => window.api.tasks.list(), 5000)
   const { data: runningRuns } = usePolling(() => window.api.tasks.getRunningRuns(), 2000)
   const { data: workers } = usePolling(() => window.api.workers.list(), 10000)
 
@@ -94,26 +86,44 @@ export function TasksPanel(): React.JSX.Element {
   }
 
   async function togglePause(task: Task): Promise<void> {
-    if (task.status === 'paused') {
-      await window.api.tasks.resume(task.id)
-    } else {
-      await window.api.tasks.pause(task.id)
+    setActionError(null)
+    try {
+      if (task.status === 'paused') {
+        await window.api.tasks.resume(task.id)
+      } else {
+        await window.api.tasks.pause(task.id)
+      }
+      refresh()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to update task status')
     }
-    refresh()
   }
 
   async function deleteTask(id: number): Promise<void> {
-    await window.api.tasks.delete(id)
-    refresh()
+    setActionError(null)
+    try {
+      await window.api.tasks.delete(id)
+      refresh()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to delete task')
+    }
   }
 
   async function runNow(id: number): Promise<void> {
-    await window.api.tasks.runNow(id)
-    refresh()
+    setActionError(null)
+    try {
+      await window.api.tasks.runNow(id)
+      refresh()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to run task')
+    }
   }
 
-  if (!tasks) {
+  if (isLoading && !tasks) {
     return <div className="p-4 text-xs text-gray-400">Loading...</div>
+  }
+  if (!tasks) {
+    return <div className="p-4 text-xs text-red-500">{tasksError ?? 'Failed to load tasks.'}</div>
   }
 
   if (tasks.length === 0) {
@@ -125,9 +135,21 @@ export function TasksPanel(): React.JSX.Element {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+      <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+      {tasksError && (
+        <div className="px-3 py-2 text-xs text-yellow-700 bg-yellow-50">
+          Temporary refresh issue: {tasksError}
+        </div>
+      )}
+      {actionError && (
+        <div className="px-3 py-2 text-xs text-red-500 bg-red-50">
+          Action failed: {actionError}
+        </div>
+      )}
       {tasks.map((task) => {
         const activeRun = runningByTaskId.get(task.id)
+        const source = sourceLabel(task)
+        const worker = task.workerId != null ? workerMap.get(task.workerId) : undefined
         return (
           <div key={task.id} className="px-3 py-2">
             <div className="flex items-center justify-between mb-1">
@@ -141,14 +163,14 @@ export function TasksPanel(): React.JSX.Element {
                   {task.runCount} / {task.maxRuns} runs
                 </span>
               )}
-              {sourceLabel(task) && (
+              {source && (
                 <span className="ml-1.5 text-gray-300">
-                  via {sourceLabel(task)}
+                  via {source}
                 </span>
               )}
-              {task.workerId != null && workerMap.get(task.workerId) && (
+              {worker && (
                 <span className="ml-1.5 text-purple-400">
-                  {workerMap.get(task.workerId)!.name}
+                  {worker.name}
                 </span>
               )}
               {task.sessionContinuity && (
@@ -158,7 +180,7 @@ export function TasksPanel(): React.JSX.Element {
               )}
             </div>
             <div className="text-xs text-gray-400 mb-1.5">
-              Last run: {formatTime(task.lastRun)}
+              Last run: {formatRelativeTime(task.lastRun)}
             </div>
             {activeRun && <ProgressBar run={activeRun} />}
             <div className="flex gap-2">

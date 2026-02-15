@@ -1,5 +1,6 @@
 import { getDatabase } from './index'
 import * as queries from '../../shared/db-queries'
+import { validateWatchPath } from '../../shared/watch-path'
 import type { Task, TaskRun, CreateTaskInput, Watch, Worker, CreateWorkerInput } from '../../shared/types'
 
 // ─── Workers ────────────────────────────────────────────────
@@ -101,67 +102,35 @@ export function getRunningTaskRuns(): TaskRun[] {
 // ─── Watches ────────────────────────────────────────────────
 
 export function createWatch(path: string, description?: string, actionPrompt?: string): Watch {
-  const db = getDatabase()
-  const result = db
-    .prepare('INSERT INTO watches (path, description, action_prompt) VALUES (?, ?, ?)')
-    .run(path, description ?? null, actionPrompt ?? null)
-  return getWatch(result.lastInsertRowid as number)!
+  const pathError = validateWatchPath(path)
+  if (pathError) {
+    throw new Error(`Invalid watch path: ${pathError}`)
+  }
+  return queries.createWatch(getDatabase(), path, description, actionPrompt)
 }
 
 export function getWatch(id: number): Watch | null {
-  const db = getDatabase()
-  const row = db.prepare('SELECT * FROM watches WHERE id = ?').get(id) as Record<string, unknown> | undefined
-  return row ? mapWatchRow(row) : null
+  return queries.getWatch(getDatabase(), id)
 }
 
 export function listWatches(status?: string): Watch[] {
-  const db = getDatabase()
-  const rows = status
-    ? db.prepare('SELECT * FROM watches WHERE status = ? ORDER BY created_at DESC').all(status)
-    : db.prepare('SELECT * FROM watches ORDER BY created_at DESC').all()
-  return (rows as Record<string, unknown>[]).map(mapWatchRow)
+  return queries.listWatches(getDatabase(), status)
 }
 
 export function deleteWatch(id: number): void {
-  getDatabase().prepare('DELETE FROM watches WHERE id = ?').run(id)
+  return queries.deleteWatch(getDatabase(), id)
 }
 
 // ─── Settings ───────────────────────────────────────────────
 
 export function getSetting(key: string): string | null {
-  const row = getDatabase()
-    .prepare('SELECT value FROM settings WHERE key = ?')
-    .get(key) as { value: string } | undefined
-  return row?.value ?? null
+  return queries.getSetting(getDatabase(), key)
 }
 
 export function setSetting(key: string, value: string): void {
-  getDatabase()
-    .prepare(
-      `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
-       ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP`
-    )
-    .run(key, value, value)
+  return queries.setSetting(getDatabase(), key, value)
 }
 
 export function getAllSettings(): Record<string, string> {
-  const rows = getDatabase().prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[]
-  const result: Record<string, string> = {}
-  for (const row of rows) result[row.key] = row.value
-  return result
-}
-
-// ─── Row Mappers ────────────────────────────────────────────
-
-function mapWatchRow(row: Record<string, unknown>): Watch {
-  return {
-    id: row.id as number,
-    path: row.path as string,
-    description: row.description as string | null,
-    actionPrompt: row.action_prompt as string | null,
-    status: row.status as string,
-    lastTriggered: row.last_triggered as string | null,
-    triggerCount: row.trigger_count as number,
-    createdAt: row.created_at as string
-  }
+  return queries.getAllSettings(getDatabase())
 }

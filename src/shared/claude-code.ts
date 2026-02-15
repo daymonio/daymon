@@ -5,6 +5,7 @@ export interface ExecutionOptions {
   onProgress?: ProgressCallback
   resumeSessionId?: string
   systemPrompt?: string
+  model?: string
 }
 
 export interface ExecutionResult {
@@ -66,6 +67,9 @@ export function executeClaudeCode(
     }
     if (options?.systemPrompt) {
       args.push('--system-prompt', options.systemPrompt)
+    }
+    if (options?.model) {
+      args.push('--model', options.model)
     }
 
     const proc = spawn('claude', args, {

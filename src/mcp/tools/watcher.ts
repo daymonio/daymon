@@ -1,27 +1,8 @@
-import { homedir } from 'os'
-import { resolve } from 'path'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { getMcpDatabase } from '../db'
-
-const SENSITIVE_PATHS = ['/.ssh', '/.gnupg', '/.aws', '/.env']
-
-function validateWatchPath(watchPath: string): string | null {
-  const resolved = resolve(watchPath)
-  if (!resolved.startsWith('/')) {
-    return 'Path must be absolute.'
-  }
-  const home = homedir()
-  if (!resolved.startsWith(home) && !resolved.startsWith('/tmp')) {
-    return `Path must be within your home directory (${home}) or /tmp.`
-  }
-  for (const sensitive of SENSITIVE_PATHS) {
-    if (resolved.startsWith(home + sensitive)) {
-      return `Cannot watch sensitive directory: ${sensitive}`
-    }
-  }
-  return null
-}
+import * as queries from '../../shared/db-queries'
+import { validateWatchPath } from '../../shared/watch-path'
 
 export function registerWatcherTools(server: McpServer): void {
   server.registerTool(
@@ -48,15 +29,12 @@ export function registerWatcherTools(server: McpServer): void {
       }
 
       const db = getMcpDatabase()
-      const result = db
-        .prepare('INSERT INTO watches (path, description, action_prompt) VALUES (?, ?, ?)')
-        .run(path, description ?? null, actionPrompt)
-      const id = result.lastInsertRowid as number
+      const watch = queries.createWatch(db, path, description, actionPrompt)
       return {
         content: [
           {
             type: 'text' as const,
-            text: `Created file watch (id: ${id}) on "${path}".\nThe Daymon app will start watching within 30 seconds. Note: the Daymon desktop app must be running for watches to work.`
+            text: `Created file watch (id: ${watch.id}) on "${path}".\nThe Daymon app will start watching within 30 seconds. Note: the Daymon desktop app must be running for watches to work.`
           }
         ]
       }
@@ -74,20 +52,18 @@ export function registerWatcherTools(server: McpServer): void {
     },
     async ({ id }) => {
       const db = getMcpDatabase()
-      const row = db.prepare('SELECT * FROM watches WHERE id = ?').get(id) as
-        | Record<string, unknown>
-        | undefined
-      if (!row) {
+      const watch = queries.getWatch(db, id)
+      if (!watch) {
         return {
           content: [{ type: 'text' as const, text: `No watch found with id ${id}.` }]
         }
       }
-      db.prepare('DELETE FROM watches WHERE id = ?').run(id)
+      queries.deleteWatch(db, id)
       return {
         content: [
           {
             type: 'text' as const,
-            text: `Removed watch (id: ${id}) on "${row.path}". The Daymon app will stop watching within 30 seconds.`
+            text: `Removed watch (id: ${id}) on "${watch.path}". The Daymon app will stop watching within 30 seconds.`
           }
         ]
       }
@@ -103,10 +79,7 @@ export function registerWatcherTools(server: McpServer): void {
     },
     async () => {
       const db = getMcpDatabase()
-      const rows = db.prepare('SELECT * FROM watches ORDER BY created_at DESC').all() as Record<
-        string,
-        unknown
-      >[]
+      const rows = queries.listWatches(db)
 
       if (rows.length === 0) {
         return {
@@ -114,13 +87,13 @@ export function registerWatcherTools(server: McpServer): void {
         }
       }
 
-      const list = rows.map((r) => ({
-        id: r.id,
-        path: r.path,
-        description: r.description,
-        status: r.status,
-        triggerCount: r.trigger_count,
-        lastTriggered: r.last_triggered
+      const list = rows.map((row) => ({
+        id: row.id,
+        path: row.path,
+        description: row.description,
+        status: row.status,
+        triggerCount: row.triggerCount,
+        lastTriggered: row.lastTriggered
       }))
 
       return {

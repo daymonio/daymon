@@ -19,6 +19,7 @@ extraResources:
     filter:
       - "**/*"
 mac:
+  icon: build/icon.icns
   extendInfo:
     - NSDocumentsFolderUsageDescription: "Daymon needs access to your Documents folder for file watching."
     - NSDownloadsFolderUsageDescription: "Daymon needs access to your Downloads folder for file watching."

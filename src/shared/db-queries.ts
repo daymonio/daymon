@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import type { Entity, Observation, Relation, MemoryStats, Task, CreateTaskInput, TaskRun, Worker, CreateWorkerInput, TriggerType, TaskStatus } from './types'
+import type { Entity, Observation, Relation, MemoryStats, Task, CreateTaskInput, TaskRun, Worker, CreateWorkerInput, TriggerType, TaskStatus, Watch } from './types'
 
 // ─── Entities ───────────────────────────────────────────────
 
@@ -296,6 +296,56 @@ export function resumeTask(db: Database.Database, id: number): void {
   updateTask(db, id, { status: 'active' })
 }
 
+// ─── Watches ────────────────────────────────────────────────
+
+export function createWatch(db: Database.Database, path: string, description?: string, actionPrompt?: string): Watch {
+  const result = db
+    .prepare('INSERT INTO watches (path, description, action_prompt) VALUES (?, ?, ?)')
+    .run(path, description ?? null, actionPrompt ?? null)
+  return getWatch(db, result.lastInsertRowid as number)!
+}
+
+export function getWatch(db: Database.Database, id: number): Watch | null {
+  const row = db.prepare('SELECT * FROM watches WHERE id = ?').get(id) as Record<string, unknown> | undefined
+  return row ? mapWatchRow(row) : null
+}
+
+export function listWatches(db: Database.Database, status?: string): Watch[] {
+  const rows = status
+    ? db.prepare('SELECT * FROM watches WHERE status = ? ORDER BY created_at DESC').all(status)
+    : db.prepare('SELECT * FROM watches ORDER BY created_at DESC').all()
+  return (rows as Record<string, unknown>[]).map(mapWatchRow)
+}
+
+export function deleteWatch(db: Database.Database, id: number): void {
+  db.prepare('DELETE FROM watches WHERE id = ?').run(id)
+}
+
+// ─── Settings ───────────────────────────────────────────────
+
+export function getSetting(db: Database.Database, key: string): string | null {
+  const row = db
+    .prepare('SELECT value FROM settings WHERE key = ?')
+    .get(key) as { value: string } | undefined
+  return row?.value ?? null
+}
+
+export function setSetting(db: Database.Database, key: string, value: string): void {
+  db
+    .prepare(
+      `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = CURRENT_TIMESTAMP`
+    )
+    .run(key, value, value)
+}
+
+export function getAllSettings(db: Database.Database): Record<string, string> {
+  const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[]
+  const result: Record<string, string> = {}
+  for (const row of rows) result[row.key] = row.value
+  return result
+}
+
 // ─── Task Runs ──────────────────────────────────────────────
 
 export function createTaskRun(db: Database.Database, taskId: number): TaskRun {
@@ -358,7 +408,7 @@ export function getDueOnceTasks(db: Database.Database): Task[] {
        WHERE trigger_type = 'once'
          AND status = 'active'
          AND scheduled_at IS NOT NULL
-         AND scheduled_at <= datetime('now')
+         AND datetime(scheduled_at) <= datetime('now')
        ORDER BY scheduled_at ASC`
     )
     .all()
@@ -514,6 +564,19 @@ function mapTaskRow(row: Record<string, unknown>): Task {
     timeoutMinutes: row.timeout_minutes as number | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string
+  }
+}
+
+function mapWatchRow(row: Record<string, unknown>): Watch {
+  return {
+    id: row.id as number,
+    path: row.path as string,
+    description: row.description as string | null,
+    actionPrompt: row.action_prompt as string | null,
+    status: row.status as string,
+    lastTriggered: row.last_triggered as string | null,
+    triggerCount: row.trigger_count as number,
+    createdAt: row.created_at as string
   }
 }
 

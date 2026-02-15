@@ -48,6 +48,9 @@ interface AppAPI {
   quit: () => Promise<void>
   getPaths: () => Promise<{ dbPath: string; resultsDir: string; dataDir: string; claudeConfigPath: string }>
   checkClaude: () => Promise<{ available: boolean; version?: string; error?: string }>
+  getClaudeIntegration: () => Promise<{ configured: boolean; configPath: string; expectedPath: string }>
+  getSchedulerStatus: () => Promise<{ running: boolean; jobCount: number; jobs: Array<{ taskId: number }> }>
+  testNotification: () => Promise<boolean>
   getAutoLaunch: () => Promise<boolean>
   setAutoLaunch: (enabled: boolean) => Promise<void>
   uninstall: () => Promise<void>

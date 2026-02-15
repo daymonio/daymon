@@ -1,21 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7 } from '../schema'
 import * as q from '../db-queries'
+import { initTestDb } from './helpers/test-db'
 
 let db: Database.Database
-
-function initTestDb(): Database.Database {
-  const d = new Database(':memory:')
-  d.exec(SCHEMA_V1)
-  d.exec(SCHEMA_V2)
-  d.exec(SCHEMA_V3)
-  d.exec(SCHEMA_V4)
-  d.exec(SCHEMA_V5)
-  d.exec(SCHEMA_V6)
-  d.exec(SCHEMA_V7)
-  return d
-}
 
 beforeEach(() => {
   db = initTestDb()
@@ -533,6 +521,19 @@ describe('getDueOnceTasks', () => {
     const due = q.getDueOnceTasks(db)
     expect(due).toHaveLength(1)
     expect(due[0].name).toBe('Due Task')
+  })
+
+  it('returns due tasks for ISO-8601 values written by APIs', () => {
+    const pastIso = new Date(Date.now() - 120000).toISOString()
+    q.createTask(db, {
+      name: 'Due ISO Task',
+      prompt: 'run me',
+      triggerType: 'once',
+      scheduledAt: pastIso
+    })
+
+    const due = q.getDueOnceTasks(db)
+    expect(due.some((task) => task.name === 'Due ISO Task')).toBe(true)
   })
 
   it('does not return future one-time tasks', () => {

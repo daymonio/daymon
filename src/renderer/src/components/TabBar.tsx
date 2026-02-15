@@ -1,10 +1,11 @@
-export type Tab = 'status' | 'memory' | 'workers' | 'tasks' | 'results' | 'settings'
+export type Tab = 'status' | 'memory' | 'workers' | 'tasks' | 'watches' | 'results' | 'settings'
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'status', label: 'Status' },
   { id: 'memory', label: 'Memory' },
   { id: 'workers', label: 'Workers' },
   { id: 'tasks', label: 'Tasks' },
+  { id: 'watches', label: 'Watches' },
   { id: 'results', label: 'Results' },
   { id: 'settings', label: 'Settings' }
 ]
