@@ -176,7 +176,7 @@ daymon/
 └── resources/          # App icons
 ```
 
-**Tech stack**: Electron, React, Tailwind CSS, better-sqlite3, node-cron, chokidar, MCP SDK, electron-builder, Vitest
+**Tech stack**: Electron 35, React 18, Tailwind CSS 4, TypeScript, Vite 7, better-sqlite3, node-cron, chokidar, zod, MCP SDK, HuggingFace Transformers (local embeddings), electron-updater, electron-builder, Vitest
 
 </details>
 
