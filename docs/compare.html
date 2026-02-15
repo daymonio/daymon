@@ -80,6 +80,7 @@
     .detail-cell.no { color: #6b7280; }
     .check { color: #34d399; font-weight: 700; }
     .cross { color: #6b7280; }
+    .bad { color: #f87171; font-weight: 700; }
     .partial-mark { color: #fbbf24; }
     .detail-note {
       font-size: 0.8rem;
@@ -182,20 +183,20 @@
         <div class="toc">
           <div class="toc-title">Contents</div>
           <ol>
-            <li><a href="#workers">Workers &amp; Agent Personalities</a></li>
+            <li><a href="#setup">Setup &amp; Cost</a></li>
             <li><a href="#sessions">Session Continuity</a></li>
             <li><a href="#memory">Memory &amp; Semantic Search</a></li>
             <li><a href="#scheduling">Task Scheduling</a></li>
             <li><a href="#execution">Task Execution</a></li>
-            <li><a href="#mcp">Claude Integration (MCP)</a></li>
-            <li><a href="#setup">Setup &amp; Cost</a></li>
+            <li><a href="#mcp">Claude Integration</a></li>
+            <li><a href="#workers">Workers &amp; Agent Personalities</a></li>
           </ol>
         </div>
 
-        <!-- 1. Workers -->
-        <div id="workers" class="section">
-          <h2>1. Workers &amp; Agent Personalities</h2>
-          <p class="section-desc">How each tool lets you define agent behavior, personalities, and system prompts.</p>
+        <!-- 1. Setup & Cost -->
+        <div id="setup" class="section">
+          <h2>1. Setup &amp; Cost</h2>
+          <p class="section-desc">What it takes to get started.</p>
           <div class="detail-table">
             <div class="detail-row detail-header">
               <div></div>
@@ -204,57 +205,45 @@
               <div class="openclaw-col">OpenClaw</div>
             </div>
             <div class="detail-row">
-              <div class="detail-label">Named agents</div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Workers with name, description, system prompt</span></div>
-              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Single assistant per conversation</span></div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Per-agent configs with identity files</span></div>
+              <div class="detail-label">Install</div>
+              <div class="detail-cell yes"><span class="check">One app</span><span class="detail-note">Download DMG, drag to Applications</span></div>
+              <div class="detail-cell yes"><span class="check">Nothing</span><span class="detail-note">Already installed</span></div>
+              <div class="detail-cell no"><span class="cross">Complex</span><span class="detail-note">Docker, Node.js, config files, tokens</span></div>
             </div>
             <div class="detail-row">
-              <div class="detail-label">System prompts</div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Per-worker, passed via --system-prompt flag</span></div>
-              <div class="detail-cell partial"><span class="partial-mark">Limited</span><span class="detail-note">Projects/custom instructions only</span></div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">SOUL.md + 15+ configurable prompt sections</span></div>
+              <div class="detail-label">Monthly cost</div>
+              <div class="detail-cell yes"><span class="check">Free</span><span class="detail-note">Uses your existing Claude subscription</span></div>
+              <div class="detail-cell yes"><span class="check">$20/mo</span><span class="detail-note">Claude Pro subscription</span></div>
+              <div class="detail-cell"><span class="bad">$50-500+/mo</span><span class="detail-note">Pay-per-token API costs</span></div>
             </div>
             <div class="detail-row">
-              <div class="detail-label">Default worker</div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Fallback when task has no worker</span></div>
-              <div class="detail-cell no"><span class="cross">N/A</span></div>
-              <div class="detail-cell no"><span class="cross">N/A</span><span class="detail-note">Main agent is always active</span></div>
+              <div class="detail-label">API keys</div>
+              <div class="detail-cell yes"><span class="check">None</span></div>
+              <div class="detail-cell yes"><span class="check">None</span></div>
+              <div class="detail-cell"><span class="bad">Required</span><span class="detail-note">LLM + optional embedding providers</span></div>
             </div>
             <div class="detail-row">
-              <div class="detail-label">Worker templates</div>
-              <div class="detail-cell yes"><span class="check">9 built-in</span><span class="detail-note">Chief of Staff, Researcher, Code Reviewer, Writer, Email Assistant, Tech Trend Analyst, Competitor Tracker, DevOps, Data Analyst</span></div>
+              <div class="detail-label">Works with</div>
+              <div class="detail-cell yes"><span class="check">Claude subscription</span></div>
+              <div class="detail-cell yes"><span class="check">Claude Pro / Max</span></div>
+              <div class="detail-cell"><span class="bad">Pay-per-token API</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Data location</div>
+              <div class="detail-cell yes"><span class="check">Local</span><span class="detail-note">SQLite on your Mac</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Cloud</span><span class="detail-note">Anthropic's servers</span></div>
+              <div class="detail-cell yes"><span class="check">Local</span><span class="detail-note">Self-hosted</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Open source</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">MIT license</span></div>
               <div class="detail-cell no"><span class="cross">No</span></div>
-              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Must write SOUL.md from scratch or use soulcraft interview</span></div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">Multi-agent</div>
-              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">One worker per task</span></div>
-              <div class="detail-cell no"><span class="cross">No</span></div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Sub-agent spawning, inter-agent messaging</span></div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">Self-evolving personality</div>
-              <div class="detail-cell no"><span class="cross">No</span></div>
-              <div class="detail-cell no"><span class="cross">No</span></div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Soul Evolution mutates SOUL.md over time</span></div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">Manage via UI</div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Workers panel: create, edit, delete, set default</span></div>
-              <div class="detail-cell no"><span class="cross">No</span></div>
-              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Edit markdown files manually</span></div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">Manage via chat</div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Via Claude Desktop or Claude Code chat</span></div>
-              <div class="detail-cell no"><span class="cross">No</span></div>
-              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Agent can edit its own files</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">MIT license</span></div>
             </div>
           </div>
           <div class="verdict">
             <strong>Verdict</strong>
-            <p>OpenClaw has multi-agent coordination and self-evolving personalities, but requires writing SOUL.md configs from scratch — no templates, no UI. Daymon offers practical worker management: 9 ready-to-use templates, full CRUD via UI and chat, edit anytime. Claude has no concept of persistent agent profiles.</p>
+            <p>Daymon is the simplest path to AI automation: install one app, and your existing Claude subscription gains scheduling, memory, workers, and file watching. OpenClaw is powerful but requires significant infrastructure and ongoing API costs. Claude works out of the box but lacks automation capabilities.</p>
           </div>
         </div>
 
@@ -465,7 +454,7 @@
               <div class="detail-label">API keys required</div>
               <div class="detail-cell yes"><span class="check">None</span><span class="detail-note">Uses your Claude subscription</span></div>
               <div class="detail-cell yes"><span class="check">None</span><span class="detail-note">Your subscription</span></div>
-              <div class="detail-cell no"><span class="cross">Required</span><span class="detail-note">Anthropic / OpenAI API keys ($50-500+/mo)</span></div>
+              <div class="detail-cell"><span class="bad">Required</span><span class="detail-note">Anthropic / OpenAI API keys ($50-500+/mo)</span></div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Worker system prompt</div>
@@ -540,10 +529,10 @@
           </div>
         </div>
 
-        <!-- 7. Setup -->
-        <div id="setup" class="section">
-          <h2>7. Setup &amp; Cost</h2>
-          <p class="section-desc">What it takes to get started.</p>
+        <!-- 7. Workers -->
+        <div id="workers" class="section">
+          <h2>7. Workers &amp; Agent Personalities</h2>
+          <p class="section-desc">Can you create specialized agents with different behaviors and system prompts?</p>
           <div class="detail-table">
             <div class="detail-row detail-header">
               <div></div>
@@ -552,39 +541,57 @@
               <div class="openclaw-col">OpenClaw</div>
             </div>
             <div class="detail-row">
-              <div class="detail-label">Install</div>
-              <div class="detail-cell yes"><span class="check">One app</span><span class="detail-note">Download DMG, drag to Applications</span></div>
-              <div class="detail-cell yes"><span class="check">Nothing</span><span class="detail-note">Already installed</span></div>
-              <div class="detail-cell no"><span class="cross">Complex</span><span class="detail-note">Docker, Node.js, config files, tokens</span></div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">Monthly cost</div>
-              <div class="detail-cell yes"><span class="check">Free</span><span class="detail-note">Uses your existing Claude subscription</span></div>
-              <div class="detail-cell yes"><span class="check">$20/mo</span><span class="detail-note">Claude Pro subscription</span></div>
-              <div class="detail-cell no"><span class="cross">$50-500+/mo</span><span class="detail-note">Pay-per-token API costs</span></div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">API keys</div>
-              <div class="detail-cell yes"><span class="check">None</span></div>
-              <div class="detail-cell yes"><span class="check">None</span></div>
-              <div class="detail-cell no"><span class="cross">Required</span><span class="detail-note">LLM + optional embedding providers</span></div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">Data location</div>
-              <div class="detail-cell yes"><span class="check">Local</span><span class="detail-note">SQLite on your Mac</span></div>
-              <div class="detail-cell partial"><span class="partial-mark">Cloud</span><span class="detail-note">Anthropic's servers</span></div>
-              <div class="detail-cell yes"><span class="check">Local</span><span class="detail-note">Self-hosted</span></div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">Open source</div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">MIT license</span></div>
+              <div class="detail-label">Named agents</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Workers with name, description, system prompt</span></div>
               <div class="detail-cell no"><span class="cross">No</span></div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">MIT license</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">SOUL.md files define agent personality</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">System prompts</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Passed via --system-prompt per task</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">SOUL.md + bootstrap files</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Default worker</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">One worker marked as default, auto-applied</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Must specify per agent</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Worker templates</div>
+              <div class="detail-cell yes"><span class="check">9 built-in</span><span class="detail-note">Researcher, Analyst, Monitor, and more</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Example SOUL.md files in docs</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Multi-agent</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Different workers on different tasks</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Multiple agents with different SOULs</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Self-evolving</div>
+              <div class="detail-cell partial"><span class="partial-mark">Via memory</span><span class="detail-note">Task results stored in memory, shared across runs</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Via SOUL</span><span class="detail-note">Agents can modify their own SOUL.md</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Manage via UI</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">WorkersPanel: create, edit, delete, set default</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell partial"><span class="partial-mark">Web UI</span><span class="detail-note">Browser-based dashboard</span></div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-label">Manage via chat</div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">create_worker, list_workers, update_worker, delete_worker</span></div>
+              <div class="detail-cell no"><span class="cross">No</span></div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Config files only</span></div>
             </div>
           </div>
           <div class="verdict">
             <strong>Verdict</strong>
-            <p>Daymon is the simplest path to AI automation: install one app, and your existing Claude subscription gains scheduling, memory, workers, and file watching. OpenClaw is powerful but requires significant infrastructure and ongoing API costs. Claude works out of the box but lacks automation capabilities.</p>
+            <p>Both Daymon and OpenClaw support specialized agents. Daymon's advantage: workers are manageable via chat (create, update, delete through Claude) and include 9 built-in templates. OpenClaw uses SOUL.md files which are more customizable but require manual file editing. Claude has no concept of custom agents.</p>
           </div>
         </div>
 
