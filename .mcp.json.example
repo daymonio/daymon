@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "daymon": {
+      "command": "node",
+      "args": ["<path-to-daymon>/out/mcp/server.js"],
+      "env": {
+        "DAYMON_DB_PATH": "<path-to-daymon-data>/daymon.db",
+        "DAYMON_SOURCE": "claude-code"
+      }
+    }
+  }
+}

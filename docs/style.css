@@ -167,6 +167,24 @@ nav a:hover {
   text-decoration: none;
 }
 
+.brew-install {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.brew-install code {
+  display: inline-block;
+  background: var(--bg-surface);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  letter-spacing: -0.01em;
+  user-select: all;
+}
+
 /* === How it works === */
 .how-it-works {
   padding: 80px 0;
