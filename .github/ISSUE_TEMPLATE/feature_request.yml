@@ -1,0 +1,33 @@
+name: Feature Request
+description: Suggest an idea to improve the project.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing an idea. Clear context helps us evaluate and prioritize requests.
+  - type: textarea
+    id: problem_motivation
+    attributes:
+      label: Problem or motivation
+      description: What problem are you trying to solve? Why is this needed?
+      placeholder: Describe the pain point or motivation behind this request.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed solution
+      description: Describe the solution you would like to see.
+      placeholder: Explain what you want to happen and how it should work.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives_considered
+    attributes:
+      label: Alternatives considered
+      description: Describe any alternative approaches or workarounds you considered.
+      placeholder: List alternatives and why they are less ideal.
+    validations:
+      required: true

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Community Discussions
+    url: https://github.com/daymonio/daymon/discussions
+    about: Ask questions, propose ideas, and discuss with the community.

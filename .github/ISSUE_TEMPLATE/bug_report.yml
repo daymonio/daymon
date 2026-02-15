@@ -1,0 +1,76 @@
+name: Bug Report
+description: Report a reproducible bug.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please provide enough detail for us to reproduce and fix it quickly.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the bug and what is going wrong.
+      placeholder: A clear and concise description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps to reproduce the issue.
+      placeholder: |
+        1. Go to ...
+        2. Click on ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+      placeholder: Describe the expected result.
+    validations:
+      required: true
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: Actual behavior
+      description: What actually happened?
+      placeholder: Describe the actual result, including any error text.
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: "### Environment"
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      description: Operating system and version.
+      placeholder: macOS 15.0
+    validations:
+      required: true
+  - type: input
+    id: electron_version
+    attributes:
+      label: Electron version
+      description: Electron version in use.
+      placeholder: 35.7.5
+    validations:
+      required: true
+  - type: input
+    id: node_version
+    attributes:
+      label: Node.js version
+      description: Node.js version in use.
+      placeholder: v22.12.0
+    validations:
+      required: true
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Add logs, screenshots, or any extra context.
