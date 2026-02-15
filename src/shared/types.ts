@@ -1,3 +1,10 @@
+import type { TRIGGER_TYPES, TASK_STATUSES } from './constants'
+
+// ─── Derived Union Types ──────────────────────────────────
+
+export type TriggerType = typeof TRIGGER_TYPES[keyof typeof TRIGGER_TYPES]
+export type TaskStatus = typeof TASK_STATUSES[keyof typeof TASK_STATUSES]
+
 // ─── Worker Types ──────────────────────────────────────────
 
 export interface Worker {
@@ -55,11 +62,11 @@ export interface Task {
   description: string | null
   prompt: string
   cronExpression: string | null
-  triggerType: string
+  triggerType: TriggerType
   triggerConfig: string | null
   scheduledAt: string | null
   executor: string
-  status: string
+  status: TaskStatus
   lastRun: string | null
   lastResult: string | null
   errorCount: number
@@ -79,7 +86,7 @@ export interface CreateTaskInput {
   description?: string
   prompt: string
   cronExpression?: string
-  triggerType?: string
+  triggerType?: TriggerType
   triggerConfig?: string
   scheduledAt?: string
   executor?: string
@@ -102,20 +109,6 @@ export interface TaskRun {
   progress: number | null
   progressMessage: string | null
   sessionId: string | null
-}
-
-// ─── Embedding Types ───────────────────────────────────────
-
-export interface Embedding {
-  id: number
-  entityId: number
-  sourceType: 'entity' | 'observation'
-  sourceId: number
-  textHash: string
-  vector: Buffer
-  model: string
-  dimensions: number
-  createdAt: string
 }
 
 // ─── Watch Types ────────────────────────────────────────────

@@ -12,12 +12,12 @@ export function registerWorkerTools(server: McpServer): void {
         'Create a named agent configuration (worker) with a system prompt that defines personality, capabilities, and constraints. '
         + 'Tasks can be assigned to workers. The worker\'s system prompt is passed to Claude CLI via --system-prompt on every task run.',
       inputSchema: {
-        name: z.string().describe('Short name for the worker (e.g., "Research Assistant", "Code Reviewer", "News Curator")'),
-        systemPrompt: z.string().describe(
+        name: z.string().min(1).max(200).describe('Short name for the worker (e.g., "Research Assistant", "Code Reviewer", "News Curator")'),
+        systemPrompt: z.string().min(1).max(50000).describe(
           'The system prompt / "soul" that defines this worker\'s personality, capabilities, and constraints. '
           + 'This is passed via --system-prompt to every task assigned to this worker.'
         ),
-        description: z.string().optional().describe('Optional short description of what this worker does'),
+        description: z.string().max(1000).optional().describe('Optional short description of what this worker does'),
         isDefault: z.boolean().optional().describe(
           'Set as the default worker. The default worker is used for tasks without a specific worker assignment. Only one worker can be default.'
         )

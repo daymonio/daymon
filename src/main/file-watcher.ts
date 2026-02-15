@@ -83,7 +83,9 @@ async function handleTrigger(watchId: number, actionPrompt: string, filePath: st
     // non-fatal
   }
 
-  const prompt = `${actionPrompt}\n\nTriggered by file: ${filePath}`
+  // Quote the file path to prevent prompt injection via crafted filenames
+  const safeFilePath = JSON.stringify(filePath)
+  const prompt = `${actionPrompt}\n\nTriggered by file change. File path: ${safeFilePath}`
   console.log(`Watch ${watchId} executing action for ${filePath}`)
 
   try {

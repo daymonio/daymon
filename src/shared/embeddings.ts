@@ -102,6 +102,3 @@ export function textHash(text: string): string {
   return createHash('sha256').update(text).digest('hex').substring(0, 16)
 }
 
-export function getEngineError(): Error | null {
-  return pipelineError
-}

@@ -9,7 +9,7 @@ import type { Task } from './types'
 export interface TaskExecutionOptions {
   db: Database.Database
   resultsDir: string
-  onComplete?: (task: Task, output: string) => void
+  onComplete?: (task: Task, output: string, durationMs: number) => void
   onFailed?: (task: Task, error: string) => void
 }
 
@@ -55,6 +55,7 @@ export async function executeTask(
   }
 
   runningTasks.add(taskId)
+  const startTime = Date.now()
   const run = queries.createTaskRun(db, taskId)
 
   try {
@@ -69,8 +70,8 @@ export async function executeTask(
         const defaultWorker = queries.getDefaultWorker(db)
         if (defaultWorker) systemPrompt = defaultWorker.systemPrompt
       }
-    } catch {
-      // Non-fatal: worker resolution failure should not block execution
+    } catch (err) {
+      console.warn('Non-fatal: worker resolution failed:', err)
     }
 
     // Determine session resume ID
@@ -83,8 +84,8 @@ export async function executeTask(
           resumeSessionId = task.sessionId
         }
         // If >= SESSION_MAX_RUNS, leave resumeSessionId undefined to start fresh
-      } catch {
-        // Non-fatal: if we can't check run count, start fresh
+      } catch (err) {
+        console.warn('Non-fatal: session run count check failed:', err)
       }
     }
 
@@ -105,8 +106,8 @@ export async function executeTask(
           augmentedPrompt = `${memoryContext}\n\n---\n\n${task.prompt}`
         }
       }
-    } catch {
-      // Non-fatal: memory injection failure should not block execution
+    } catch (err) {
+      console.warn('Non-fatal: memory injection failed:', err)
     }
 
     // Resolve timeout: task-specific > default (30 min)
@@ -130,7 +131,7 @@ export async function executeTask(
     if (result.exitCode !== 0 && resumeSessionId) {
       try {
         queries.clearTaskSession(db, taskId)
-      } catch { /* non-fatal */ }
+      } catch (err) { console.warn('Non-fatal: clear session failed:', err) }
 
       // Re-inject full memory context for the fresh run
       let retryPrompt = task.prompt
@@ -139,7 +140,7 @@ export async function executeTask(
         if (memoryContext) {
           retryPrompt = `${memoryContext}\n\n---\n\n${task.prompt}`
         }
-      } catch { /* non-fatal */ }
+      } catch (err) { console.warn('Non-fatal: memory context retry failed:', err) }
 
       lastProgressUpdate = 0
       const retryResult = await executeClaudeCode(retryPrompt, {
@@ -162,7 +163,7 @@ export async function executeTask(
     const errorMsg = err instanceof Error ? err.message : String(err)
     queries.completeTaskRun(db, run.id, '', undefined, errorMsg)
     onFailed?.(task, errorMsg)
-    return { success: false, output: '', errorMessage: errorMsg, durationMs: 0 }
+    return { success: false, output: '', errorMessage: errorMsg, durationMs: Date.now() - startTime }
   } finally {
     runningTasks.delete(taskId)
   }
@@ -175,7 +176,7 @@ function finishRun(
   task: Task,
   result: { stdout: string; stderr: string; exitCode: number; durationMs: number; timedOut: boolean; sessionId: string | null },
   resultsDir: string,
-  onComplete?: (task: Task, output: string) => void,
+  onComplete?: (task: Task, output: string, durationMs: number) => void,
   onFailed?: (task: Task, error: string) => void
 ): TaskExecutionResult {
   const output = result.stdout || result.stderr || '(no output)'
@@ -188,21 +189,21 @@ function finishRun(
       if (task.sessionContinuity) {
         queries.updateTask(db, taskId, { sessionId: result.sessionId })
       }
-    } catch { /* non-fatal */ }
+    } catch (err) { console.warn('Non-fatal: session ID storage failed:', err) }
   }
 
   if (result.exitCode === 0 && !result.timedOut) {
     queries.completeTaskRun(db, runId, output, resultFilePath)
-    try { queries.storeTaskResultInMemory(db, taskId, output, true) } catch { /* non-fatal */ }
+    try { queries.storeTaskResultInMemory(db, taskId, output, true) } catch (err) { console.warn('Non-fatal: memory storage failed:', err) }
     queries.incrementRunCount(db, taskId)
-    onComplete?.(task, output.slice(0, 200))
+    onComplete?.(task, output.slice(0, 200), result.durationMs)
     return { success: true, output, durationMs: result.durationMs, resultFilePath }
   } else {
     const errorMsg = result.timedOut
       ? `Timed out after ${result.durationMs}ms`
       : `Exit code ${result.exitCode}: ${result.stderr || '(no stderr)'}`
     queries.completeTaskRun(db, runId, output, resultFilePath, errorMsg)
-    try { queries.storeTaskResultInMemory(db, taskId, output, false) } catch { /* non-fatal */ }
+    try { queries.storeTaskResultInMemory(db, taskId, output, false) } catch (err) { console.warn('Non-fatal: memory storage failed:', err) }
     onFailed?.(task, errorMsg)
     return { success: false, output, errorMessage: errorMsg, durationMs: result.durationMs, resultFilePath }
   }

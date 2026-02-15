@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6 } from '../schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7 } from '../schema'
 import * as q from '../db-queries'
 
 let db: Database.Database
@@ -13,6 +13,7 @@ function initTestDb(): Database.Database {
   d.exec(SCHEMA_V4)
   d.exec(SCHEMA_V5)
   d.exec(SCHEMA_V6)
+  d.exec(SCHEMA_V7)
   return d
 }
 
@@ -695,11 +696,11 @@ describe('schema migration', () => {
     expect(colNames).toContain('timeout_minutes')
   })
 
-  it('schema_version table has versions 1-6', () => {
+  it('schema_version table has versions 1-7', () => {
     const versions = db
       .prepare('SELECT version FROM schema_version ORDER BY version')
       .all() as { version: number }[]
-    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4, 5, 6, 7])
   })
 })
 

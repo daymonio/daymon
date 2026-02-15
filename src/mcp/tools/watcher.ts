@@ -1,6 +1,27 @@
+import { homedir } from 'os'
+import { resolve } from 'path'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { getMcpDatabase } from '../db'
+
+const SENSITIVE_PATHS = ['/.ssh', '/.gnupg', '/.aws', '/.env']
+
+function validateWatchPath(watchPath: string): string | null {
+  const resolved = resolve(watchPath)
+  if (!resolved.startsWith('/')) {
+    return 'Path must be absolute.'
+  }
+  const home = homedir()
+  if (!resolved.startsWith(home) && !resolved.startsWith('/tmp')) {
+    return `Path must be within your home directory (${home}) or /tmp.`
+  }
+  for (const sensitive of SENSITIVE_PATHS) {
+    if (resolved.startsWith(home + sensitive)) {
+      return `Cannot watch sensitive directory: ${sensitive}`
+    }
+  }
+  return null
+}
 
 export function registerWatcherTools(server: McpServer): void {
   server.registerTool(
@@ -10,14 +31,22 @@ export function registerWatcherTools(server: McpServer): void {
       description:
         'Watch a file or folder for changes. When a new file is added or a file is modified, Daymon will execute the action prompt using Claude Code CLI. The watcher runs in the Daymon background process.',
       inputSchema: {
-        path: z.string().describe('Absolute path to the file or folder to watch'),
-        description: z.string().optional().describe('Description of what this watch does'),
+        path: z.string().min(1).describe('Absolute path to the file or folder to watch'),
+        description: z.string().max(500).optional().describe('Description of what this watch does'),
         actionPrompt: z
           .string()
+          .max(50000)
           .describe('The prompt/instruction for Claude to execute when a change is detected')
       }
     },
     async ({ path, description, actionPrompt }) => {
+      const pathError = validateWatchPath(path)
+      if (pathError) {
+        return {
+          content: [{ type: 'text' as const, text: `Invalid watch path: ${pathError}` }]
+        }
+      }
+
       const db = getMcpDatabase()
       const result = db
         .prepare('INSERT INTO watches (path, description, action_prompt) VALUES (?, ?, ?)')

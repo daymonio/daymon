@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import type { Entity, Observation, Relation, MemoryStats, Task, CreateTaskInput, TaskRun, Worker, CreateWorkerInput } from './types'
+import type { Entity, Observation, Relation, MemoryStats, Task, CreateTaskInput, TaskRun, Worker, CreateWorkerInput, TriggerType, TaskStatus } from './types'
 
 // ─── Entities ───────────────────────────────────────────────
 
@@ -58,9 +58,11 @@ export function searchEntities(db: Database.Database, query: string): Entity[] {
     // FTS parse error (special characters in query) — fall through to LIKE
   }
 
+  // Escape LIKE wildcards to prevent wildcard injection
+  const escaped = query.replace(/[%_]/g, '\\$&')
   return db
-    .prepare('SELECT * FROM entities WHERE name LIKE ? OR category LIKE ? ORDER BY updated_at DESC')
-    .all(`%${query}%`, `%${query}%`) as Entity[]
+    .prepare("SELECT * FROM entities WHERE name LIKE ? ESCAPE '\\' OR category LIKE ? ESCAPE '\\' ORDER BY updated_at DESC")
+    .all(`%${escaped}%`, `%${escaped}%`) as Entity[]
 }
 
 // ─── Observations ───────────────────────────────────────────
@@ -246,8 +248,8 @@ export function listTasks(db: Database.Database, status?: string): Task[] {
 
 export function updateTask(db: Database.Database, id: number, updates: Partial<{
   name: string; description: string; prompt: string; cronExpression: string
-  triggerType: string; triggerConfig: string; scheduledAt: string; executor: string
-  status: string; lastRun: string; lastResult: string; errorCount: number
+  triggerType: TriggerType; triggerConfig: string; scheduledAt: string; executor: string
+  status: TaskStatus; lastRun: string; lastResult: string; errorCount: number
   maxRuns: number; runCount: number; memoryEntityId: number
   workerId: number | null; sessionContinuity: boolean; sessionId: string | null
   timeoutMinutes: number | null
@@ -383,6 +385,31 @@ const MAX_RELATED_OBSERVATIONS = 3
 const MAX_MEMORY_LENGTH = 2000
 const MAX_OBSERVATIONS_PER_ENTITY = 10
 
+function buildRelatedKnowledgeSection(db: Database.Database, task: Task): string | null {
+  const words = task.name.split(/\s+/).filter(w => w.length >= 2)
+  const relatedMap = new Map<number, Entity>()
+  for (const word of words) {
+    for (const entity of searchEntities(db, word)) {
+      if (entity.id !== task.memoryEntityId) {
+        relatedMap.set(entity.id, entity)
+      }
+    }
+  }
+  const otherEntities = Array.from(relatedMap.values())
+  if (otherEntities.length === 0) return null
+
+  const relatedParts: string[] = []
+  for (const entity of otherEntities.slice(0, 5)) {
+    const observations = getObservations(db, entity.id)
+    if (observations.length > 0) {
+      const recent = observations.slice(0, MAX_RELATED_OBSERVATIONS)
+      const obsText = recent.map(o => o.content).join('\n')
+      relatedParts.push(`**${entity.name}** (${entity.type}):\n${obsText}`)
+    }
+  }
+  return relatedParts.length > 0 ? `## Related knowledge:\n${relatedParts.join('\n\n')}` : null
+}
+
 export function getTaskMemoryContext(db: Database.Database, taskId: number): string | null {
   const task = getTask(db, taskId)
   if (!task) return null
@@ -403,32 +430,8 @@ export function getTaskMemoryContext(db: Database.Database, taskId: number): str
   }
 
   // 2. Related knowledge from all memory (other tasks, user memories)
-  // Split task name into words and search each for broader matching
-  const words = task.name.split(/\s+/).filter(w => w.length >= 2)
-  const relatedMap = new Map<number, Entity>()
-  for (const word of words) {
-    for (const entity of searchEntities(db, word)) {
-      if (entity.id !== task.memoryEntityId) {
-        relatedMap.set(entity.id, entity)
-      }
-    }
-  }
-  const otherEntities = Array.from(relatedMap.values())
-
-  if (otherEntities.length > 0) {
-    const relatedParts: string[] = []
-    for (const entity of otherEntities.slice(0, 5)) {
-      const observations = getObservations(db, entity.id)
-      if (observations.length > 0) {
-        const recent = observations.slice(0, MAX_RELATED_OBSERVATIONS)
-        const obsText = recent.map(o => o.content).join('\n')
-        relatedParts.push(`**${entity.name}** (${entity.type}):\n${obsText}`)
-      }
-    }
-    if (relatedParts.length > 0) {
-      sections.push(`## Related knowledge:\n${relatedParts.join('\n\n')}`)
-    }
-  }
+  const relatedSection = buildRelatedKnowledgeSection(db, task)
+  if (relatedSection) sections.push(relatedSection)
 
   return sections.length > 0 ? sections.join('\n\n') : null
 }
@@ -475,11 +478,14 @@ export function storeTaskResultInMemory(
 }
 
 export function incrementRunCount(db: Database.Database, taskId: number): void {
-  db.prepare('UPDATE tasks SET run_count = run_count + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(taskId)
-  const task = getTask(db, taskId)
-  if (task?.maxRuns && task.runCount >= task.maxRuns) {
-    updateTask(db, taskId, { status: 'completed' })
-  }
+  // Atomic: increment run_count and auto-complete if maxRuns reached in a single statement
+  db.prepare(
+    `UPDATE tasks SET
+       run_count = run_count + 1,
+       status = CASE WHEN max_runs IS NOT NULL AND run_count + 1 >= max_runs THEN 'completed' ELSE status END,
+       updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`
+  ).run(taskId)
 }
 
 // ─── Task Row Mappers ───────────────────────────────────────
@@ -491,11 +497,11 @@ function mapTaskRow(row: Record<string, unknown>): Task {
     description: row.description as string | null,
     prompt: row.prompt as string,
     cronExpression: row.cron_expression as string | null,
-    triggerType: row.trigger_type as string,
+    triggerType: row.trigger_type as TriggerType,
     triggerConfig: row.trigger_config as string | null,
     scheduledAt: row.scheduled_at as string | null,
     executor: row.executor as string,
-    status: row.status as string,
+    status: row.status as TaskStatus,
     lastRun: row.last_run as string | null,
     lastResult: row.last_result as string | null,
     errorCount: row.error_count as number,
@@ -548,29 +554,7 @@ export function getSessionRunCount(db: Database.Database, taskId: number, sessio
 export function getCrossTaskMemoryContext(db: Database.Database, taskId: number): string | null {
   const task = getTask(db, taskId)
   if (!task) return null
-
-  const words = task.name.split(/\s+/).filter(w => w.length >= 2)
-  const relatedMap = new Map<number, Entity>()
-  for (const word of words) {
-    for (const entity of searchEntities(db, word)) {
-      if (entity.id !== task.memoryEntityId) {
-        relatedMap.set(entity.id, entity)
-      }
-    }
-  }
-  const otherEntities = Array.from(relatedMap.values())
-  if (otherEntities.length === 0) return null
-
-  const relatedParts: string[] = []
-  for (const entity of otherEntities.slice(0, 5)) {
-    const observations = getObservations(db, entity.id)
-    if (observations.length > 0) {
-      const recent = observations.slice(0, MAX_RELATED_OBSERVATIONS)
-      const obsText = recent.map(o => o.content).join('\n')
-      relatedParts.push(`**${entity.name}** (${entity.type}):\n${obsText}`)
-    }
-  }
-  return relatedParts.length > 0 ? `## Related knowledge:\n${relatedParts.join('\n\n')}` : null
+  return buildRelatedKnowledgeSection(db, task)
 }
 
 // ─── Embeddings ────────────────────────────────────────────
@@ -637,7 +621,7 @@ export function getUnembeddedEntities(db: Database.Database, limit: number = 50)
 
 // ─── Hybrid Search (FTS + Semantic) ───────────────────────
 
-export interface HybridSearchResult {
+interface HybridSearchResult {
   entity: Entity
   ftsScore: number
   semanticScore: number

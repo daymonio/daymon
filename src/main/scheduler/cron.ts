@@ -84,7 +84,7 @@ function checkDueOnceTasks(): void {
       })
       .catch((err) => {
         console.error(`Failed to execute one-time task ${task.id}:`, err)
-        updateTask(task.id, { status: 'completed' })
+        // Keep active so scheduler can retry on next poll
       })
       .finally(() => {
         pendingOnceTasks.delete(task.id)

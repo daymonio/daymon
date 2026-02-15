@@ -23,14 +23,14 @@ export function registerMemoryTools(server: McpServer): void {
       description:
         'Store a memory. Creates an entity with an observation. Use for facts, preferences, project details, people, events.',
       inputSchema: {
-        name: z.string().describe('Short name for this memory (e.g. "Series A fundraise", "favorite color")'),
-        content: z.string().describe('The detailed information to remember'),
+        name: z.string().min(1).max(200).describe('Short name for this memory (e.g. "Series A fundraise", "favorite color")'),
+        content: z.string().min(1).max(50000).describe('The detailed information to remember'),
         type: z
-          .string()
+          .enum(['fact', 'preference', 'person', 'project', 'event'])
           .default('fact')
           .describe('Type: fact, preference, person, project, event'),
         category: z
-          .string()
+          .enum(['work', 'personal', 'preference', 'project', 'person'])
           .optional()
           .describe('Category: work, personal, preference, project, person'),
       }

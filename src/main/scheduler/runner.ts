@@ -1,10 +1,7 @@
 import { getDatabase } from '../db'
 import { getConfig } from '../config'
 import { notifyTaskComplete, notifyTaskFailed } from '../notifications'
-import {
-  executeTask as sharedExecuteTask,
-  isTaskRunning as sharedIsTaskRunning
-} from '../../shared/task-runner'
+import { executeTask as sharedExecuteTask } from '../../shared/task-runner'
 
 export async function executeTask(taskId: number): Promise<void> {
   const config = getConfig()
@@ -13,8 +10,8 @@ export async function executeTask(taskId: number): Promise<void> {
   const result = await sharedExecuteTask(taskId, {
     db,
     resultsDir: config.resultsDir,
-    onComplete: (task, output) => {
-      console.log(`Task ${taskId} (${task.name}) completed in ${result.durationMs}ms`)
+    onComplete: (task, output, durationMs) => {
+      console.log(`Task ${taskId} (${task.name}) completed in ${durationMs}ms`)
       notifyTaskComplete(task.name, output)
     },
     onFailed: (task, error) => {
@@ -26,8 +23,4 @@ export async function executeTask(taskId: number): Promise<void> {
   if (!result.success && result.errorMessage) {
     console.log(`Task ${taskId}: ${result.errorMessage}`)
   }
-}
-
-export function isTaskRunning(taskId: number): boolean {
-  return sharedIsTaskRunning(taskId)
 }

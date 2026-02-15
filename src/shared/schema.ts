@@ -164,3 +164,8 @@ export const SCHEMA_V6 = `
 ALTER TABLE tasks ADD COLUMN timeout_minutes INTEGER;
 INSERT OR IGNORE INTO schema_version (version) VALUES (6);
 `
+
+export const SCHEMA_V7 = `
+CREATE INDEX IF NOT EXISTS idx_task_runs_status ON task_runs(status);
+INSERT OR IGNORE INTO schema_version (version) VALUES (7);
+`
