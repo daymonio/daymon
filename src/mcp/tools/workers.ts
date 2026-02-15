@@ -10,7 +10,8 @@ export function registerWorkerTools(server: McpServer): void {
       title: 'Create Worker',
       description:
         'Create a named agent configuration (worker) with a system prompt that defines personality, capabilities, and constraints. '
-        + 'Tasks can be assigned to workers. The worker\'s system prompt is passed to Claude CLI via --system-prompt on every task run.',
+        + 'Tasks can be assigned to workers. The worker\'s system prompt is passed to Claude CLI via --system-prompt on every task run. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         name: z.string().min(1).max(200).describe('Short name for the worker (e.g., "Research Assistant", "Code Reviewer", "News Curator")'),
         systemPrompt: z.string().min(1).max(50000).describe(
@@ -29,7 +30,7 @@ export function registerWorkerTools(server: McpServer): void {
       return {
         content: [{
           type: 'text' as const,
-          text: `Created worker "${name}" (id: ${worker.id}).${worker.isDefault ? ' Set as default.' : ''}`
+          text: `Created worker "${name}".`
         }]
       }
     }
@@ -65,7 +66,8 @@ export function registerWorkerTools(server: McpServer): void {
     'daymon_update_worker',
     {
       title: 'Update Worker',
-      description: 'Update a worker\'s name, system prompt, description, or default status.',
+      description: 'Update a worker\'s name, system prompt, description, or default status. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         id: z.number().describe('The worker ID to update'),
         name: z.string().optional().describe('New name'),
@@ -86,7 +88,7 @@ export function registerWorkerTools(server: McpServer): void {
       if (description !== undefined) updates.description = description
       if (isDefault !== undefined) updates.isDefault = isDefault
       queries.updateWorker(db, id, updates)
-      return { content: [{ type: 'text' as const, text: `Updated worker "${worker.name}" (id: ${id}).` }] }
+      return { content: [{ type: 'text' as const, text: `Updated worker "${worker.name}".` }] }
     }
   )
 
@@ -94,7 +96,8 @@ export function registerWorkerTools(server: McpServer): void {
     'daymon_delete_worker',
     {
       title: 'Delete Worker',
-      description: 'Delete a worker configuration. Tasks assigned to this worker will have their worker unset.',
+      description: 'Delete a worker configuration. Tasks assigned to this worker will have their worker unset. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         id: z.number().describe('The worker ID to delete')
       }
@@ -106,7 +109,7 @@ export function registerWorkerTools(server: McpServer): void {
         return { content: [{ type: 'text' as const, text: `No worker found with id ${id}.` }] }
       }
       queries.deleteWorker(db, id)
-      return { content: [{ type: 'text' as const, text: `Deleted worker "${worker.name}" (id: ${id}).` }] }
+      return { content: [{ type: 'text' as const, text: `Deleted worker "${worker.name}".` }] }
     }
   )
 }

@@ -10,7 +10,8 @@ export function registerWatcherTools(server: McpServer): void {
     {
       title: 'Watch Folder',
       description:
-        'Watch a file or folder for changes. When a new file is added or a file is modified, Daymon will execute the action prompt using Claude Code CLI. The watcher runs in the Daymon background process.',
+        'Watch a file or folder for changes. When a new file is added or a file is modified, Daymon will execute the action prompt using Claude Code CLI. The watcher runs in the Daymon background process. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         path: z.string().min(1).describe('Absolute path to the file or folder to watch'),
         description: z.string().max(500).optional().describe('Description of what this watch does'),
@@ -34,7 +35,7 @@ export function registerWatcherTools(server: McpServer): void {
         content: [
           {
             type: 'text' as const,
-            text: `Created file watch (id: ${watch.id}) on "${path}".`
+            text: `Watching "${path}".`
           }
         ]
       }
@@ -45,7 +46,8 @@ export function registerWatcherTools(server: McpServer): void {
     'daymon_unwatch',
     {
       title: 'Stop Watching',
-      description: 'Stop watching a file or folder by its watch ID.',
+      description: 'Stop watching a file or folder by its watch ID. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         id: z.number().describe('The watch ID to remove')
       }
@@ -63,7 +65,7 @@ export function registerWatcherTools(server: McpServer): void {
         content: [
           {
             type: 'text' as const,
-            text: `Removed watch (id: ${id}) on "${watch.path}".`
+            text: `Stopped watching "${watch.path}".`
           }
         ]
       }

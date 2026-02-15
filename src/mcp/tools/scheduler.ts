@@ -22,7 +22,9 @@ export function registerSchedulerTools(server: McpServer): void {
       title: 'Schedule Task',
       description:
         'Create a task — recurring (cron), one-time (specific datetime), or on-demand (manual trigger). '
-        + 'Provide cronExpression for recurring, scheduledAt for one-time, or neither for on-demand.',
+        + 'Provide cronExpression for recurring, scheduledAt for one-time, or neither for on-demand. '
+        + 'RESPONSE STYLE: After calling this tool, confirm to the user in 1 short sentence. '
+        + 'Do NOT add notes, tips, caveats, or advice. Do NOT mention task IDs, cron syntax, session continuity, workers, timeouts, Electron, or internal tool names.',
       inputSchema: {
         name: z.string().max(200).optional().describe(
           'Short descriptive name for the task. If omitted, a name will be generated from the prompt. Examples: "HN Morning Digest", "Inbox Summary", "Download Organizer".'
@@ -134,35 +136,25 @@ export function registerSchedulerTools(server: McpServer): void {
         timeoutMinutes: timeout ?? undefined
       })
 
-      // Response varies by type
-      const maxRunsNote = maxRuns ? `\nWill auto-complete after ${maxRuns} successful run(s).` : ''
-      const timeoutNote = timeout ? `\nTimeout: ${timeout} minute(s)` : ''
-      const workerNote = workerId ? (() => { const w = queries.getWorker(db, workerId); return w ? `\nWorker: ${w.name}` : '' })() : ''
-      const sessionNote = sessionContinuity ? '\nSession continuity: enabled' : ''
       if (triggerType === 'cron') {
         return {
           content: [{
             type: 'text' as const,
-            text: `Scheduled recurring task "${taskName}" (id: ${task.id}).\nSchedule: ${cronExpression}${maxRunsNote}${timeoutNote}${workerNote}${sessionNote}`
+            text: `Scheduled recurring task "${taskName}".`
           }]
         }
       } else if (triggerType === 'once') {
-        const diffMs = new Date(scheduledAt!).getTime() - Date.now()
-        const diffMins = Math.round(diffMs / 60000)
-        const timeDesc = diffMins < 60
-          ? `${diffMins} minute(s)`
-          : `${Math.floor(diffMins / 60)} hour(s) and ${diffMins % 60} minute(s)`
         return {
           content: [{
             type: 'text' as const,
-            text: `Scheduled one-time task "${taskName}" (id: ${task.id}).\nRuns at: ${scheduledAt}\nTime until execution: ~${timeDesc}${timeoutNote}${workerNote}${sessionNote}`
+            text: `Scheduled one-time task "${taskName}" for ${scheduledAt}.`
           }]
         }
       } else {
         return {
           content: [{
             type: 'text' as const,
-            text: `Created on-demand task "${taskName}" (id: ${task.id}).${timeoutNote}${workerNote}${sessionNote}\nRun it anytime with daymon_run_task.`
+            text: `Created on-demand task "${taskName}".`
           }]
         }
       }
@@ -265,7 +257,7 @@ export function registerSchedulerTools(server: McpServer): void {
         return {
           content: [{
             type: 'text' as const,
-            text: `Task "${task.name}" completed in ${(result.durationMs / 1000).toFixed(1)}s.\n\n${result.output}`
+            text: `Task "${task.name}" completed.\n\n${result.output}`
           }]
         }
       } else {
@@ -284,7 +276,8 @@ export function registerSchedulerTools(server: McpServer): void {
     'daymon_pause_task',
     {
       title: 'Pause Task',
-      description: 'Pause a scheduled task by its ID. The task will not run until resumed.',
+      description: 'Pause a scheduled task by its ID. The task will not run until resumed. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         id: z.number().describe('The task ID to pause')
       }
@@ -302,7 +295,7 @@ export function registerSchedulerTools(server: McpServer): void {
         content: [
           {
             type: 'text' as const,
-            text: `Paused task "${task.name}" (id: ${id}).`
+            text: `Paused "${task.name}".`
           }
         ]
       }
@@ -313,7 +306,8 @@ export function registerSchedulerTools(server: McpServer): void {
     'daymon_resume_task',
     {
       title: 'Resume Task',
-      description: 'Resume a paused task by its ID.',
+      description: 'Resume a paused task by its ID. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         id: z.number().describe('The task ID to resume')
       }
@@ -331,7 +325,7 @@ export function registerSchedulerTools(server: McpServer): void {
         content: [
           {
             type: 'text' as const,
-            text: `Resumed task "${task.name}" (id: ${id}).`
+            text: `Resumed "${task.name}".`
           }
         ]
       }
@@ -342,7 +336,8 @@ export function registerSchedulerTools(server: McpServer): void {
     'daymon_delete_task',
     {
       title: 'Delete Task',
-      description: 'Delete a scheduled task by its ID. This also removes all run history.',
+      description: 'Delete a scheduled task by its ID. This also removes all run history. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         id: z.number().describe('The task ID to delete')
       }
@@ -360,7 +355,7 @@ export function registerSchedulerTools(server: McpServer): void {
         content: [
           {
             type: 'text' as const,
-            text: `Deleted task "${task.name}" (id: ${id}).`
+            text: `Deleted "${task.name}".`
           }
         ]
       }
@@ -479,7 +474,8 @@ export function registerSchedulerTools(server: McpServer): void {
     'daymon_reset_session',
     {
       title: 'Reset Task Session',
-      description: 'Clear the session for a task, forcing the next run to start a fresh conversation. Only relevant for tasks with session continuity enabled.',
+      description: 'Clear the session for a task, forcing the next run to start a fresh conversation. Only relevant for tasks with session continuity enabled. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         id: z.number().describe('The task ID to reset the session for')
       }
@@ -494,7 +490,7 @@ export function registerSchedulerTools(server: McpServer): void {
       return {
         content: [{
           type: 'text' as const,
-          text: `Session cleared for task "${task.name}" (id: ${id}). Next run will start a fresh conversation.`
+          text: `Session cleared for "${task.name}".`
         }]
       }
     }

@@ -21,7 +21,8 @@ export function registerMemoryTools(server: McpServer): void {
     {
       title: 'Remember',
       description:
-        'Store a memory. Creates an entity with an observation. Use for facts, preferences, project details, people, events.',
+        'Store a memory. Creates an entity with an observation. Use for facts, preferences, project details, people, events. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         name: z.string().min(1).max(200).describe('Short name for this memory (e.g. "Series A fundraise", "favorite color")'),
         content: z.string().min(1).max(50000).describe('The detailed information to remember'),
@@ -43,7 +44,7 @@ export function registerMemoryTools(server: McpServer): void {
         content: [
           {
             type: 'text' as const,
-            text: `Remembered "${name}" (id: ${entity.id}). Stored under ${category ?? 'general'}.`
+            text: `Remembered "${name}".`
           }
         ]
       }
@@ -126,7 +127,8 @@ export function registerMemoryTools(server: McpServer): void {
     'daymon_forget',
     {
       title: 'Forget',
-      description: 'Delete a memory by its ID. Also removes all related observations and relations.',
+      description: 'Delete a memory by its ID. Also removes all related observations and relations. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         id: z.number().describe('The entity ID to delete')
       }
@@ -144,7 +146,7 @@ export function registerMemoryTools(server: McpServer): void {
         content: [
           {
             type: 'text' as const,
-            text: `Forgot "${entity.name}" (id: ${id}).`
+            text: `Forgot "${entity.name}".`
           }
         ]
       }
