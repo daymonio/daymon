@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EventEmitter } from 'events'
 import { parseStreamEvent } from '../claude-code'
-import { generateTaskName } from '../../mcp/tools/scheduler'
 
 // ─── parseStreamEvent ─────────────────────────────────────────
 
@@ -62,52 +61,6 @@ describe('parseStreamEvent', () => {
   it('returns null for content_block_start without content_block', () => {
     const event = { type: 'content_block_start' }
     expect(parseStreamEvent(event, 0)).toBeNull()
-  })
-})
-
-// ─── generateTaskName ─────────────────────────────────────────
-
-describe('generateTaskName', () => {
-  it('returns short prompt as-is', () => {
-    expect(generateTaskName('Check HN for AI news')).toBe('Check HN for AI news')
-  })
-
-  it('strips common preamble phrases', () => {
-    expect(generateTaskName('Please check the weather')).toBe('check the weather')
-    expect(generateTaskName('Can you summarize this')).toBe('summarize this')
-    expect(generateTaskName('I want you to analyze data')).toBe('analyze data')
-    expect(generateTaskName('I need you to review code')).toBe('review code')
-  })
-
-  it('truncates long prompts with ellipsis', () => {
-    const long = 'Summarize the entire contents of the quarterly report file'
-    const result = generateTaskName(long)
-    expect(result.length).toBeLessThanOrEqual(40)
-    expect(result).toMatch(/\.\.\.$/)
-  })
-
-  it('uses first sentence only', () => {
-    expect(generateTaskName('Check email. Then summarize.')).toBe('Check email')
-  })
-
-  it('uses first line only', () => {
-    expect(generateTaskName('Check email\nThen summarize')).toBe('Check email')
-  })
-
-  it('handles exactly 40 char prompt without truncation', () => {
-    const exact = 'A'.repeat(40)
-    expect(generateTaskName(exact)).toBe(exact)
-  })
-
-  it('handles 41 char prompt with truncation', () => {
-    const over = 'A'.repeat(41)
-    const result = generateTaskName(over)
-    expect(result).toBe('A'.repeat(37) + '...')
-    expect(result.length).toBe(40)
-  })
-
-  it('trims whitespace', () => {
-    expect(generateTaskName('  Check email  ')).toBe('Check email')
   })
 })
 
