@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Rebuild better-sqlite3 for Node.js
+        run: npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3
+
       - name: TypeScript check
         run: npm run typecheck
 
