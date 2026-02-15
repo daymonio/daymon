@@ -298,6 +298,8 @@ nav a:hover {
   font-size: 0.85rem;
   line-height: 1.6;
   color: var(--text);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .copy-btn {
