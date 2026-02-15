@@ -98,6 +98,18 @@
       </div>
     </section>
 
+    <section class="copy-prompt">
+      <div class="container">
+        <h3>Copy &amp; paste to Claude Code</h3>
+        <p class="copy-prompt-subtitle">After installing Daymon, paste this into Claude Code to connect it:</p>
+        <div class="prompt-box" onclick="copyPrompt(this)">
+          <span class="prompt-text">Set up Daymon MCP server for this project. The server is at /Applications/Daymon.app/Contents/Resources/mcp/server.js and the database is at ~/Library/Application Support/daymon/daymon.db. Create a .mcp.json file with DAYMON_SOURCE set to claude-code.</span>
+          <span class="copy-btn" title="Copy to clipboard">Copy</span>
+        </div>
+        <p class="copy-prompt-note">Claude Desktop? Just open Daymon &mdash; it auto-configures. No prompt needed.</p>
+      </div>
+    </section>
+
     <section id="features" class="features">
       <div class="container">
         <h3>Features</h3>
@@ -343,5 +355,15 @@
     </div>
   </footer>
 
+  <script>
+    function copyPrompt(el) {
+      var text = el.querySelector('.prompt-text').textContent;
+      navigator.clipboard.writeText(text).then(function() {
+        var btn = el.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+  </script>
 </body>
 </html>

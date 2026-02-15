@@ -205,6 +205,75 @@ nav a:hover {
   color: var(--accent-hover);
 }
 
+/* === Copy Prompt === */
+.copy-prompt {
+  padding: 60px 0;
+  border-top: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.copy-prompt h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.copy-prompt-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+}
+
+.prompt-box {
+  position: relative;
+  background: var(--bg-surface);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--radius);
+  padding: 20px 80px 20px 24px;
+  max-width: 700px;
+  margin: 0 auto;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.prompt-box:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.prompt-text {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.copy-btn {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.prompt-box:hover .copy-btn {
+  background: var(--accent-hover);
+}
+
+.copy-prompt-note {
+  text-align: center;
+  color: var(--text-muted);
+  margin-top: 16px;
+  font-size: 0.85rem;
+}
+
 /* === How it works === */
 .how-it-works {
   padding: 80px 0;
