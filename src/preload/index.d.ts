@@ -50,7 +50,7 @@ interface AppAPI {
   checkClaude: () => Promise<{ available: boolean; version?: string; error?: string }>
   getClaudeIntegration: () => Promise<{ configured: boolean; configPath: string; expectedPath: string }>
   getSchedulerStatus: () => Promise<{ running: boolean; jobCount: number; jobs: Array<{ taskId: number }> }>
-  testNotification: () => Promise<boolean>
+  testNotification: () => Promise<{ shown: boolean; reason?: string }>
   getAutoLaunch: () => Promise<boolean>
   setAutoLaunch: (enabled: boolean) => Promise<void>
   uninstall: () => Promise<void>

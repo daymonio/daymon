@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { createTray, showPopoverWindow } from './tray'
+import { createTray, showPopoverWindowFromDock } from './tray'
 import { initDatabase, closeDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
 import { ensureClaudeConfig } from './claude-config'
@@ -61,60 +61,66 @@ function installBrokenPipeGuards(): void {
   })
 }
 
-// Prevent multiple instances — quit if another is already running
-const gotLock = app.requestSingleInstanceLock()
-if (!gotLock) {
-  app.quit()
-}
+function bootstrap(): void {
+  // Set app identity before instance lock for consistent lock scope and app attribution.
+  app.setName('Daymon')
+  electronApp.setAppUserModelId('io.daymon.app')
 
-installBrokenPipeGuards()
+  // Prevent duplicate Dock icons and split state from multiple instances.
+  const gotLock = app.requestSingleInstanceLock()
+  if (!gotLock) {
+    app.exit(0)
+    return
+  }
 
-// Set app identity as early as possible for dev-notification attribution
-app.setName('Daymon')
-electronApp.setAppUserModelId('io.daymon.app')
+  installBrokenPipeGuards()
 
-app.whenReady().then(() => {
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+  app.whenReady().then(() => {
+    app.on('browser-window-created', (_, window) => {
+      optimizer.watchWindowShortcuts(window)
+    })
+
+    initDatabase()
+    registerIpcHandlers()
+    createTray()
+    ensureClaudeConfig()
+    startScheduler()
+    startAllWatches()
+  }).catch((err) => {
+    fatalMainError('Failed during app startup', err)
   })
 
-  initDatabase()
-  registerIpcHandlers()
-  createTray()
-  ensureClaudeConfig()
-  startScheduler()
-  startAllWatches()
-}).catch((err) => {
-  fatalMainError('Failed during app startup', err)
-})
+  app.on('second-instance', () => {
+    showPopoverWindowFromDock()
+  })
 
-app.on('second-instance', () => {
-  showPopoverWindow()
-})
+  app.on('activate', () => {
+    // Dock activation should always surface the window, even if tray placement fails.
+    showPopoverWindowFromDock()
+  })
 
-app.on('activate', () => {
-  showPopoverWindow()
-})
+  // Tray app: stay alive when all windows close
+  app.on('window-all-closed', () => {
+    // Do nothing
+  })
 
-// Tray app: stay alive when all windows close
-app.on('window-all-closed', () => {
-  // Do nothing
-})
+  app.on('before-quit', () => {
+    try {
+      stopAllWatches()
+    } catch (err) {
+      safeLog('Error while stopping file watchers', err)
+    }
+    try {
+      stopScheduler()
+    } catch (err) {
+      safeLog('Error while stopping scheduler', err)
+    }
+    try {
+      closeDatabase()
+    } catch (err) {
+      safeLog('Error while closing database', err)
+    }
+  })
+}
 
-app.on('before-quit', () => {
-  try {
-    stopAllWatches()
-  } catch (err) {
-    safeLog('Error while stopping file watchers', err)
-  }
-  try {
-    stopScheduler()
-  } catch (err) {
-    safeLog('Error while stopping scheduler', err)
-  }
-  try {
-    closeDatabase()
-  } catch (err) {
-    safeLog('Error while closing database', err)
-  }
-})
+bootstrap()

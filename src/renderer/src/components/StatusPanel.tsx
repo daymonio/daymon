@@ -8,26 +8,41 @@ interface StatusData {
   latestRun: TaskRun | null
   runningRuns: TaskRun[]
   scheduler: { running: boolean; jobCount: number }
+  workerCount: number
+  watchCount: number
 }
 
 async function fetchStatus(): Promise<StatusData> {
-  const [stats, tasks, runs, runningRuns, scheduler] = await Promise.all([
+  if (!window.api?.memory || !window.api?.tasks || !window.api?.app) {
+    throw new Error('IPC bridge is unavailable. Please restart Daymon.')
+  }
+
+  const [stats, tasks, runs, runningRuns, scheduler, workers, watches] = await Promise.all([
     window.api.memory.getStats(),
     window.api.tasks.list(),
     window.api.tasks.listAllRuns(1),
     window.api.tasks.getRunningRuns(),
-    window.api.app.getSchedulerStatus()
+    window.api.app.getSchedulerStatus(),
+    window.api.workers.list(),
+    window.api.watches.list()
   ])
   return {
     entityCount: stats.entityCount,
     tasks,
     latestRun: runs[0] ?? null,
     runningRuns,
-    scheduler
+    scheduler,
+    workerCount: workers.length,
+    watchCount: watches.length
   }
 }
 
-export function StatusPanel({ onNavigate }: { onNavigate?: (tab: string) => void }): React.JSX.Element {
+interface StatusPanelProps {
+  onNavigate?: (tab: string) => void
+  advancedMode: boolean
+}
+
+export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): React.JSX.Element {
   const { data, error, isLoading } = usePolling(fetchStatus, 3000)
 
   if (isLoading && !data) {
@@ -58,13 +73,25 @@ export function StatusPanel({ onNavigate }: { onNavigate?: (tab: string) => void
         </div>
       )}
 
+      {advancedMode && (
+        <button
+          className="w-full text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+          onClick={() => onNavigate?.('memory')}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-600">Memory</span>
+            <span className="text-xs text-gray-500">{data.entityCount} entities</span>
+          </div>
+        </button>
+      )}
+
       <button
         className="w-full text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-        onClick={() => onNavigate?.('memory')}
+        onClick={() => onNavigate?.('workers')}
       >
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-600">Memory</span>
-          <span className="text-xs text-gray-500">{data.entityCount} entities</span>
+          <span className="text-xs font-medium text-gray-600">Workers</span>
+          <span className="text-xs text-gray-500">{data.workerCount} configured</span>
         </div>
       </button>
 
@@ -86,6 +113,18 @@ export function StatusPanel({ onNavigate }: { onNavigate?: (tab: string) => void
           )}
         </div>
       </button>
+
+      {advancedMode && (
+        <button
+          className="w-full text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+          onClick={() => onNavigate?.('watches')}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-600">Watches</span>
+            <span className="text-xs text-gray-500">{data.watchCount} active</span>
+          </div>
+        </button>
+      )}
 
       {data.runningRuns.length > 0 && (
         <div className="p-3 bg-blue-50 rounded-lg">

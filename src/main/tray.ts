@@ -109,6 +109,17 @@ export function showPopoverWindow(): void {
   popoverWindow.focus()
 }
 
+export function showPopoverWindowFromDock(): void {
+  if (!popoverWindow) return
+  if (popoverWindow.isVisible()) {
+    popoverWindow.focus()
+    return
+  }
+  popoverWindow.center()
+  popoverWindow.show()
+  popoverWindow.focus()
+}
+
 function togglePopover(): void {
   if (!popoverWindow) return
   if (popoverWindow.isVisible()) {

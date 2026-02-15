@@ -19,7 +19,12 @@ interface ClaudeIntegrationStatus {
   expectedPath: string
 }
 
-export function SettingsPanel(): React.JSX.Element {
+interface SettingsPanelProps {
+  advancedMode: boolean
+  onAdvancedModeChange: (enabled: boolean) => void
+}
+
+export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPanelProps): React.JSX.Element {
   const [version, setVersion] = useState('')
   const [paths, setPaths] = useState<PathsInfo | null>(null)
   const [cliStatus, setCliStatus] = useState<ClaudeCliStatus | null>(null)
@@ -30,6 +35,7 @@ export function SettingsPanel(): React.JSX.Element {
   const [notificationTestMessage, setNotificationTestMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!window.api) return
     window.api.app.getVersion().then(setVersion)
     window.api.app.getPaths().then(setPaths)
     window.api.app.checkClaude().then(setCliStatus)
@@ -52,6 +58,12 @@ export function SettingsPanel(): React.JSX.Element {
     setNotifications(next)
   }
 
+  async function toggleAdvancedMode(): Promise<void> {
+    const next = !advancedMode
+    await window.api.settings.set('advanced_mode', String(next))
+    onAdvancedModeChange(next)
+  }
+
   async function handleUninstall(): Promise<void> {
     if (!confirmUninstall) {
       setConfirmUninstall(true)
@@ -62,8 +74,12 @@ export function SettingsPanel(): React.JSX.Element {
 
   async function handleTestNotification(): Promise<void> {
     try {
-      const shown = await window.api.app.testNotification()
-      setNotificationTestMessage(shown ? 'Test notification dispatched.' : 'Notification dispatch failed.')
+      const result = await window.api.app.testNotification()
+      setNotificationTestMessage(
+        result.shown
+          ? 'Notification displayed successfully.'
+          : `Notification failed: ${result.reason ?? 'unknown reason'}`
+      )
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to send test notification.'
       setNotificationTestMessage(message)
@@ -110,6 +126,7 @@ export function SettingsPanel(): React.JSX.Element {
         <div className="bg-gray-50 rounded-lg p-2 space-y-1">
           {toggle('Launch at login', autoLaunch, toggleAutoLaunch)}
           {toggle('Notifications', notifications, toggleNotifications)}
+          {toggle('Advanced mode', advancedMode, toggleAdvancedMode)}
         </div>
       </div>
 

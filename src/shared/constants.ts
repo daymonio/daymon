@@ -3,7 +3,7 @@ export const DEFAULTS = {
   TRIGGER_TYPE: 'cron',
   OBSERVATION_SOURCE: 'claude',
   ENTITY_TYPE: 'fact',
-  WINDOW_WIDTH: 400,
+  WINDOW_WIDTH: 480,
   WINDOW_HEIGHT: 600,
   PROGRESS_THROTTLE_MS: 2000
 } as const

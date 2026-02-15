@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { TabBar, type Tab } from './components/TabBar'
 import { StatusPanel } from './components/StatusPanel'
 import { MemoryPanel } from './components/MemoryPanel'
@@ -8,13 +8,32 @@ import { WatchesPanel } from './components/WatchesPanel'
 import { ResultsPanel } from './components/ResultsPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 
+const ADVANCED_TABS = new Set<Tab>(['memory', 'watches'])
+
 function App(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('status')
+  const [advancedMode, setAdvancedMode] = useState(false)
+
+  useEffect(() => {
+    if (!window.api?.settings) return
+    window.api.settings.get('advanced_mode').then((v) => {
+      setAdvancedMode(v === 'true')
+    }).catch(() => {
+      // Keep default when bridge/settings are not yet available.
+    })
+  }, [])
+
+  function handleAdvancedModeChange(enabled: boolean): void {
+    setAdvancedMode(enabled)
+    if (!enabled && ADVANCED_TABS.has(tab)) {
+      setTab('status')
+    }
+  }
 
   function renderPanel(): React.JSX.Element {
     switch (tab) {
       case 'status':
-        return <StatusPanel onNavigate={(t) => setTab(t as Tab)} />
+        return <StatusPanel onNavigate={(t) => setTab(t as Tab)} advancedMode={advancedMode} />
       case 'memory':
         return <MemoryPanel />
       case 'workers':
@@ -26,7 +45,7 @@ function App(): React.JSX.Element {
       case 'results':
         return <ResultsPanel />
       case 'settings':
-        return <SettingsPanel />
+        return <SettingsPanel advancedMode={advancedMode} onAdvancedModeChange={handleAdvancedModeChange} />
     }
   }
 
@@ -39,7 +58,7 @@ function App(): React.JSX.Element {
         <h1 className="text-sm font-semibold text-gray-700">Daymon</h1>
       </div>
 
-      <TabBar active={tab} onChange={setTab} />
+      <TabBar active={tab} onChange={setTab} advancedMode={advancedMode} />
 
       <div className="flex-1 overflow-y-auto">
         {renderPanel()}
