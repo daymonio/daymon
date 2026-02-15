@@ -52,12 +52,11 @@ Open Claude Desktop and try:
 
 ### Claude Code
 
-1. Copy `.mcp.json.example` to `.mcp.json` in your project root
-2. Update the paths:
-   - `command`: your Node.js path (`which node`)
-   - First `args` entry: path to `out/mcp/server.js` (run `npm run build:mcp` first)
-   - `DAYMON_DB_PATH`: path to your Daymon database (typically `~/Library/Application Support/daymon/daymon.db`)
-3. Restart Claude Code — Daymon tools are now available
+After installing Daymon, paste this to Claude Code:
+
+> "Install Daymon MCP server for this project. The server is at /Applications/Daymon.app/Contents/Resources/mcp/server.js and the database is at ~/Library/Application Support/daymon/daymon.db. Create a .mcp.json file."
+
+Or set it up manually — see [.mcp.json.example](.mcp.json.example) for the template.
 
 Then try:
 

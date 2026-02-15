@@ -185,6 +185,16 @@ nav a:hover {
   user-select: all;
 }
 
+.inline-code {
+  background: var(--bg-surface);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
 .requirements {
   margin-top: 14px;
   font-size: 0.85rem;
