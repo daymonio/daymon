@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './ipc'
 import { ensureClaudeConfig } from './claude-config'
 import { startScheduler, stopScheduler } from './scheduler/cron'
 import { startAllWatches, stopAllWatches } from './file-watcher'
+import { getSetting, setSetting } from './db/tasks'
 import { APP_NAME, APP_ID } from '../shared/constants'
 
 function isBrokenPipeError(error: unknown): boolean {
@@ -85,6 +86,14 @@ function bootstrap(): void {
     })
 
     initDatabase()
+
+    // First launch: enable auto-launch and disable advanced mode.
+    if (!getSetting('setup_complete')) {
+      app.setLoginItemSettings({ openAtLogin: true })
+      setSetting('advanced_mode', 'false')
+      setSetting('setup_complete', 'true')
+    }
+
     registerIpcHandlers()
     createTray()
     ensureClaudeConfig()

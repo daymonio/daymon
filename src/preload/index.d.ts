@@ -55,6 +55,7 @@ interface AppAPI {
   getAutoLaunch: () => Promise<boolean>
   setAutoLaunch: (enabled: boolean) => Promise<void>
   uninstall: () => Promise<void>
+  hideWindow: () => Promise<void>
 }
 
 interface WorkersAPI {

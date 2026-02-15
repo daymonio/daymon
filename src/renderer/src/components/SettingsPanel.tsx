@@ -32,7 +32,6 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
   const [autoLaunch, setAutoLaunch] = useState<boolean | null>(null)
   const [notifications, setNotifications] = useState<boolean>(true)
   const [confirmUninstall, setConfirmUninstall] = useState(false)
-  const [notificationTestMessage, setNotificationTestMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (!window.api) return
@@ -70,20 +69,6 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
       return
     }
     await window.api.app.uninstall()
-  }
-
-  async function handleTestNotification(): Promise<void> {
-    try {
-      const result = await window.api.app.testNotification()
-      setNotificationTestMessage(
-        result.shown
-          ? 'Notification displayed successfully.'
-          : `Notification failed: ${result.reason ?? 'unknown reason'}`
-      )
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to send test notification.'
-      setNotificationTestMessage(message)
-    }
   }
 
   function row(label: string, value: string | null): React.JSX.Element {
@@ -148,17 +133,6 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
             <span className={integrationStatus?.configured ? 'text-green-600' : 'text-red-500'}>
               {integrationStatus == null ? '...' : integrationStatus.configured ? 'Configured' : 'Not configured'}
             </span>
-          </div>
-          <div className="pt-1">
-            <button
-              onClick={handleTestNotification}
-              className="text-xs text-blue-500 hover:text-blue-700"
-            >
-              Send Test Notification
-            </button>
-            {notificationTestMessage && (
-              <div className="text-xs text-gray-400 mt-0.5">{notificationTestMessage}</div>
-            )}
           </div>
         </div>
       </div>

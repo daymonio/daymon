@@ -8,7 +8,7 @@ import { WatchesPanel } from './components/WatchesPanel'
 import { ResultsPanel } from './components/ResultsPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 
-const ADVANCED_TABS = new Set<Tab>(['memory', 'watches'])
+const ADVANCED_TABS = new Set<Tab>(['memory', 'watches', 'results'])
 
 function App(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('status')
@@ -56,6 +56,16 @@ function App(): React.JSX.Element {
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <h1 className="text-sm font-semibold text-gray-700">Daymon</h1>
+        <button
+          onClick={() => window.api.app.hideWindow()}
+          className="text-gray-400 hover:text-gray-600 transition-colors"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          title="Collapse"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M3 5l4 4 4-4" />
+          </svg>
+        </button>
       </div>
 
       <TabBar active={tab} onChange={setTab} advancedMode={advancedMode} />

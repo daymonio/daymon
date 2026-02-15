@@ -1,4 +1,4 @@
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, BrowserWindow } from 'electron'
 import * as memory from './db/memory'
 import * as tasks from './db/tasks'
 import { executeTask } from './scheduler/runner'
@@ -163,4 +163,7 @@ export function registerIpcHandlers(): void {
     app.setLoginItemSettings({ openAtLogin: enabled })
   })
   ipcMain.handle('app:uninstall', () => uninstall())
+  ipcMain.handle('app:hideWindow', (e) => {
+    BrowserWindow.fromWebContents(e.sender)?.hide()
+  })
 }

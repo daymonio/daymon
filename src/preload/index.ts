@@ -73,7 +73,8 @@ const api = {
     testNotification: () => ipcRenderer.invoke('app:testNotification'),
     getAutoLaunch: () => ipcRenderer.invoke('app:getAutoLaunch'),
     setAutoLaunch: (enabled: boolean) => ipcRenderer.invoke('app:setAutoLaunch', enabled),
-    uninstall: () => ipcRenderer.invoke('app:uninstall')
+    uninstall: () => ipcRenderer.invoke('app:uninstall'),
+    hideWindow: () => ipcRenderer.invoke('app:hideWindow')
   }
 }
 

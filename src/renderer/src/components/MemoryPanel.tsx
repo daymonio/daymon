@@ -78,7 +78,7 @@ export function MemoryPanel(): React.JSX.Element {
                       e.stopPropagation()
                       deleteEntity(entity.id)
                     }}
-                    className="ml-2 text-xs text-red-400 hover:text-red-600"
+                    className="ml-2 text-xs text-red-400 hover:text-red-600 shrink-0"
                   >
                     Del
                   </button>
