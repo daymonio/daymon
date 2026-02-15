@@ -62,8 +62,19 @@ jobs:
           files: |
             dist/*.dmg
             dist/*.zip
+            dist/*.blockmap
             dist/latest-mac.yml
-          generate_release_notes: true
+          body: |
+            ## Install
+
+            Download the **`.dmg`** file below, open it, and drag Daymon to Applications.
+
+            Or install with Homebrew:
+            ```
+            brew install daymonio/daymon/daymon
+            ```
+
+            > The `.zip`, `.blockmap`, and `latest-mac.yml` files are for auto-updates — you don't need them.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
