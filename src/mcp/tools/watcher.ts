@@ -34,7 +34,7 @@ export function registerWatcherTools(server: McpServer): void {
         content: [
           {
             type: 'text' as const,
-            text: `Created file watch (id: ${watch.id}) on "${path}".\nThe Daymon app will start watching within 30 seconds. Note: the Daymon desktop app must be running for watches to work.`
+            text: `Created file watch (id: ${watch.id}) on "${path}".`
           }
         ]
       }
@@ -63,7 +63,7 @@ export function registerWatcherTools(server: McpServer): void {
         content: [
           {
             type: 'text' as const,
-            text: `Removed watch (id: ${id}) on "${watch.path}". The Daymon app will stop watching within 30 seconds.`
+            text: `Removed watch (id: ${id}) on "${watch.path}".`
           }
         ]
       }

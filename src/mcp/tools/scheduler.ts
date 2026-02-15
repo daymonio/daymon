@@ -143,7 +143,7 @@ export function registerSchedulerTools(server: McpServer): void {
         return {
           content: [{
             type: 'text' as const,
-            text: `Scheduled recurring task "${taskName}" (id: ${task.id}).\nSchedule: ${cronExpression}${maxRunsNote}${timeoutNote}${workerNote}${sessionNote}\nThe Daymon scheduler will pick it up within 30 seconds.`
+            text: `Scheduled recurring task "${taskName}" (id: ${task.id}).\nSchedule: ${cronExpression}${maxRunsNote}${timeoutNote}${workerNote}${sessionNote}`
           }]
         }
       } else if (triggerType === 'once') {
@@ -155,7 +155,7 @@ export function registerSchedulerTools(server: McpServer): void {
         return {
           content: [{
             type: 'text' as const,
-            text: `Scheduled one-time task "${taskName}" (id: ${task.id}).\nRuns at: ${scheduledAt}\nTime until execution: ~${timeDesc}${timeoutNote}${workerNote}${sessionNote}\nThe Daymon scheduler checks every 30 seconds.`
+            text: `Scheduled one-time task "${taskName}" (id: ${task.id}).\nRuns at: ${scheduledAt}\nTime until execution: ~${timeDesc}${timeoutNote}${workerNote}${sessionNote}`
           }]
         }
       } else {
