@@ -68,16 +68,24 @@ describe('parseStreamEvent', () => {
 
 describe('checkClaudeCliAvailable', () => {
   let mockExecSync: ReturnType<typeof vi.fn>
+  let mockExistsSync: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     vi.resetModules()
     mockExecSync = vi.fn()
+    mockExistsSync = vi.fn().mockReturnValue(true)
   })
 
   async function importWithMock() {
     vi.doMock('child_process', () => ({
       execSync: mockExecSync,
       spawn: vi.fn()
+    }))
+    vi.doMock('fs', () => ({
+      existsSync: mockExistsSync
+    }))
+    vi.doMock('os', () => ({
+      homedir: () => '/mock-home'
     }))
     const mod = await import('../claude-code')
     return mod.checkClaudeCliAvailable
@@ -89,6 +97,14 @@ describe('checkClaudeCliAvailable', () => {
     const result = checkClaudeCliAvailable()
     expect(result.available).toBe(true)
     expect(result.version).toBe('1.0.5')
+  })
+
+  it('returns not available when claude binary not found on disk', async () => {
+    mockExistsSync.mockReturnValue(false)
+    const checkClaudeCliAvailable = await importWithMock()
+    const result = checkClaudeCliAvailable()
+    expect(result.available).toBe(false)
+    expect(result.error).toContain('Claude CLI not found')
   })
 
   it('returns not available with specific message for ENOENT', async () => {
@@ -128,7 +144,7 @@ describe('checkClaudeCliAvailable', () => {
     const checkClaudeCliAvailable = await importWithMock()
     checkClaudeCliAvailable()
     const callArgs = mockExecSync.mock.calls[0]
-    expect(callArgs[0]).toBe('claude --version')
+    expect(callArgs[0]).toBe('"/mock-home/.local/bin/claude" --version')
     const env = callArgs[1].env
     expect(env).not.toHaveProperty('ELECTRON_RUN_AS_NODE')
   })
@@ -138,10 +154,12 @@ describe('checkClaudeCliAvailable', () => {
 
 describe('executeClaudeCode', () => {
   let mockSpawn: ReturnType<typeof vi.fn>
+  let mockExistsSync: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     vi.resetModules()
     mockSpawn = vi.fn()
+    mockExistsSync = vi.fn().mockReturnValue(true)
   })
 
   function createMockProcess() {
@@ -161,9 +179,24 @@ describe('executeClaudeCode', () => {
       execSync: vi.fn(),
       spawn: mockSpawn
     }))
+    vi.doMock('fs', () => ({
+      existsSync: mockExistsSync
+    }))
+    vi.doMock('os', () => ({
+      homedir: () => '/mock-home'
+    }))
     const mod = await import('../claude-code')
     return mod.executeClaudeCode
   }
+
+  it('resolves with error when claude binary not found', async () => {
+    mockExistsSync.mockReturnValue(false)
+    const executeClaudeCode = await importWithMock()
+    const result = await executeClaudeCode('Test')
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('Claude CLI not found')
+    expect(result.sessionId).toBeNull()
+  })
 
   it('resolves with result text from stream-json result event', async () => {
     const proc = createMockProcess()
@@ -194,7 +227,7 @@ describe('executeClaudeCode', () => {
     await promise
 
     expect(mockSpawn).toHaveBeenCalledWith(
-      'claude',
+      '/mock-home/.local/bin/claude',
       ['-p', 'My prompt', '--output-format', 'stream-json', '--verbose'],
       expect.objectContaining({
         stdio: ['ignore', 'pipe', 'pipe']

@@ -158,17 +158,22 @@ export function createTray(): BrowserWindow {
 }
 
 function loadTrayIcon(): Electron.NativeImage {
-  const iconFile = process.platform === 'darwin' && app.isPackaged ? 'trayIconTemplate.png' : 'logo.png'
   const root = app.isPackaged ? process.resourcesPath : app.getAppPath()
-  const iconPath = join(root, 'resources', iconFile)
+  const iconPath = join(root, 'resources', 'trayIconTemplate.png')
 
   if (existsSync(iconPath)) {
     const image = nativeImage.createFromPath(iconPath)
     if (!image.isEmpty()) {
-      if (process.platform === 'darwin' && app.isPackaged) {
-        image.setTemplateImage(true)
-      }
       return image
+    }
+  }
+
+  // Fallback to logo
+  const logoPath = join(root, 'resources', 'logo.png')
+  if (existsSync(logoPath)) {
+    const logo = nativeImage.createFromPath(logoPath)
+    if (!logo.isEmpty()) {
+      return logo.resize({ width: 22, height: 22 })
     }
   }
 

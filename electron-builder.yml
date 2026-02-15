@@ -20,6 +20,8 @@ extraResources:
       - "**/*"
   - from: "resources/trayIconTemplate.png"
     to: "resources/trayIconTemplate.png"
+  - from: "resources/trayIconTemplate@2x.png"
+    to: "resources/trayIconTemplate@2x.png"
   - from: "resources/logo.png"
     to: "resources/logo.png"
 mac:

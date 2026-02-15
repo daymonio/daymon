@@ -1,4 +1,7 @@
 import { spawn, execSync } from 'child_process'
+import { existsSync } from 'fs'
+import { join } from 'path'
+import { homedir } from 'os'
 
 export interface ExecutionOptions {
   timeoutMs?: number
@@ -26,11 +29,64 @@ export type ProgressCallback = (progress: ProgressUpdate) => void
 
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 
+let cachedClaudePath: string | null = null
+
+/**
+ * Resolve the full path to the `claude` CLI binary.
+ * Packaged Electron apps don't inherit the user's login shell PATH,
+ * so we probe common locations and fall back to a login-shell `which`.
+ */
+function resolveClaudePath(): string | null {
+  if (cachedClaudePath) return cachedClaudePath
+
+  const home = homedir()
+  const candidates = [
+    join(home, '.local', 'bin', 'claude'),
+    join(home, '.claude', 'bin', 'claude'),
+    '/usr/local/bin/claude',
+    '/opt/homebrew/bin/claude'
+  ]
+
+  for (const p of candidates) {
+    if (existsSync(p)) {
+      cachedClaudePath = p
+      return p
+    }
+  }
+
+  // Fall back to login shell resolution (works when PATH is set in .zshrc / .bashrc)
+  const shells = ['/bin/zsh', '/bin/bash']
+  for (const sh of shells) {
+    if (!existsSync(sh)) continue
+    try {
+      const env = { ...process.env }
+      delete env.ELECTRON_RUN_AS_NODE
+      const resolved = execSync(`${sh} -l -c 'which claude'`, {
+        encoding: 'utf-8',
+        env,
+        timeout: 5000
+      }).trim()
+      if (resolved && existsSync(resolved)) {
+        cachedClaudePath = resolved
+        return resolved
+      }
+    } catch {
+      // Shell not available or claude not in that shell's PATH
+    }
+  }
+
+  return null
+}
+
 export function checkClaudeCliAvailable(): { available: boolean; version?: string; error?: string } {
   try {
+    const claudePath = resolveClaudePath()
+    if (!claudePath) {
+      return { available: false, error: 'Claude CLI not found. Install from https://docs.anthropic.com/en/docs/claude-code' }
+    }
     const env = { ...process.env }
     delete env.ELECTRON_RUN_AS_NODE
-    const version = execSync('claude --version', { encoding: 'utf-8', env, timeout: 5000 }).trim()
+    const version = execSync(`"${claudePath}" --version`, { encoding: 'utf-8', env, timeout: 5000 }).trim()
     return { available: true, version }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -72,7 +128,20 @@ export function executeClaudeCode(
       args.push('--model', options.model)
     }
 
-    const proc = spawn('claude', args, {
+    const claudePath = resolveClaudePath()
+    if (!claudePath) {
+      resolve({
+        stdout: '',
+        stderr: 'Claude CLI not found. Install from https://docs.anthropic.com/en/docs/claude-code',
+        exitCode: 1,
+        durationMs: Date.now() - startTime,
+        timedOut: false,
+        sessionId: null
+      })
+      return
+    }
+
+    const proc = spawn(claudePath, args, {
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: timeoutMs
