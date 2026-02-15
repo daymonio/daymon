@@ -23,13 +23,18 @@ function resolveNodePath(): string {
   const nvmDir = join(home, '.nvm', 'versions', 'node')
   if (existsSync(nvmDir)) {
     try {
-      const versions = (readdirSync(nvmDir) as string[])
+      const nvmPaths = (readdirSync(nvmDir) as string[])
         .filter((v: string) => v.startsWith('v'))
-        .sort()
-        .reverse()
-      for (const v of versions) {
-        candidates.unshift(join(nvmDir, v, 'bin', 'node'))
-      }
+        .sort((a: string, b: string) => {
+          const pa = a.slice(1).split('.').map(Number)
+          const pb = b.slice(1).split('.').map(Number)
+          for (let i = 0; i < 3; i++) {
+            if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pb[i] ?? 0) - (pa[i] ?? 0)
+          }
+          return 0
+        })
+        .map((v: string) => join(nvmDir, v, 'bin', 'node'))
+      candidates.unshift(...nvmPaths)
     } catch { /* ignore */ }
   }
 
