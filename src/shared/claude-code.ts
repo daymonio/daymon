@@ -23,7 +23,7 @@ export interface ProgressUpdate {
 
 export type ProgressCallback = (progress: ProgressUpdate) => void
 
-const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
+const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 
 export function checkClaudeCliAvailable(): { available: boolean; version?: string; error?: string } {
   try {

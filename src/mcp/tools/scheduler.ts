@@ -55,10 +55,15 @@ export function registerSchedulerTools(server: McpServer): void {
           'Enable session continuity across runs. When true, each run continues the previous Claude CLI session, '
           + 'allowing the task to build on prior context naturally (e.g., "compared to yesterday\'s results..."). '
           + 'Default: false (each run is stateless).'
+        ),
+        timeout: z.number().optional().describe(
+          'Maximum execution time in minutes. Omit for the default (30 minutes). '
+          + 'Set higher for complex tasks like research or multi-step analysis. '
+          + 'Example: 60 for one hour, 120 for two hours.'
         )
       }
     },
-    async ({ name, prompt, cronExpression, scheduledAt, description, maxRuns, workerId, sessionContinuity }) => {
+    async ({ name, prompt, cronExpression, scheduledAt, description, maxRuns, workerId, sessionContinuity, timeout }) => {
       const db = getMcpDatabase()
 
       // Auto-determine trigger type
@@ -101,18 +106,20 @@ export function registerSchedulerTools(server: McpServer): void {
         executor: 'claude_code',
         maxRuns: maxRuns ?? undefined,
         workerId: workerId ?? undefined,
-        sessionContinuity: sessionContinuity ?? false
+        sessionContinuity: sessionContinuity ?? false,
+        timeoutMinutes: timeout ?? undefined
       })
 
       // Response varies by type
       const maxRunsNote = maxRuns ? `\nWill auto-complete after ${maxRuns} successful run(s).` : ''
+      const timeoutNote = timeout ? `\nTimeout: ${timeout} minute(s)` : ''
       const workerNote = workerId ? (() => { const w = queries.getWorker(db, workerId); return w ? `\nWorker: ${w.name}` : '' })() : ''
       const sessionNote = sessionContinuity ? '\nSession continuity: enabled' : ''
       if (triggerType === 'cron') {
         return {
           content: [{
             type: 'text' as const,
-            text: `Scheduled recurring task "${taskName}" (id: ${task.id}).\nSchedule: ${cronExpression}${maxRunsNote}${workerNote}${sessionNote}\nThe Daymon scheduler will pick it up within 30 seconds.`
+            text: `Scheduled recurring task "${taskName}" (id: ${task.id}).\nSchedule: ${cronExpression}${maxRunsNote}${timeoutNote}${workerNote}${sessionNote}\nThe Daymon scheduler will pick it up within 30 seconds.`
           }]
         }
       } else if (triggerType === 'once') {
@@ -124,14 +131,14 @@ export function registerSchedulerTools(server: McpServer): void {
         return {
           content: [{
             type: 'text' as const,
-            text: `Scheduled one-time task "${taskName}" (id: ${task.id}).\nRuns at: ${scheduledAt}\nTime until execution: ~${timeDesc}${workerNote}${sessionNote}\nThe Daymon scheduler checks every 30 seconds.`
+            text: `Scheduled one-time task "${taskName}" (id: ${task.id}).\nRuns at: ${scheduledAt}\nTime until execution: ~${timeDesc}${timeoutNote}${workerNote}${sessionNote}\nThe Daymon scheduler checks every 30 seconds.`
           }]
         }
       } else {
         return {
           content: [{
             type: 'text' as const,
-            text: `Created on-demand task "${taskName}" (id: ${task.id}).${workerNote}${sessionNote}\nRun it anytime with daymon_run_task.`
+            text: `Created on-demand task "${taskName}" (id: ${task.id}).${timeoutNote}${workerNote}${sessionNote}\nRun it anytime with daymon_run_task.`
           }]
         }
       }

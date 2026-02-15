@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5 } from '../schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6 } from '../schema'
 import * as queries from '../db-queries'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -26,6 +26,7 @@ function initTestDb(): Database.Database {
   d.exec(SCHEMA_V3)
   d.exec(SCHEMA_V4)
   d.exec(SCHEMA_V5)
+  d.exec(SCHEMA_V6)
   return d
 }
 
@@ -605,6 +606,40 @@ describe('executeTask - worker system prompt', () => {
 
     expect(mockExecute).toHaveBeenCalledWith('Do it', expect.objectContaining({
       systemPrompt: 'Specific.'
+    }))
+  })
+})
+
+// ─── Task Timeout ──────────────────────────────────────────
+
+describe('executeTask - timeout', () => {
+  it('passes task-specific timeout to executeClaudeCode', async () => {
+    const task = queries.createTask(db, {
+      name: 'Long Task', prompt: 'Do research', triggerType: 'manual', timeoutMinutes: 60
+    })
+
+    mockExecute.mockResolvedValue({
+      stdout: 'done', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    expect(mockExecute).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      timeoutMs: 60 * 60 * 1000
+    }))
+  })
+
+  it('uses default timeout when task has no timeout set', async () => {
+    const id = createActiveTask('Quick Task', 'Do something')
+
+    mockExecute.mockResolvedValue({
+      stdout: 'done', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    await executeTask(id, { db, resultsDir })
+
+    expect(mockExecute).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      timeoutMs: undefined
     }))
   })
 })

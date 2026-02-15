@@ -108,7 +108,7 @@ export function SettingsPanel(): React.JSX.Element {
             </span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-600">MCP Server</span>
+            <span className="text-gray-600">Claude Integration</span>
             <span className="text-green-600">Configured</span>
           </div>
         </div>

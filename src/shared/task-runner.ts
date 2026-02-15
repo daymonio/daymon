@@ -109,10 +109,14 @@ export async function executeTask(
       // Non-fatal: memory injection failure should not block execution
     }
 
+    // Resolve timeout: task-specific > default (30 min)
+    const timeoutMs = task.timeoutMinutes != null ? task.timeoutMinutes * 60 * 1000 : undefined
+
     let lastProgressUpdate = 0
     const result = await executeClaudeCode(augmentedPrompt, {
       systemPrompt,
       resumeSessionId,
+      timeoutMs,
       onProgress: (progress) => {
         const now = Date.now()
         if (now - lastProgressUpdate >= DEFAULTS.PROGRESS_THROTTLE_MS) {
@@ -140,6 +144,7 @@ export async function executeTask(
       lastProgressUpdate = 0
       const retryResult = await executeClaudeCode(retryPrompt, {
         systemPrompt,
+        timeoutMs,
         onProgress: (progress) => {
           const now = Date.now()
           if (now - lastProgressUpdate >= DEFAULTS.PROGRESS_THROTTLE_MS) {

@@ -272,6 +272,100 @@ nav a:hover {
   font-size: 0.9rem;
 }
 
+/* === Workers === */
+.workers {
+  padding: 80px 0;
+  border-top: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.workers h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.workers-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  margin-bottom: 40px;
+  font-size: 0.95rem;
+}
+
+.worker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.worker-card {
+  background: var(--bg-surface);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  transition: border-color 0.3s;
+}
+.worker-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.worker-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+  color: var(--accent-hover);
+}
+
+.worker-desc {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.worker-how {
+  background: var(--bg-surface);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+}
+
+.worker-how-title {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.worker-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.worker-step-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--accent-hover);
+  margin-bottom: 6px;
+}
+
+.worker-step-text {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .worker-grid {
+    grid-template-columns: 1fr;
+  }
+  .worker-steps {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 /* === Comparison === */
 .compare {
   padding: 80px 0;
@@ -434,6 +528,8 @@ footer p {
   .feature-card:nth-child(2) { animation-delay: 0.2s; }
   .feature-card:nth-child(3) { animation-delay: 0.3s; }
   .feature-card:nth-child(4) { animation-delay: 0.4s; }
+  .feature-card:nth-child(5) { animation-delay: 0.5s; }
+  .feature-card:nth-child(6) { animation-delay: 0.6s; }
 
   .steps li {
     opacity: 0;

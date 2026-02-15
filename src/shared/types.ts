@@ -69,6 +69,7 @@ export interface Task {
   workerId: number | null
   sessionContinuity: boolean
   sessionId: string | null
+  timeoutMinutes: number | null
   createdAt: string
   updatedAt: string
 }
@@ -85,6 +86,7 @@ export interface CreateTaskInput {
   maxRuns?: number
   workerId?: number
   sessionContinuity?: boolean
+  timeoutMinutes?: number
 }
 
 export interface TaskRun {

@@ -114,13 +114,13 @@ All agents MUST update this file when completing a task. Change `[ ]` to `[x]`.
 - [x] TasksPanel: worker name and "continuous" badge shown on tasks
 - [x] Workers tab added to TabBar between Memory and Tasks
 - [x] Build config: @huggingface/transformers dependency, onnxruntime-node externals/asarUnpack
-- [x] Test suite: 200 tests across 7 files (75 new tests for workers, sessions, embeddings, hybrid search)
+- [x] Test suite: 233 tests across 8 files (workers, sessions, embeddings, hybrid search, claude-code executor, generateTaskName)
 
 ### Week 6: Package + Launch
 - [ ] electron-builder: create signed + notarized DMG
 - [ ] Homebrew cask formula
 - [x] Landing page: daymon.io
-- [x] GitHub README with install instructions, MCP tools reference, tech stack
+- [x] GitHub README with install instructions, tools reference, workers, session continuity
 - [x] MIT LICENSE file
 - [x] GitHub Actions build + release workflow (.github/workflows/build.yml)
 - [ ] Record 2-min demo video

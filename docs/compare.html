@@ -187,7 +187,7 @@
             <li><a href="#memory">Memory &amp; Semantic Search</a></li>
             <li><a href="#scheduling">Task Scheduling</a></li>
             <li><a href="#execution">Task Execution</a></li>
-            <li><a href="#mcp">MCP Integration</a></li>
+            <li><a href="#mcp">Claude Integration (MCP)</a></li>
             <li><a href="#setup">Setup &amp; Cost</a></li>
           </ol>
         </div>
@@ -223,9 +223,9 @@
             </div>
             <div class="detail-row">
               <div class="detail-label">Worker templates</div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Researcher, Code Reviewer, Writer, Data Analyst, DevOps</span></div>
+              <div class="detail-cell yes"><span class="check">9 built-in</span><span class="detail-note">Chief of Staff, Researcher, Code Reviewer, Writer, Email Assistant, Tech Trend Analyst, Competitor Tracker, DevOps, Data Analyst</span></div>
               <div class="detail-cell no"><span class="cross">No</span></div>
-              <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">soulcraft interview generates SOUL.md</span></div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Must write SOUL.md from scratch or use soulcraft interview</span></div>
             </div>
             <div class="detail-row">
               <div class="detail-label">Multi-agent</div>
@@ -247,14 +247,14 @@
             </div>
             <div class="detail-row">
               <div class="detail-label">Manage via chat</div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">MCP tools: create/list/update/delete workers</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Via Claude Desktop or Claude Code chat</span></div>
               <div class="detail-cell no"><span class="cross">No</span></div>
               <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Agent can edit its own files</span></div>
             </div>
           </div>
           <div class="verdict">
             <strong>Verdict</strong>
-            <p>OpenClaw has the deepest agent identity system with multi-agent coordination and self-evolving personalities. Daymon offers practical worker management — create via UI or chat, assign to tasks, use templates for quick starts. Claude has no concept of persistent agent profiles.</p>
+            <p>OpenClaw has multi-agent coordination and self-evolving personalities, but requires writing SOUL.md configs from scratch — no templates, no UI. Daymon offers practical worker management: 9 ready-to-use templates, full CRUD via UI and chat, edit anytime. Claude has no concept of persistent agent profiles.</p>
           </div>
         </div>
 
@@ -289,7 +289,7 @@
             </div>
             <div class="detail-row">
               <div class="detail-label">Manual session reset</div>
-              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">daymon_reset_session MCP tool</span></div>
+              <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Via Claude chat or Daymon UI</span></div>
               <div class="detail-cell no"><span class="cross">N/A</span></div>
               <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">/new and /reset for chat sessions</span></div>
             </div>
@@ -500,8 +500,8 @@
 
         <!-- 6. MCP -->
         <div id="mcp" class="section">
-          <h2>6. MCP Integration</h2>
-          <p class="section-desc">Model Context Protocol — the standard for extending AI tools.</p>
+          <h2>6. Claude Integration</h2>
+          <p class="section-desc">How each tool connects to Claude Desktop and Claude Code.</p>
           <div class="detail-table">
             <div class="detail-row detail-header">
               <div></div>
@@ -510,7 +510,7 @@
               <div class="openclaw-col">OpenClaw</div>
             </div>
             <div class="detail-row">
-              <div class="detail-label">MCP server</div>
+              <div class="detail-label">Native integration</div>
               <div class="detail-cell yes"><span class="check">Yes</span><span class="detail-note">Native stdio + HTTP, 20+ tools</span></div>
               <div class="detail-cell no"><span class="cross">N/A</span><span class="detail-note">MCP client, not server</span></div>
               <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">PRs rejected, community workarounds only</span></div>
@@ -536,7 +536,7 @@
           </div>
           <div class="verdict">
             <strong>Verdict</strong>
-            <p>Daymon is MCP-native — it works seamlessly with Claude Desktop and Claude Code with zero configuration. OpenClaw chose not to implement MCP, building its own skills ecosystem instead. If you're in the Claude ecosystem, Daymon integrates naturally.</p>
+            <p>Daymon integrates directly into Claude Desktop and Claude Code with zero configuration. Just install the app — Claude gains new tools automatically. OpenClaw built its own skills ecosystem that doesn't connect to Claude. If you use Claude, Daymon is the natural extension.</p>
           </div>
         </div>
 

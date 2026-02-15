@@ -119,7 +119,7 @@ export function TasksPanel(): React.JSX.Element {
   if (tasks.length === 0) {
     return (
       <div className="p-4 text-center text-xs text-gray-400">
-        No tasks yet. Use Claude to schedule tasks via MCP.
+        No tasks yet. Ask Claude in Claude Desktop or Claude Code to schedule one.
       </div>
     )
   }

@@ -159,3 +159,8 @@ ALTER TABLE entities ADD COLUMN embedded_at DATETIME;
 
 INSERT OR IGNORE INTO schema_version (version) VALUES (5);
 `
+
+export const SCHEMA_V6 = `
+ALTER TABLE tasks ADD COLUMN timeout_minutes INTEGER;
+INSERT OR IGNORE INTO schema_version (version) VALUES (6);
+`

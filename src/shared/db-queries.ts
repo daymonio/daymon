@@ -210,8 +210,8 @@ function mapWorkerRow(row: Record<string, unknown>): Worker {
 export function createTask(db: Database.Database, input: CreateTaskInput): Task {
   const result = db
     .prepare(
-      `INSERT INTO tasks (name, description, prompt, cron_expression, trigger_type, trigger_config, scheduled_at, executor, max_runs, worker_id, session_continuity)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tasks (name, description, prompt, cron_expression, trigger_type, trigger_config, scheduled_at, executor, max_runs, worker_id, session_continuity, timeout_minutes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name,
@@ -224,7 +224,8 @@ export function createTask(db: Database.Database, input: CreateTaskInput): Task 
       input.executor ?? 'claude_code',
       input.maxRuns ?? null,
       input.workerId ?? null,
-      input.sessionContinuity ? 1 : 0
+      input.sessionContinuity ? 1 : 0,
+      input.timeoutMinutes ?? null
     )
   const task = getTask(db, result.lastInsertRowid as number)!
   if (input.workerId) refreshWorkerTaskCount(db, input.workerId)
@@ -249,6 +250,7 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
   status: string; lastRun: string; lastResult: string; errorCount: number
   maxRuns: number; runCount: number; memoryEntityId: number
   workerId: number | null; sessionContinuity: boolean; sessionId: string | null
+  timeoutMinutes: number | null
 }>): void {
   const fieldMap: Record<string, string> = {
     name: 'name', description: 'description', prompt: 'prompt',
@@ -257,7 +259,8 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
     executor: 'executor', status: 'status',
     lastRun: 'last_run', lastResult: 'last_result', errorCount: 'error_count',
     maxRuns: 'max_runs', runCount: 'run_count', memoryEntityId: 'memory_entity_id',
-    workerId: 'worker_id', sessionContinuity: 'session_continuity', sessionId: 'session_id'
+    workerId: 'worker_id', sessionContinuity: 'session_continuity', sessionId: 'session_id',
+    timeoutMinutes: 'timeout_minutes'
   }
 
   const fields: string[] = []
@@ -502,6 +505,7 @@ function mapTaskRow(row: Record<string, unknown>): Task {
     workerId: row.worker_id as number | null,
     sessionContinuity: (row.session_continuity as number) === 1,
     sessionId: row.session_id as string | null,
+    timeoutMinutes: row.timeout_minutes as number | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string
   }

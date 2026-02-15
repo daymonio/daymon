@@ -26,6 +26,7 @@
       </a>
       <nav>
         <a href="#features">Features</a>
+        <a href="#workers">Workers</a>
         <a href="#compare">Compare</a>
         <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a>
       </nav>
@@ -99,7 +100,19 @@
             <div class="feature-icon">&#129504;</div>
             <h4>Persistent Memory</h4>
             <p class="feature-example">"Remember I'm fundraising Series A"</p>
-            <p>Say it once — it sticks forever. Structured, queryable knowledge graph.</p>
+            <p>Say it once — it sticks forever. Knowledge graph with semantic search.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#128100;</div>
+            <h4>Workers</h4>
+            <p class="feature-example">"Use my Chief of Staff worker for this task"</p>
+            <p>Named agent personalities with system prompts. Assign different workers to different tasks. Templates included.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#128257;</div>
+            <h4>Session Continuity</h4>
+            <p class="feature-example">"Compare today's results to yesterday's"</p>
+            <p>Tasks can resume where they left off. Each run builds on the last — no context lost.</p>
           </div>
           <div class="feature-card">
             <div class="feature-icon">&#128193;</div>
@@ -112,6 +125,56 @@
             <h4>100% Local</h4>
             <p class="feature-example">Everything on your Mac</p>
             <p>No cloud. No account. Your data is a SQLite file you can inspect anytime.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="workers" class="workers">
+      <div class="container">
+        <h3>Workers — give your tasks a personality</h3>
+        <p class="workers-subtitle">Workers are named agent profiles with system prompts. Pick a template, edit it, or write your own from scratch. Assign to any task.</p>
+        <div class="worker-grid">
+          <div class="worker-card">
+            <div class="worker-name">Chief of Staff</div>
+            <div class="worker-desc">Proactive business ops. Triages ruthlessly, anticipates needs, proposes actions instead of asking what to do.</div>
+          </div>
+          <div class="worker-card">
+            <div class="worker-name">Researcher</div>
+            <div class="worker-desc">Deep research with strong opinions on sources. Synthesis over summarization — every finding gets a "so what?"</div>
+          </div>
+          <div class="worker-card">
+            <div class="worker-name">Email Assistant</div>
+            <div class="worker-desc">3-tier triage: ACT NOW, ACT TODAY, SKIP. Drafts replies matching sender's tone. Never sends anything.</div>
+          </div>
+          <div class="worker-card">
+            <div class="worker-name">Competitor Tracker</div>
+            <div class="worker-desc">Reports signal, not noise. Silence is a valid report. Each finding includes what changed, why it matters, and how to respond.</div>
+          </div>
+          <div class="worker-card">
+            <div class="worker-name">Code Reviewer</div>
+            <div class="worker-desc">Catches what linters miss. Leads with blockers, cites specific lines, suggests concrete fixes. No bikeshedding.</div>
+          </div>
+          <div class="worker-card">
+            <div class="worker-name">+ Create your own</div>
+            <div class="worker-desc">4 more built-in templates (Writer, Tech Trend Analyst, DevOps, Data Analyst) — or write any system prompt from scratch. Edit anytime.</div>
+          </div>
+        </div>
+        <div class="worker-how">
+          <div class="worker-how-title">How to use workers</div>
+          <div class="worker-steps">
+            <div class="worker-step">
+              <div class="worker-step-label">Create</div>
+              <div class="worker-step-text">Pick a template or write your own system prompt — in the Daymon UI or via Claude chat.</div>
+            </div>
+            <div class="worker-step">
+              <div class="worker-step-label">Assign</div>
+              <div class="worker-step-text">Attach a worker to any task. "Schedule this with my Researcher worker."</div>
+            </div>
+            <div class="worker-step">
+              <div class="worker-step-label">Run</div>
+              <div class="worker-step-text">The worker's system prompt is injected into every execution. The task runs with that personality.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -171,15 +234,27 @@
             <div class="openclaw-col good">Runs 24/7 but complex setup</div>
           </div>
           <div class="compare-row">
+            <div class="compare-label">Workers</div>
+            <div class="daymon-col">9 templates + create your own, edit anytime</div>
+            <div class="claude-col">No persistent profiles</div>
+            <div class="openclaw-col">Manual SOUL.md config (no templates)</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Session continuity</div>
+            <div class="daymon-col">Tasks resume across runs</div>
+            <div class="claude-col">No scheduled tasks</div>
+            <div class="openclaw-col">Fresh session each run</div>
+          </div>
+          <div class="compare-row">
             <div class="compare-label">Persistent memory</div>
-            <div class="daymon-col">Structured, queryable knowledge graph</div>
+            <div class="daymon-col">Knowledge graph + semantic search</div>
             <div class="claude-col">Basic — per model only</div>
             <div class="openclaw-col">Custom DB setup required</div>
           </div>
           <div class="compare-row">
             <div class="compare-label">Integrations</div>
             <div class="daymon-col">All Claude tools + scheduling, memory, file watching</div>
-            <div class="claude-col good">MCP tools &amp; built-in integrations</div>
+            <div class="claude-col good">Built-in tools &amp; integrations</div>
             <div class="openclaw-col">100+ custom skills (each needs API keys)</div>
           </div>
           <div class="compare-row">

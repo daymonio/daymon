@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5 } from '../schema'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6 } from '../schema'
 import * as q from '../db-queries'
 
 let db: Database.Database
@@ -12,6 +12,7 @@ function initTestDb(): Database.Database {
   d.exec(SCHEMA_V3)
   d.exec(SCHEMA_V4)
   d.exec(SCHEMA_V5)
+  d.exec(SCHEMA_V6)
   return d
 }
 
@@ -293,6 +294,24 @@ describe('createTask', () => {
     })
     expect(task.maxRuns).toBeNull()
     expect(task.runCount).toBe(0)
+  })
+
+  it('creates a task with custom timeout', () => {
+    const task = q.createTask(db, {
+      name: 'Long Task',
+      prompt: 'Research deeply',
+      triggerType: 'manual',
+      timeoutMinutes: 120
+    })
+    expect(task.timeoutMinutes).toBe(120)
+  })
+
+  it('creates a task with null timeout (default)', () => {
+    const task = q.createTask(db, {
+      name: 'Default Timeout',
+      prompt: 'Quick task'
+    })
+    expect(task.timeoutMinutes).toBeNull()
   })
 })
 
@@ -670,11 +689,17 @@ describe('schema migration', () => {
     expect(tables.map((t) => t.name)).toContain('embeddings')
   })
 
-  it('schema_version table has versions 1-5', () => {
+  it('V6 adds timeout_minutes column to tasks', () => {
+    const columns = db.prepare('PRAGMA table_info(tasks)').all() as { name: string }[]
+    const colNames = columns.map((c) => c.name)
+    expect(colNames).toContain('timeout_minutes')
+  })
+
+  it('schema_version table has versions 1-6', () => {
     const versions = db
       .prepare('SELECT version FROM schema_version ORDER BY version')
       .all() as { version: number }[]
-    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4, 5])
+    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4, 5, 6])
   })
 })
 
