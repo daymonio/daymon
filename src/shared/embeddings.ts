@@ -2,7 +2,6 @@ import { createHash } from 'crypto'
 
 let pipeline: ((text: string | string[]) => Promise<{ tolist: () => number[][] }>) | null = null
 let pipelineLoading = false
-let pipelineError: Error | null = null
 
 const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2'
 const DIMENSIONS = 384
@@ -33,9 +32,7 @@ export async function initEngine(): Promise<void> {
       const result = await pipe(text, { pooling: 'mean', normalize: true })
       return result as { tolist: () => number[][] }
     }
-    pipelineError = null
-  } catch (err) {
-    pipelineError = err instanceof Error ? err : new Error(String(err))
+  } catch {
     pipeline = null
   } finally {
     pipelineLoading = false
