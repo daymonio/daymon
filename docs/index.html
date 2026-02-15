@@ -101,9 +101,9 @@
     <section class="copy-prompt">
       <div class="container">
         <h3>Copy &amp; paste to Claude Code</h3>
-        <p class="copy-prompt-subtitle">After installing Daymon, paste this into Claude Code to connect it:</p>
+        <p class="copy-prompt-subtitle">After installing Daymon, paste this into Claude Code to connect it globally:</p>
         <div class="prompt-box" onclick="copyPrompt(this)">
-          <span class="prompt-text">Set up Daymon MCP server for this project. The server is at /Applications/Daymon.app/Contents/Resources/mcp/server.js and the database is at ~/Library/Application Support/daymon/daymon.db. Create a .mcp.json file with DAYMON_SOURCE set to claude-code.</span>
+          <span class="prompt-text">Add Daymon as a global MCP server (user scope, so it works in every project). The stdio server command is: node /Applications/Daymon.app/Contents/Resources/mcp/server.js — with env vars DAYMON_DB_PATH=~/Library/Application Support/daymon/daymon.db and DAYMON_SOURCE=claude-code.</span>
           <span class="copy-btn" title="Copy to clipboard">Copy</span>
         </div>
         <p class="copy-prompt-note">Claude Desktop? Just open Daymon &mdash; it auto-configures. No prompt needed.</p>

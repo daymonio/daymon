@@ -54,9 +54,9 @@ Open Claude Desktop and try:
 
 After installing Daymon, paste this to Claude Code:
 
-> "Install Daymon MCP server for this project. The server is at /Applications/Daymon.app/Contents/Resources/mcp/server.js and the database is at ~/Library/Application Support/daymon/daymon.db. Create a .mcp.json file."
+> "Add Daymon as a global MCP server (user scope, so it works in every project). The stdio server command is: node /Applications/Daymon.app/Contents/Resources/mcp/server.js — with env vars DAYMON_DB_PATH=~/Library/Application Support/daymon/daymon.db and DAYMON_SOURCE=claude-code."
 
-Or set it up manually — see [.mcp.json.example](.mcp.json.example) for the template.
+This sets it up once for all projects. Or configure per-project manually — see [.mcp.json.example](.mcp.json.example).
 
 Then try:
 
