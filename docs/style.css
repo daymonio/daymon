@@ -10,9 +10,9 @@
   --bg-surface: #12152a;
   --text: #e8e8ed;
   --text-muted: #9a9ab0;
-  --accent: #6366f1;
-  --accent-glow: rgba(99, 102, 241, 0.25);
-  --accent-hover: #818cf8;
+  --accent: #e86a1a;
+  --accent-glow: rgba(232, 106, 26, 0.25);
+  --accent-hover: #f59542;
   --radius: 12px;
   --max-width: 960px;
 }
@@ -50,7 +50,7 @@ header {
   z-index: 100;
   background: rgba(11, 13, 23, 0.85);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+  border-bottom: 1px solid rgba(232, 106, 26, 0.1);
 }
 
 .header-inner {
@@ -175,7 +175,7 @@ nav a:hover {
 .brew-install code {
   display: inline-block;
   background: var(--bg-surface);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(232, 106, 26, 0.2);
   border-radius: 8px;
   padding: 10px 24px;
   font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
@@ -187,7 +187,7 @@ nav a:hover {
 
 .inline-code {
   background: var(--bg-surface);
-  border: 1px solid rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(232, 106, 26, 0.15);
   border-radius: 4px;
   padding: 2px 6px;
   font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
@@ -208,7 +208,7 @@ nav a:hover {
 /* === Setup Section === */
 .setup-section {
   padding: 80px 0;
-  border-top: 1px solid rgba(99, 102, 241, 0.1);
+  border-top: 1px solid rgba(232, 106, 26, 0.1);
 }
 
 .setup-section h3 {
@@ -229,14 +229,14 @@ nav a:hover {
 .setup-option {
   flex: 1;
   background: var(--bg-surface);
-  border: 1px solid rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(232, 106, 26, 0.15);
   border-radius: var(--radius);
   overflow: hidden;
 }
 
 .setup-option-header {
   padding: 16px 24px;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+  border-bottom: 1px solid rgba(232, 106, 26, 0.1);
 }
 
 .setup-badge {
@@ -280,7 +280,7 @@ nav a:hover {
 
 .prompt-box {
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(232, 106, 26, 0.2);
   border-radius: 8px;
   padding: 16px;
   cursor: pointer;
@@ -291,7 +291,7 @@ nav a:hover {
 }
 
 .prompt-box:hover {
-  border-color: rgba(99, 102, 241, 0.5);
+  border-color: rgba(232, 106, 26, 0.5);
 }
 
 .prompt-text {
@@ -364,7 +364,7 @@ nav a:hover {
   align-items: center;
   justify-content: center;
   background: var(--bg-surface);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(232, 106, 26, 0.3);
   border-radius: 50%;
   font-weight: 700;
   font-size: 0.9rem;
@@ -402,13 +402,13 @@ nav a:hover {
 
 .feature-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(232, 106, 26, 0.12);
   border-radius: var(--radius);
   padding: 28px;
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 .feature-card:hover {
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(232, 106, 26, 0.4);
   box-shadow: 0 0 30px var(--accent-glow);
 }
 
@@ -438,7 +438,7 @@ nav a:hover {
 /* === Workers === */
 .workers {
   padding: 80px 0;
-  border-top: 1px solid rgba(99, 102, 241, 0.1);
+  border-top: 1px solid rgba(232, 106, 26, 0.1);
 }
 
 .workers h3 {
@@ -464,14 +464,14 @@ nav a:hover {
 
 .worker-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(232, 106, 26, 0.15);
   border-left: 3px solid var(--accent);
   border-radius: var(--radius);
   padding: 18px 20px;
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 .worker-card:hover {
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: rgba(232, 106, 26, 0.4);
   border-left-color: var(--accent-hover);
   box-shadow: 0 0 20px var(--accent-glow);
 }
@@ -522,7 +522,7 @@ nav a:hover {
   align-items: center;
   justify-content: center;
   background: var(--bg-surface);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(232, 106, 26, 0.3);
   border-radius: 50%;
   font-weight: 700;
   font-size: 0.8rem;
@@ -530,7 +530,7 @@ nav a:hover {
 }
 
 .worker-flow-arrow {
-  color: rgba(99, 102, 241, 0.4);
+  color: rgba(232, 106, 26, 0.4);
   font-size: 1.2rem;
 }
 
@@ -550,7 +550,7 @@ nav a:hover {
 /* === Comparison === */
 .compare {
   padding: 80px 0;
-  border-top: 1px solid rgba(99, 102, 241, 0.1);
+  border-top: 1px solid rgba(232, 106, 26, 0.1);
 }
 
 .compare h3 {
@@ -571,7 +571,7 @@ nav a:hover {
   margin: 0 auto;
   border-radius: var(--radius);
   overflow: hidden;
-  border: 1px solid rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(232, 106, 26, 0.12);
 }
 
 .compare-row {
@@ -657,7 +657,7 @@ nav a:hover {
 .final-cta {
   text-align: center;
   padding: 80px 0;
-  border-top: 1px solid rgba(99, 102, 241, 0.1);
+  border-top: 1px solid rgba(232, 106, 26, 0.1);
 }
 
 .final-cta h3 {
