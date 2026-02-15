@@ -7,6 +7,7 @@ import { ensureClaudeConfig } from './claude-config'
 import { startScheduler, stopScheduler } from './scheduler/cron'
 import { startAllWatches, stopAllWatches } from './file-watcher'
 import { getSetting, setSetting } from './db/tasks'
+import { initUpdater, stopUpdater } from './updater'
 import { APP_NAME, APP_ID } from '../shared/constants'
 
 function isBrokenPipeError(error: unknown): boolean {
@@ -99,6 +100,7 @@ function bootstrap(): void {
     ensureClaudeConfig()
     startScheduler()
     startAllWatches()
+    initUpdater()
   }).catch((err) => {
     fatalMainError('Failed during app startup', err)
   })
@@ -118,6 +120,11 @@ function bootstrap(): void {
   })
 
   app.on('before-quit', () => {
+    try {
+      stopUpdater()
+    } catch (err) {
+      safeLog('Error while stopping updater', err)
+    }
     try {
       stopAllWatches()
     } catch (err) {

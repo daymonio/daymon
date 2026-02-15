@@ -32,6 +32,12 @@ Your Claude subscription only works when you do. Daymon puts it to work 24/7.
 
 ## Installation
 
+### Homebrew (recommended)
+
+```bash
+brew install daymonio/daymon/daymon
+```
+
 ### Download
 
 Download the latest `.dmg` from [GitHub Releases](https://github.com/daymonio/daymon/releases).

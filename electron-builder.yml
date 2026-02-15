@@ -23,9 +23,12 @@ mac:
   extendInfo:
     NSDocumentsFolderUsageDescription: "Daymon needs access to your Documents folder for file watching."
     NSDownloadsFolderUsageDescription: "Daymon needs access to your Downloads folder for file watching."
-  notarize: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  notarize: true
   target:
     - dmg
+    - zip
   type: distribution
 dmg:
   contents:

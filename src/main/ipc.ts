@@ -6,6 +6,7 @@ import { getConfig, getClaudeConfigPath } from './config'
 import { checkClaudeCliAvailable } from '../shared/claude-code'
 import { startWatch, stopWatch } from './file-watcher'
 import { uninstall } from './uninstall'
+import { checkForUpdates, downloadUpdate, installUpdate, getUpdateStatus } from './updater'
 import { getClaudeIntegrationStatus } from './claude-config'
 import { getSchedulerStatus } from './scheduler/cron'
 import { testNotification } from './notifications'
@@ -163,6 +164,10 @@ export function registerIpcHandlers(): void {
     app.setLoginItemSettings({ openAtLogin: enabled })
   })
   ipcMain.handle('app:uninstall', () => uninstall())
+  ipcMain.handle('app:getUpdateStatus', () => getUpdateStatus())
+  ipcMain.handle('app:checkForUpdates', () => checkForUpdates())
+  ipcMain.handle('app:downloadUpdate', () => downloadUpdate())
+  ipcMain.handle('app:installUpdate', () => installUpdate())
   ipcMain.handle('app:hideWindow', (e) => {
     BrowserWindow.fromWebContents(e.sender)?.hide()
   })

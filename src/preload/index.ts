@@ -74,7 +74,11 @@ const api = {
     getAutoLaunch: () => ipcRenderer.invoke('app:getAutoLaunch'),
     setAutoLaunch: (enabled: boolean) => ipcRenderer.invoke('app:setAutoLaunch', enabled),
     uninstall: () => ipcRenderer.invoke('app:uninstall'),
-    hideWindow: () => ipcRenderer.invoke('app:hideWindow')
+    hideWindow: () => ipcRenderer.invoke('app:hideWindow'),
+    getUpdateStatus: () => ipcRenderer.invoke('app:getUpdateStatus'),
+    checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
+    downloadUpdate: () => ipcRenderer.invoke('app:downloadUpdate'),
+    installUpdate: () => ipcRenderer.invoke('app:installUpdate')
   }
 }
 

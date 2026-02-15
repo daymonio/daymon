@@ -117,8 +117,9 @@ All agents MUST update this file when completing a task. Change `[ ]` to `[x]`.
 - [x] Test suite: 225 tests across 8 files (workers, sessions, embeddings, hybrid search, claude-code executor, generateTaskName)
 
 ### Week 6: Package + Launch
-- [ ] electron-builder: create signed + notarized DMG
-- [ ] Homebrew cask formula
+- [x] electron-builder: create signed + notarized DMG
+- [x] Homebrew cask formula
+- [x] Auto-update via electron-updater (check/download/install UI in Settings)
 - [x] Landing page: daymon.io
 - [x] GitHub README with install instructions, tools reference, workers, session continuity
 - [x] MIT LICENSE file

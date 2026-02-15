@@ -24,6 +24,13 @@ interface SettingsPanelProps {
   onAdvancedModeChange: (enabled: boolean) => void
 }
 
+interface UpdateStatus {
+  status: string
+  version?: string
+  progress?: number
+  error?: string
+}
+
 export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPanelProps): React.JSX.Element {
   const [version, setVersion] = useState('')
   const [paths, setPaths] = useState<PathsInfo | null>(null)
@@ -32,6 +39,7 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
   const [autoLaunch, setAutoLaunch] = useState<boolean | null>(null)
   const [notifications, setNotifications] = useState<boolean>(true)
   const [confirmUninstall, setConfirmUninstall] = useState(false)
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
 
   useEffect(() => {
     if (!window.api) return
@@ -43,6 +51,7 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     window.api.settings.get('notifications_enabled').then((v) => {
       setNotifications(v !== 'false')
     })
+    window.api.app.getUpdateStatus().then(setUpdateStatus)
   }, [])
 
   async function toggleAutoLaunch(): Promise<void> {
@@ -149,10 +158,57 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
 
       <div>
         <h3 className="text-xs font-semibold text-gray-700 mb-1">App</h3>
-        <div className="bg-gray-50 rounded-lg p-2">
+        <div className="bg-gray-50 rounded-lg p-2 space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-600">Version</span>
             <span className="text-gray-400">{version || '...'}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-600">
+              {updateStatus?.status === 'available' && `v${updateStatus.version} available`}
+              {updateStatus?.status === 'downloading' && `Downloading${updateStatus.progress != null ? ` ${updateStatus.progress}%` : '...'}`}
+              {updateStatus?.status === 'ready' && 'Update ready'}
+              {updateStatus?.status === 'checking' && 'Checking...'}
+              {updateStatus?.status === 'not-available' && 'Up to date'}
+              {updateStatus?.status === 'error' && (
+                <span className="text-red-500" title={updateStatus.error}>Update check failed</span>
+              )}
+              {(!updateStatus || updateStatus.status === 'idle') && 'Updates'}
+            </span>
+            {(!updateStatus || updateStatus.status === 'idle' || updateStatus.status === 'not-available' || updateStatus.status === 'error') && (
+              <button
+                onClick={async () => {
+                  await window.api.app.checkForUpdates()
+                  setTimeout(() => window.api.app.getUpdateStatus().then(setUpdateStatus), 1000)
+                }}
+                className="text-blue-500 hover:text-blue-700"
+              >
+                Check
+              </button>
+            )}
+            {updateStatus?.status === 'available' && (
+              <button
+                onClick={async () => {
+                  await window.api.app.downloadUpdate()
+                  const poll = setInterval(async () => {
+                    const s = await window.api.app.getUpdateStatus()
+                    setUpdateStatus(s)
+                    if (s.status !== 'downloading') clearInterval(poll)
+                  }, 500)
+                }}
+                className="text-blue-500 hover:text-blue-700"
+              >
+                Download
+              </button>
+            )}
+            {updateStatus?.status === 'ready' && (
+              <button
+                onClick={() => window.api.app.installUpdate()}
+                className="text-green-600 hover:text-green-700 font-medium"
+              >
+                Install & Restart
+              </button>
+            )}
           </div>
         </div>
       </div>

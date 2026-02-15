@@ -56,6 +56,10 @@ interface AppAPI {
   setAutoLaunch: (enabled: boolean) => Promise<void>
   uninstall: () => Promise<void>
   hideWindow: () => Promise<void>
+  getUpdateStatus: () => Promise<{ status: string; version?: string; progress?: number; error?: string }>
+  checkForUpdates: () => Promise<void>
+  downloadUpdate: () => Promise<void>
+  installUpdate: () => Promise<void>
 }
 
 interface WorkersAPI {
