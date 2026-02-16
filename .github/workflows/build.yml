@@ -24,10 +24,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install sqlite-vec for x64 (universal build)
+      - name: Install cross-arch native deps (universal build)
         run: |
           VEC_VERSION=$(node -p "require('./node_modules/sqlite-vec-darwin-arm64/package.json').version")
-          npm install "sqlite-vec-darwin-x64@${VEC_VERSION}" --no-save
+          npm install "sqlite-vec-darwin-x64@${VEC_VERSION}" "@img/sharp-darwin-x64" --no-save --force
 
       - name: Rebuild better-sqlite3 for Node.js (tests only)
         run: npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3
@@ -46,7 +46,7 @@ jobs:
           cd out/mcp
           # Install sqlite-vec for x64
           VEC_VERSION=$(node -p "require('./node_modules/sqlite-vec-darwin-arm64/package.json').version")
-          npm install "sqlite-vec-darwin-x64@${VEC_VERSION}" --no-save
+          npm install "sqlite-vec-darwin-x64@${VEC_VERSION}" --no-save --force
           # Create fat better-sqlite3 binary via lipo
           cp node_modules/better-sqlite3/build/Release/better_sqlite3.node better_sqlite3_arm64.node
           arch -x86_64 npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3 --arch=x64
