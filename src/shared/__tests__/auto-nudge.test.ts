@@ -4,7 +4,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 describe('isInQuietHours', () => {
   let mockGetSetting: ReturnType<typeof vi.fn>
-  let importMod: () => Promise<typeof import('../auto-nudge')>
 
   beforeEach(() => {
     vi.resetModules()
