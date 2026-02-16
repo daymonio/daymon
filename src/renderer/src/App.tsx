@@ -39,7 +39,7 @@ function App(): React.JSX.Element {
       case 'workers':
         return <WorkersPanel />
       case 'tasks':
-        return <TasksPanel />
+        return <TasksPanel advancedMode={advancedMode} />
       case 'watches':
         return <WatchesPanel />
       case 'results':

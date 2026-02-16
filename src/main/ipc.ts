@@ -2,14 +2,12 @@ import { ipcMain, app, BrowserWindow } from 'electron'
 import { resizePopoverWindow } from './tray'
 import * as memory from './db/memory'
 import * as tasks from './db/tasks'
-import { executeTask } from './scheduler/runner'
 import { getConfig, getClaudeConfigPath } from './config'
 import { checkClaudeCliAvailable } from '../shared/claude-code'
-import { startWatch, stopWatch } from './file-watcher'
+import { sidecarFetch } from './sidecar'
 import { uninstall } from './uninstall'
 import { checkForUpdates, downloadUpdate, installUpdate, getUpdateStatus } from './updater'
 import { getClaudeIntegrationStatus } from './claude-config'
-import { getSchedulerStatus } from './scheduler/cron'
 import { testNotification } from './notifications'
 import { z } from 'zod'
 import type { CreateTaskInput, CreateWorkerInput } from '../shared/types'
@@ -82,12 +80,14 @@ export function registerIpcHandlers(): void {
 
   // ─── Tasks ────────────────────────────────────────────
 
-  ipcMain.handle('tasks:create', (_e, task: CreateTaskInput) => {
+  ipcMain.handle('tasks:create', async (_e, task: CreateTaskInput) => {
     const validated = parseOrThrow(createTaskSchema, task)
-    return tasks.createTask({
+    const result = tasks.createTask({
       ...validated,
       triggerConfig: JSON.stringify({ source: 'daymon' })
     })
+    sidecarFetch('POST', '/sync').catch(() => {})
+    return result
   })
   ipcMain.handle('tasks:get', (_e, id: number) => tasks.getTask(parseOrThrow(idSchema, id)))
   ipcMain.handle('tasks:list', (_e, status?: string) => {
@@ -98,17 +98,30 @@ export function registerIpcHandlers(): void {
     const validatedId = parseOrThrow(idSchema, id)
     const validatedUpdates = parseOrThrow(updateTaskSchema, updates)
     tasks.updateTask(validatedId, validatedUpdates)
+    sidecarFetch('POST', '/sync').catch(() => {})
   })
-  ipcMain.handle('tasks:delete', (_e, id: number) => tasks.deleteTask(parseOrThrow(idSchema, id)))
-  ipcMain.handle('tasks:pause', (_e, id: number) => tasks.pauseTask(parseOrThrow(idSchema, id)))
-  ipcMain.handle('tasks:resume', (_e, id: number) => tasks.resumeTask(parseOrThrow(idSchema, id)))
+  ipcMain.handle('tasks:delete', (_e, id: number) => {
+    tasks.deleteTask(parseOrThrow(idSchema, id))
+    sidecarFetch('POST', '/sync').catch(() => {})
+  })
+  ipcMain.handle('tasks:pause', (_e, id: number) => {
+    tasks.pauseTask(parseOrThrow(idSchema, id))
+    sidecarFetch('POST', '/sync').catch(() => {})
+  })
+  ipcMain.handle('tasks:resume', (_e, id: number) => {
+    tasks.resumeTask(parseOrThrow(idSchema, id))
+    sidecarFetch('POST', '/sync').catch(() => {})
+  })
   ipcMain.handle('tasks:getRuns', (_e, taskId: number) => tasks.getTaskRuns(parseOrThrow(idSchema, taskId)))
   ipcMain.handle('tasks:getLatestRun', (_e, taskId: number) => tasks.getLatestTaskRun(parseOrThrow(idSchema, taskId)))
   ipcMain.handle('tasks:listAllRuns', (_e, limit?: number) => {
     const validatedLimit = parseOrThrow(z.number().int().min(1).max(200).optional().default(20), limit)
     return tasks.listAllRuns(validatedLimit)
   })
-  ipcMain.handle('tasks:runNow', (_e, id: number) => executeTask(parseOrThrow(idSchema, id)))
+  ipcMain.handle('tasks:runNow', (_e, id: number) => {
+    const validatedId = parseOrThrow(idSchema, id)
+    return sidecarFetch('POST', `/tasks/${validatedId}/run`)
+  })
   ipcMain.handle('tasks:getRunningRuns', () => tasks.getRunningTaskRuns())
   ipcMain.handle('tasks:getConsoleLogs', (_e, runId: number, afterSeq?: number, limit?: number) => {
     const validatedRunId = parseOrThrow(idSchema, runId)
@@ -132,7 +145,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('watches:create', (_e, path: string, description?: string, actionPrompt?: string) => {
     const validated = parseOrThrow(createWatchSchema, { path, description, actionPrompt })
     const watch = tasks.createWatch(validated.path, validated.description, validated.actionPrompt)
-    startWatch(watch)
+    sidecarFetch('POST', '/sync').catch(() => {})
     return watch
   })
   ipcMain.handle('watches:list', (_e, status?: string) => {
@@ -141,8 +154,8 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle('watches:delete', (_e, id: number) => {
     const validatedId = parseOrThrow(idSchema, id)
-    stopWatch(validatedId)
     tasks.deleteWatch(validatedId)
+    sidecarFetch('POST', '/sync').catch(() => {})
   })
   ipcMain.handle('watches:count', (_e, status?: string) => {
     const validatedStatus = parseOrThrow(z.enum(['active']).optional(), status)
@@ -164,7 +177,14 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle('app:checkClaude', () => checkClaudeCliAvailable())
   ipcMain.handle('app:getClaudeIntegration', () => getClaudeIntegrationStatus())
-  ipcMain.handle('app:getSchedulerStatus', () => getSchedulerStatus())
+  ipcMain.handle('app:getSchedulerStatus', async () => {
+    const health = (await sidecarFetch('GET', '/health')) as Record<string, unknown> | null
+    if (health && typeof health === 'object' && 'scheduler' in health) {
+      return health.scheduler
+    }
+    // Sidecar not ready — return fallback
+    return { running: false, jobCount: 0, jobs: [] }
+  })
   ipcMain.handle('app:testNotification', () => testNotification())
   ipcMain.handle('app:getAutoLaunch', () => app.getLoginItemSettings().openAtLogin)
   ipcMain.handle('app:setAutoLaunch', (_e, enabled: boolean) => {

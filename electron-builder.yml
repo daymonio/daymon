@@ -19,6 +19,8 @@ asarUnpack:
 extraResources:
   - from: "out/mcp/server.js"
     to: "mcp/server.js"
+  - from: "out/mcp/sidecar.js"
+    to: "mcp/sidecar.js"
   - from: "out/mcp/node_modules"
     to: "mcp/node_modules"
   - from: "resources/trayIconTemplate.png"

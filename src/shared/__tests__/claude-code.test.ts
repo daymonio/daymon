@@ -416,7 +416,7 @@ describe('executeClaudeCode', () => {
     expect(proc.kill).toHaveBeenCalled()
   })
 
-  it('uses custom timeout from options', async () => {
+  it('does not pass timeout to spawn options (uses manual setTimeout instead)', async () => {
     const proc = createMockProcess()
     mockSpawn.mockReturnValue(proc)
     const executeClaudeCode = await importWithMock()
@@ -425,7 +425,21 @@ describe('executeClaudeCode', () => {
     proc.emit('close', 0)
     await promise
 
-    expect(mockSpawn.mock.calls[0][2].timeout).toBe(5000)
+    expect(mockSpawn.mock.calls[0][2]).not.toHaveProperty('timeout')
+  })
+
+  it('handles spawn() throwing synchronously (e.g. EBADF)', async () => {
+    const ebadfError = new Error('spawn EBADF') as NodeJS.ErrnoException
+    ebadfError.code = 'EBADF'
+    mockSpawn.mockImplementation(() => { throw ebadfError })
+    const executeClaudeCode = await importWithMock()
+
+    const result = await executeClaudeCode('Test')
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('Failed to spawn Claude CLI')
+    expect(result.stderr).toContain('spawn EBADF')
+    expect(result.sessionId).toBeNull()
+    expect(result.timedOut).toBe(false)
   })
 
   it('passes --max-turns flag when maxTurns is set', async () => {

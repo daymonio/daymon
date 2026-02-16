@@ -9,7 +9,7 @@ import { getClaudeConfigPath, getConfig } from './config'
 
 let cachedNodePath: string | null = null
 
-function resolveNodePath(): string {
+export function resolveNodePath(): string {
   if (cachedNodePath) return cachedNodePath
 
   // Probe common locations (packaged Electron doesn't inherit login shell PATH)

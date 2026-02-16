@@ -161,14 +161,26 @@ export function executeClaudeCode(
       return
     }
 
-    const proc = spawn(claudePath, args, {
-      cwd: homedir(),
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: timeoutMs
-    })
+    let proc: ReturnType<typeof spawn>
+    try {
+      proc = spawn(claudePath, args, {
+        cwd: homedir(),
+        env,
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
+    } catch (err) {
+      resolve({
+        stdout: '',
+        stderr: `Failed to spawn Claude CLI: ${err instanceof Error ? err.message : String(err)}`,
+        exitCode: 1,
+        durationMs: Date.now() - startTime,
+        timedOut: false,
+        sessionId: null
+      })
+      return
+    }
 
-    // Guard against failed pipe creation (EBADF, fd exhaustion)
+    // Guard against failed pipe creation (fd exhaustion)
     if (!proc.stdout || !proc.stderr) {
       resolve({
         stdout: '',

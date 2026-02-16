@@ -193,7 +193,10 @@ export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): Rea
       >
         <div className="flex items-center gap-2">
           <span className="text-sm">&#11088;</span>
-          <span className="text-xs font-medium text-yellow-700">Star Daymon on GitHub</span>
+          <span className="text-xs font-medium text-yellow-700">Star us on GitHub</span>
+        </div>
+        <div className="text-xs text-yellow-600 mt-0.5">
+          Free &amp; open source — a star helps others discover Daymon
         </div>
       </button>
     </div>

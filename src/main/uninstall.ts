@@ -1,6 +1,8 @@
 import { app } from 'electron'
 import { readFileSync, writeFileSync, existsSync, rmSync } from 'fs'
+import { join } from 'path'
 import { getClaudeConfigPath, getConfig } from './config'
+import { shutdownSidecar } from './sidecar'
 
 export function removeFromClaudeConfig(): void {
   try {
@@ -38,7 +40,20 @@ export function deleteAppData(): void {
   }
 }
 
+function killSidecar(): void {
+  try {
+    const config = getConfig()
+    const pidFile = join(config.dataDir, 'sidecar.pid')
+    if (existsSync(pidFile)) {
+      const pid = parseInt(readFileSync(pidFile, 'utf-8').trim(), 10)
+      try { process.kill(pid, 'SIGTERM') } catch { /* already dead */ }
+    }
+  } catch { /* non-fatal */ }
+}
+
 export function uninstall(): void {
+  shutdownSidecar().catch(() => {})
+  killSidecar()
   removeFromClaudeConfig()
   deleteAppData()
   app.quit()

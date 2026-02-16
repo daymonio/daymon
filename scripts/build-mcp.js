@@ -2,20 +2,26 @@ const { execSync } = require('child_process')
 const { writeFileSync, mkdirSync } = require('fs')
 const { version } = require('../package.json')
 
-const esbuildArgs = [
-  'src/mcp/server.ts',
-  '--bundle',
-  '--platform=node',
-  '--target=node18',
-  '--outfile=out/mcp/server.js',
+const EXTERNALS = [
   '--external:better-sqlite3',
   '--external:sqlite-vec',
   '--external:@huggingface/transformers',
-  '--external:onnxruntime-node',
-  `--define:__APP_VERSION__='"${version}"'`
-].join(' ')
+  '--external:onnxruntime-node'
+]
 
-execSync(`esbuild ${esbuildArgs}`, { stdio: 'inherit' })
+const COMMON = [
+  '--bundle',
+  '--platform=node',
+  '--target=node18',
+  ...EXTERNALS,
+  `--define:__APP_VERSION__='"${version}"'`
+]
+
+// Bundle MCP server
+execSync(`esbuild src/mcp/server.ts --outfile=out/mcp/server.js ${COMMON.join(' ')}`, { stdio: 'inherit' })
+
+// Bundle sidecar (shares MCP's node_modules)
+execSync(`esbuild src/sidecar/server.ts --outfile=out/mcp/sidecar.js ${COMMON.join(' ')}`, { stdio: 'inherit' })
 
 // Create package.json so npm install stays in out/mcp/ (not the root)
 mkdirSync('out/mcp', { recursive: true })

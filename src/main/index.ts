@@ -4,8 +4,7 @@ import { createTray, showPopoverWindowFromDock } from './tray'
 import { initDatabase, closeDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
 import { ensureClaudeConfig } from './claude-config'
-import { startScheduler, stopScheduler } from './scheduler/cron'
-import { startAllWatches, stopAllWatches } from './file-watcher'
+import { launchSidecar, shutdownSidecar } from './sidecar'
 import { getSetting, setSetting } from './db/tasks'
 import { initUpdater, stopUpdater } from './updater'
 import { APP_NAME, APP_ID } from '../shared/constants'
@@ -105,8 +104,9 @@ function bootstrap(): void {
     // the main thread and the tray icon never responds to clicks.
     setImmediate(() => {
       ensureClaudeConfig()
-      startScheduler()
-      startAllWatches()
+      launchSidecar().catch((err) => {
+        console.error('Failed to launch sidecar:', err)
+      })
       initUpdater()
     })
   }).catch((err) => {
@@ -134,14 +134,9 @@ function bootstrap(): void {
       safeLog('Error while stopping updater', err)
     }
     try {
-      stopAllWatches()
+      shutdownSidecar()
     } catch (err) {
-      safeLog('Error while stopping file watchers', err)
-    }
-    try {
-      stopScheduler()
-    } catch (err) {
-      safeLog('Error while stopping scheduler', err)
+      safeLog('Error while stopping sidecar', err)
     }
     try {
       closeDatabase()
