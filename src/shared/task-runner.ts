@@ -1,9 +1,11 @@
 import { join } from 'path'
 import { writeFileSync, mkdirSync, existsSync } from 'fs'
 import { executeClaudeCode } from './claude-code'
-import type { ConsoleLogCallback } from './claude-code'
+import type { ConsoleLogCallback, ExecutionOptions, ExecutionResult } from './claude-code'
 import * as queries from './db-queries'
 import { DEFAULTS } from './constants'
+import { shouldDistill, distillLearnedContext } from './learned-context'
+import { detectRateLimit, sleep, RATE_LIMIT_MAX_RETRIES } from './rate-limit'
 import type Database from 'better-sqlite3'
 import type { Task } from './types'
 
@@ -57,6 +59,69 @@ function createConsoleLogBuffer(db: Database.Database, runId: number): {
     },
     flush
   }
+}
+
+/**
+ * Execute Claude Code with automatic rate limit retry.
+ * If the CLI fails due to a rate/usage limit, waits for the reset time and retries.
+ */
+async function executeWithRateLimitRetry(
+  prompt: string,
+  execOptions: ExecutionOptions,
+  db: Database.Database,
+  runId: number,
+  taskId: number
+): Promise<ExecutionResult> {
+  let result = await executeClaudeCode(prompt, execOptions)
+
+  let retries = 0
+  while (result.exitCode !== 0 && retries < RATE_LIMIT_MAX_RETRIES) {
+    const rateLimitInfo = detectRateLimit(result)
+    if (!rateLimitInfo) break
+
+    retries++
+    const retryLabel = `(attempt ${retries + 1}/${RATE_LIMIT_MAX_RETRIES + 1})`
+    const waitSec = Math.round(rateLimitInfo.waitMs / 1000)
+    const resetTimeStr = rateLimitInfo.resetAt
+      ? rateLimitInfo.resetAt.toLocaleTimeString()
+      : `~${Math.round(waitSec / 60)}min`
+
+    console.log(`Task ${taskId}: Rate limit detected. Waiting ${waitSec}s until ${resetTimeStr} ${retryLabel}`)
+
+    queries.updateTaskRunProgress(db, runId, null, `Rate limited. Retrying at ${resetTimeStr} ${retryLabel}`)
+
+    // Log to console so it appears in task progress history
+    try {
+      queries.insertConsoleLogs(db, [{
+        runId,
+        seq: Date.now(),
+        entryType: 'error',
+        content: `Rate limit reached. Waiting ${waitSec}s until reset ${retryLabel}`
+      }])
+    } catch { /* non-fatal */ }
+
+    await sleep(rateLimitInfo.waitMs)
+
+    queries.updateTaskRunProgress(db, runId, null, `Retrying after rate limit ${retryLabel}`)
+
+    // Re-create console log buffer for the retry
+    const retryConsoleLog = createConsoleLogBuffer(db, runId)
+    let lastProgressUpdate = 0
+    result = await executeClaudeCode(prompt, {
+      ...execOptions,
+      onConsoleLog: retryConsoleLog.onConsoleLog,
+      onProgress: (progress) => {
+        const now = Date.now()
+        if (now - lastProgressUpdate >= DEFAULTS.PROGRESS_THROTTLE_MS) {
+          queries.updateTaskRunProgress(db, runId, progress.fraction, progress.message)
+          lastProgressUpdate = now
+        }
+      }
+    })
+    retryConsoleLog.flush()
+  }
+
+  return result
 }
 
 export function isTaskRunning(taskId: number): boolean {
@@ -130,21 +195,30 @@ export async function executeTask(
       }
     }
 
-    // Inject memory context into prompt
+    // Inject learned context (methodology from previous runs)
     let augmentedPrompt = task.prompt
+    try {
+      if (task.learnedContext) {
+        augmentedPrompt = `## Approach (learned from previous runs):\n${task.learnedContext}\n\n---\n\n${augmentedPrompt}`
+      }
+    } catch (err) {
+      console.warn('Non-fatal: learned context injection failed:', err)
+    }
+
+    // Inject memory context into prompt
     try {
       if (task.sessionContinuity && resumeSessionId) {
         // Session-continuous task with existing session: only inject cross-task knowledge
         // (the session already has own history from previous runs)
         const crossTaskContext = queries.getCrossTaskMemoryContext(db, taskId)
         if (crossTaskContext) {
-          augmentedPrompt = `${crossTaskContext}\n\n---\n\n${task.prompt}`
+          augmentedPrompt = `${crossTaskContext}\n\n---\n\n${augmentedPrompt}`
         }
       } else {
         // First run, stateless task, or session rotation: full memory injection
         const memoryContext = queries.getTaskMemoryContext(db, taskId)
         if (memoryContext) {
-          augmentedPrompt = `${memoryContext}\n\n---\n\n${task.prompt}`
+          augmentedPrompt = `${memoryContext}\n\n---\n\n${augmentedPrompt}`
         }
       }
     } catch (err) {
@@ -159,7 +233,7 @@ export async function executeTask(
 
     const consoleLog = createConsoleLogBuffer(db, run.id)
     let lastProgressUpdate = 0
-    const result = await executeClaudeCode(augmentedPrompt, {
+    const execOptions: ExecutionOptions = {
       systemPrompt,
       model,
       resumeSessionId,
@@ -175,7 +249,8 @@ export async function executeTask(
           lastProgressUpdate = now
         }
       }
-    })
+    }
+    const result = await executeWithRateLimitRetry(augmentedPrompt, execOptions, db, run.id, taskId)
     consoleLog.flush()
 
     // If resume failed, retry without session
@@ -184,18 +259,23 @@ export async function executeTask(
         queries.clearTaskSession(db, taskId)
       } catch (err) { console.warn('Non-fatal: clear session failed:', err) }
 
-      // Re-inject full memory context for the fresh run
+      // Re-inject learned context + full memory context for the fresh run
       let retryPrompt = task.prompt
+      try {
+        if (task.learnedContext) {
+          retryPrompt = `## Approach (learned from previous runs):\n${task.learnedContext}\n\n---\n\n${retryPrompt}`
+        }
+      } catch (err) { console.warn('Non-fatal: learned context retry failed:', err) }
       try {
         const memoryContext = queries.getTaskMemoryContext(db, taskId)
         if (memoryContext) {
-          retryPrompt = `${memoryContext}\n\n---\n\n${task.prompt}`
+          retryPrompt = `${memoryContext}\n\n---\n\n${retryPrompt}`
         }
       } catch (err) { console.warn('Non-fatal: memory context retry failed:', err) }
 
       const retryConsoleLog = createConsoleLogBuffer(db, run.id)
       lastProgressUpdate = 0
-      const retryResult = await executeClaudeCode(retryPrompt, {
+      const retryExecOptions: ExecutionOptions = {
         systemPrompt,
         model,
         timeoutMs,
@@ -210,7 +290,8 @@ export async function executeTask(
             lastProgressUpdate = now
           }
         }
-      })
+      }
+      const retryResult = await executeWithRateLimitRetry(retryPrompt, retryExecOptions, db, run.id, taskId)
       retryConsoleLog.flush()
 
       return finishRun(db, run.id, taskId, task, retryResult, resultsDir, onComplete, onFailed)
@@ -254,6 +335,17 @@ function finishRun(
     queries.completeTaskRun(db, runId, output, resultFilePath)
     try { queries.storeTaskResultInMemory(db, taskId, output, true) } catch (err) { console.warn('Non-fatal: memory storage failed:', err) }
     queries.incrementRunCount(db, taskId)
+
+    // Fire-and-forget: distill methodology from run history
+    try {
+      const updatedTask = queries.getTask(db, taskId)
+      if (updatedTask && shouldDistill(updatedTask)) {
+        distillLearnedContext(db, taskId).catch(err =>
+          console.warn('Non-fatal: learned context distillation failed:', err)
+        )
+      }
+    } catch (err) { console.warn('Non-fatal: distillation check failed:', err) }
+
     onComplete?.(task, output.slice(0, 200), result.durationMs)
     return { success: true, output, durationMs: result.durationMs, resultFilePath }
   } else {

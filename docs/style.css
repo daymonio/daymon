@@ -101,25 +101,27 @@ nav a:hover {
 }
 
 .hero h1 {
-  font-size: clamp(1.4rem, 3.5vw, 2rem);
-  font-weight: 800;
-  line-height: 1.2;
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
   max-width: 700px;
   margin: 0 auto;
 }
 
 .hero h2 {
-  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  font-size: clamp(1.8rem, 4.5vw, 2.8rem);
   font-weight: 700;
   color: var(--accent-hover);
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .subtitle {
-  color: var(--text);
-  font-size: clamp(1.15rem, 2.5vw, 1.45rem);
-  margin-top: 20px;
-  line-height: 1.6;
+  color: var(--text-muted);
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  margin-top: 16px;
+  line-height: 1.5;
 }
 
 /* === Demo === */
@@ -128,7 +130,8 @@ nav a:hover {
   text-align: center;
 }
 
-.demo img {
+.demo img,
+.demo video {
   max-width: 100%;
   height: auto;
   border-radius: var(--radius);

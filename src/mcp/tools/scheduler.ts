@@ -215,7 +215,8 @@ export function registerSchedulerTools(server: McpServer): void {
           description: t.description,
           workerId: t.workerId,
           workerName: worker?.name ?? null,
-          sessionContinuity: t.sessionContinuity
+          sessionContinuity: t.sessionContinuity,
+          learnedContext: t.learnedContext ? t.learnedContext.slice(0, 200) + (t.learnedContext.length > 200 ? '...' : '') : null
         }
       })
 
@@ -444,7 +445,11 @@ export function registerSchedulerTools(server: McpServer): void {
         content: [
           {
             type: 'text' as const,
-            text: JSON.stringify({ task: task.name, runs: history }, null, 2)
+            text: JSON.stringify({
+              task: task.name,
+              learnedContext: task.learnedContext ?? null,
+              runs: history
+            }, null, 2)
           }
         ]
       }

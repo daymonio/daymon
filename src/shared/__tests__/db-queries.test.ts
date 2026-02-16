@@ -697,11 +697,17 @@ describe('schema migration', () => {
     expect(colNames).toContain('timeout_minutes')
   })
 
-  it('schema_version table has versions 1-10', () => {
+  it('V11 adds learned_context column to tasks', () => {
+    const columns = db.prepare('PRAGMA table_info(tasks)').all() as { name: string }[]
+    const colNames = columns.map((c) => c.name)
+    expect(colNames).toContain('learned_context')
+  })
+
+  it('schema_version table has versions 1-11', () => {
     const versions = db
       .prepare('SELECT version FROM schema_version ORDER BY version')
       .all() as { version: number }[]
-    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
   })
 })
 
@@ -1155,5 +1161,44 @@ describe('hybridSearch', () => {
     q.createEntity(db, 'Something')
     const results = q.hybridSearch(db, 'zzzznotfound', null)
     expect(results).toHaveLength(0)
+  })
+})
+
+// ─── Learned Context ──────────────────────────────────────────────
+
+describe('learnedContext', () => {
+  it('defaults to null on task creation', () => {
+    const task = q.createTask(db, { name: 'Test', prompt: 'Do something' })
+    expect(task.learnedContext).toBeNull()
+  })
+
+  it('can be set via updateTask', () => {
+    const task = q.createTask(db, { name: 'Test', prompt: 'Do something' })
+    q.updateTask(db, task.id, { learnedContext: 'Use CoinGecko API for BTC price' })
+    const updated = q.getTask(db, task.id)!
+    expect(updated.learnedContext).toBe('Use CoinGecko API for BTC price')
+  })
+
+  it('can be cleared by setting to null', () => {
+    const task = q.createTask(db, { name: 'Test', prompt: 'Do something' })
+    q.updateTask(db, task.id, { learnedContext: 'Some context' })
+    q.updateTask(db, task.id, { learnedContext: null })
+    const updated = q.getTask(db, task.id)!
+    expect(updated.learnedContext).toBeNull()
+  })
+
+  it('persists through getTask round-trip', () => {
+    const task = q.createTask(db, { name: 'Test', prompt: 'Do something' })
+    const longContext = '- Use WebSearch for latest data\n- Parse JSON from CoinGecko\n- Format as USD with 2 decimals'
+    q.updateTask(db, task.id, { learnedContext: longContext })
+    const fetched = q.getTask(db, task.id)!
+    expect(fetched.learnedContext).toBe(longContext)
+  })
+
+  it('appears in listTasks results', () => {
+    const task = q.createTask(db, { name: 'Test', prompt: 'Do something' })
+    q.updateTask(db, task.id, { learnedContext: 'Learned approach' })
+    const tasks = q.listTasks(db)
+    expect(tasks[0].learnedContext).toBe('Learned approach')
   })
 })

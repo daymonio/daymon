@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     max_turns INTEGER,
     allowed_tools TEXT,
     disallowed_tools TEXT,
+    learned_context TEXT,
     created_at DATETIME DEFAULT (datetime('now','localtime')),
     updated_at DATETIME DEFAULT (datetime('now','localtime'))
 );
@@ -179,6 +180,7 @@ INSERT OR IGNORE INTO schema_version (version) VALUES (7);
 INSERT OR IGNORE INTO schema_version (version) VALUES (8);
 INSERT OR IGNORE INTO schema_version (version) VALUES (9);
 INSERT OR IGNORE INTO schema_version (version) VALUES (10);
+INSERT OR IGNORE INTO schema_version (version) VALUES (11);
 `
 
 /**
@@ -292,5 +294,12 @@ INSERT OR IGNORE INTO schema_version (version) VALUES (9);`
 ALTER TABLE tasks ADD COLUMN allowed_tools TEXT;
 ALTER TABLE tasks ADD COLUMN disallowed_tools TEXT;
 INSERT OR IGNORE INTO schema_version (version) VALUES (10);`
+  },
+  {
+    version: 11,
+    label: 'task learned context',
+    sql: `
+ALTER TABLE tasks ADD COLUMN learned_context TEXT;
+INSERT OR IGNORE INTO schema_version (version) VALUES (11);`
   }
 ]

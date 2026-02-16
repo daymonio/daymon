@@ -80,6 +80,7 @@ export interface Task {
   maxTurns: number | null
   allowedTools: string | null
   disallowedTools: string | null
+  learnedContext: string | null
   createdAt: string
   updatedAt: string
 }

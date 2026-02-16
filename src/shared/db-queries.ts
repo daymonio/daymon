@@ -71,7 +71,7 @@ export function addObservation(db: Database.Database, entityId: number, content:
   const result = db
     .prepare('INSERT INTO observations (entity_id, content, source) VALUES (?, ?, ?)')
     .run(entityId, content, source)
-  db.prepare("UPDATE entities SET updated_at = datetime('now','localtime') WHERE id = ?").run(entityId)
+  db.prepare("UPDATE entities SET embedded_at = NULL, updated_at = datetime('now','localtime') WHERE id = ?").run(entityId)
   return getObservation(db, result.lastInsertRowid as number)!
 }
 
@@ -262,6 +262,7 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
   workerId: number | null; sessionContinuity: boolean; sessionId: string | null
   timeoutMinutes: number | null; maxTurns: number | null
   allowedTools: string | null; disallowedTools: string | null
+  learnedContext: string | null
 }>): void {
   const fieldMap: Record<string, string> = {
     name: 'name', description: 'description', prompt: 'prompt',
@@ -272,7 +273,8 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
     maxRuns: 'max_runs', runCount: 'run_count', memoryEntityId: 'memory_entity_id',
     workerId: 'worker_id', sessionContinuity: 'session_continuity', sessionId: 'session_id',
     timeoutMinutes: 'timeout_minutes', maxTurns: 'max_turns',
-    allowedTools: 'allowed_tools', disallowedTools: 'disallowed_tools'
+    allowedTools: 'allowed_tools', disallowedTools: 'disallowed_tools',
+    learnedContext: 'learned_context'
   }
 
   const fields: string[] = []
@@ -661,6 +663,7 @@ function mapTaskRow(row: Record<string, unknown>): Task {
     maxTurns: row.max_turns as number | null,
     allowedTools: row.allowed_tools as string | null,
     disallowedTools: row.disallowed_tools as string | null,
+    learnedContext: row.learned_context as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string
   }

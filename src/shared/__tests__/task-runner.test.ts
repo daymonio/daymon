@@ -6,15 +6,25 @@ import { join } from 'path'
 import { mkdtempSync, existsSync, readFileSync, rmSync } from 'fs'
 import { initTestDb } from './helpers/test-db'
 
-// Mock executeClaudeCode before importing task-runner
+// Mock executeClaudeCode and sleep before importing task-runner
 vi.mock('../claude-code', () => ({
   executeClaudeCode: vi.fn()
 }))
 
+vi.mock('../rate-limit', async () => {
+  const actual = await vi.importActual('../rate-limit') as Record<string, unknown>
+  return {
+    ...actual,
+    sleep: vi.fn().mockResolvedValue(undefined) // instant sleep in tests
+  }
+})
+
 import { executeTask, isTaskRunning } from '../task-runner'
 import { executeClaudeCode } from '../claude-code'
+import { sleep } from '../rate-limit'
 
 const mockExecute = vi.mocked(executeClaudeCode)
+const mockSleep = vi.mocked(sleep)
 
 let db: Database.Database
 let resultsDir: string
@@ -33,6 +43,7 @@ beforeEach(() => {
   db = initTestDb()
   resultsDir = mkdtempSync(join(tmpdir(), 'daymon-test-'))
   mockExecute.mockReset()
+  mockSleep.mockClear()
 })
 
 afterEach(() => {
@@ -770,5 +781,361 @@ describe('executeTask - session continuity', () => {
 
     const runs = queries.getTaskRuns(db, task.id, 1)
     expect(runs[0].sessionId).toBe('sess-run-123')
+  })
+})
+
+// ─── Learned Context Injection ─────────────────────────────────
+
+describe('executeTask - learned context', () => {
+  it('injects learned context into prompt', async () => {
+    const task = queries.createTask(db, {
+      name: 'BTC Price',
+      prompt: 'Get current Bitcoin price',
+      triggerType: 'manual'
+    })
+    queries.updateTask(db, task.id, { learnedContext: '- Use CoinGecko API\n- Endpoint: /simple/price' })
+
+    mockExecute.mockResolvedValue({
+      stdout: 'BTC is $50k', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    const calledPrompt = mockExecute.mock.calls[0][0]
+    expect(calledPrompt).toContain('Approach (learned from previous runs)')
+    expect(calledPrompt).toContain('Use CoinGecko API')
+    expect(calledPrompt).toContain('Get current Bitcoin price')
+  })
+
+  it('does not inject learned context when null', async () => {
+    const id = createActiveTask('No Context', 'Just do it')
+    mockExecute.mockResolvedValue({
+      stdout: 'done', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    await executeTask(id, { db, resultsDir })
+
+    const calledPrompt = mockExecute.mock.calls[0][0]
+    expect(calledPrompt).not.toContain('Approach (learned from previous runs)')
+    expect(calledPrompt).toBe('Just do it')
+  })
+
+  it('injects both learned context and memory context', async () => {
+    const task = queries.createTask(db, {
+      name: 'Dual Context',
+      prompt: 'Check things',
+      triggerType: 'manual'
+    })
+    // Set learned context
+    queries.updateTask(db, task.id, { learnedContext: '- Use API v2' })
+    // Set memory context
+    const entity = queries.createEntity(db, 'Task: Dual Context', 'task_result', 'task')
+    queries.updateTask(db, task.id, { memoryEntityId: entity.id })
+    queries.addObservation(db, entity.id, '[SUCCESS] Previous data', 'task_runner')
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    const calledPrompt = mockExecute.mock.calls[0][0]
+    // Both should be present
+    expect(calledPrompt).toContain('Approach (learned from previous runs)')
+    expect(calledPrompt).toContain('Use API v2')
+    expect(calledPrompt).toContain('Your previous results')
+    expect(calledPrompt).toContain('Previous data')
+    expect(calledPrompt).toContain('Check things')
+  })
+
+  it('triggers distillation after 3 successful runs of a recurring task', async () => {
+    const task = queries.createTask(db, {
+      name: 'Recurring',
+      prompt: 'Do recurring work',
+      triggerType: 'cron',
+      cronExpression: '0 9 * * *'
+    })
+
+    // Run 3 times successfully
+    for (let i = 0; i < 3; i++) {
+      mockExecute.mockResolvedValue({
+        stdout: `Run ${i + 1} result`, stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+      })
+      await executeTask(task.id, { db, resultsDir })
+    }
+
+    // The 3rd run should have triggered a distillation call (4th call to mockExecute)
+    // Calls: run1, run2, run3, distillation
+    expect(mockExecute.mock.calls.length).toBe(4)
+    const distillPrompt = mockExecute.mock.calls[3][0]
+    expect(distillPrompt).toContain('methodology memo')
+    expect(distillPrompt).toContain('Recurring')
+  })
+
+  it('does not trigger distillation for one-shot tasks', async () => {
+    const task = queries.createTask(db, {
+      name: 'One Shot',
+      prompt: 'Do once',
+      triggerType: 'once',
+      scheduledAt: new Date(Date.now() + 3600000).toISOString()
+    })
+
+    // Run 3 times (simulating manual re-runs)
+    for (let i = 0; i < 3; i++) {
+      // Re-activate since 'once' tasks auto-complete
+      queries.updateTask(db, task.id, { status: 'active' })
+      mockExecute.mockResolvedValue({
+        stdout: `Run ${i + 1}`, stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+      })
+      await executeTask(task.id, { db, resultsDir })
+    }
+
+    // Should only have 3 calls (no distillation)
+    expect(mockExecute.mock.calls.length).toBe(3)
+  })
+
+  it('does not trigger distillation before runCount reaches 3', async () => {
+    const task = queries.createTask(db, {
+      name: 'Early',
+      prompt: 'Too early',
+      triggerType: 'manual'
+    })
+
+    // Run only twice
+    for (let i = 0; i < 2; i++) {
+      mockExecute.mockResolvedValue({
+        stdout: `Run ${i + 1}`, stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+      })
+      await executeTask(task.id, { db, resultsDir })
+    }
+
+    // Should only have 2 calls (no distillation)
+    expect(mockExecute.mock.calls.length).toBe(2)
+  })
+
+  it('stores distilled context when distillation succeeds', async () => {
+    const task = queries.createTask(db, {
+      name: 'Distill Me',
+      prompt: 'Work',
+      triggerType: 'manual'
+    })
+
+    // First 2 runs
+    for (let i = 0; i < 2; i++) {
+      mockExecute.mockResolvedValueOnce({
+        stdout: `Run ${i + 1} result`, stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+      })
+      await executeTask(task.id, { db, resultsDir })
+    }
+
+    // 3rd run triggers distillation — mock both the run and distillation
+    mockExecute.mockResolvedValueOnce({
+      stdout: 'Run 3 result', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+    mockExecute.mockResolvedValueOnce({
+      stdout: '- Use WebSearch for data\n- Parse JSON response', stderr: '', exitCode: 0, durationMs: 50, timedOut: false, sessionId: null
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    // Wait for async distillation to complete
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    const updated = queries.getTask(db, task.id)!
+    expect(updated.learnedContext).toBe('- Use WebSearch for data\n- Parse JSON response')
+  })
+})
+
+// ─── Rate Limit Retry ──────────────────────────────────────────
+
+describe('executeTask - rate limit retry', () => {
+  it('retries after rate limit error and succeeds', async () => {
+    const id = createActiveTask('Rate Limited Task', 'Do work')
+
+    // First call: rate limited, second call: success
+    mockExecute
+      .mockResolvedValueOnce({
+        stdout: '', stderr: 'Error: 429 rate_limit_error', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+      })
+      .mockResolvedValueOnce({
+        stdout: 'Success after retry', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+      })
+
+    const result = await executeTask(id, { db, resultsDir })
+
+    expect(result.success).toBe(true)
+    expect(result.output).toBe('Success after retry')
+    expect(mockExecute).toHaveBeenCalledTimes(2)
+    expect(mockSleep).toHaveBeenCalledTimes(1)
+  })
+
+  it('updates progress message during rate limit wait', async () => {
+    const id = createActiveTask('Progress Task', 'Do work')
+
+    mockExecute
+      .mockResolvedValueOnce({
+        stdout: '', stderr: 'rate limit exceeded', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+      })
+      .mockResolvedValueOnce({
+        stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+      })
+
+    await executeTask(id, { db, resultsDir })
+
+    // Check that progress was updated with rate limit message
+    const runs = queries.getTaskRuns(db, id, 1)
+    // The progress message may have been overwritten by completion, but console logs should have the entry
+    const consoleLogs = queries.getConsoleLogs(db, runs[0].id, 0, 50)
+    const rateLimitLog = consoleLogs.find(l => l.content.includes('Rate limit reached'))
+    expect(rateLimitLog).toBeDefined()
+    expect(rateLimitLog!.entryType).toBe('error')
+  })
+
+  it('stops retrying after max retries and fails', async () => {
+    const id = createActiveTask('Max Retry Task', 'Do work')
+
+    // All calls return rate limit error
+    mockExecute.mockResolvedValue({
+      stdout: '', stderr: 'usage limit reached', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+    })
+
+    const result = await executeTask(id, { db, resultsDir })
+
+    expect(result.success).toBe(false)
+    expect(result.errorMessage).toContain('Exit code 1')
+    // 1 initial + 3 retries = 4 calls
+    expect(mockExecute).toHaveBeenCalledTimes(4)
+    expect(mockSleep).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not retry for non-rate-limit errors', async () => {
+    const id = createActiveTask('Normal Error', 'Do work')
+
+    mockExecute.mockResolvedValue({
+      stdout: '', stderr: 'Something broke', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+    })
+
+    const result = await executeTask(id, { db, resultsDir })
+
+    expect(result.success).toBe(false)
+    expect(mockExecute).toHaveBeenCalledTimes(1)
+    expect(mockSleep).not.toHaveBeenCalled()
+  })
+
+  it('does not retry when exitCode is 0', async () => {
+    const id = createActiveTask('Success Task', 'Do work')
+
+    mockExecute.mockResolvedValue({
+      stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+    })
+
+    const result = await executeTask(id, { db, resultsDir })
+
+    expect(result.success).toBe(true)
+    expect(mockExecute).toHaveBeenCalledTimes(1)
+    expect(mockSleep).not.toHaveBeenCalled()
+  })
+
+  it('calls onFailed only after final retry attempt', async () => {
+    const id = createActiveTask('Callback Task', 'Do work')
+
+    mockExecute.mockResolvedValue({
+      stdout: '', stderr: 'rate limit exceeded', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+    })
+
+    const onFailed = vi.fn()
+    const onComplete = vi.fn()
+    await executeTask(id, { db, resultsDir, onComplete, onFailed })
+
+    expect(onFailed).toHaveBeenCalledOnce()
+    expect(onComplete).not.toHaveBeenCalled()
+  })
+
+  it('calls onComplete if a retry succeeds', async () => {
+    const id = createActiveTask('Success Callback', 'Do work')
+
+    mockExecute
+      .mockResolvedValueOnce({
+        stdout: '', stderr: 'too many requests', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+      })
+      .mockResolvedValueOnce({
+        stdout: 'Success!', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+      })
+
+    const onComplete = vi.fn()
+    const onFailed = vi.fn()
+    await executeTask(id, { db, resultsDir, onComplete, onFailed })
+
+    expect(onComplete).toHaveBeenCalledOnce()
+    expect(onFailed).not.toHaveBeenCalled()
+  })
+
+  it('retries rate limit on session-resume retry path', async () => {
+    const task = queries.createTask(db, {
+      name: 'Session Rate Limit',
+      prompt: 'Continue work',
+      triggerType: 'manual',
+      sessionContinuity: true
+    })
+    queries.updateTask(db, task.id, { sessionId: 'sess-broken' })
+
+    // First call: session resume fails (non-rate-limit)
+    // Second call (session retry): rate limited
+    // Third call (rate limit retry): success
+    mockExecute
+      .mockResolvedValueOnce({
+        stdout: '', stderr: 'session error', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+      })
+      .mockResolvedValueOnce({
+        stdout: '', stderr: 'rate limit exceeded', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+      })
+      .mockResolvedValueOnce({
+        stdout: 'Finally worked', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: 'sess-new'
+      })
+
+    const result = await executeTask(task.id, { db, resultsDir })
+
+    expect(result.success).toBe(true)
+    expect(result.output).toBe('Finally worked')
+    expect(mockExecute).toHaveBeenCalledTimes(3)
+    expect(mockSleep).toHaveBeenCalledTimes(1)
+  })
+
+  it('increments runCount when retry succeeds', async () => {
+    const task = queries.createTask(db, {
+      name: 'Count After Retry',
+      prompt: 'Count me',
+      triggerType: 'manual',
+      maxRuns: 5
+    })
+
+    mockExecute
+      .mockResolvedValueOnce({
+        stdout: '', stderr: '429 rate_limit_error', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+      })
+      .mockResolvedValueOnce({
+        stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+      })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    expect(queries.getTask(db, task.id)!.runCount).toBe(1)
+  })
+
+  it('does not increment runCount when all retries fail', async () => {
+    const task = queries.createTask(db, {
+      name: 'No Count',
+      prompt: 'Fail me',
+      triggerType: 'manual',
+      maxRuns: 5
+    })
+
+    mockExecute.mockResolvedValue({
+      stdout: '', stderr: 'rate limit exceeded', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+    })
+
+    await executeTask(task.id, { db, resultsDir })
+
+    expect(queries.getTask(db, task.id)!.runCount).toBe(0)
   })
 })

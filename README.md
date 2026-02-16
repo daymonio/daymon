@@ -17,6 +17,10 @@ Scheduled tasks, persistent memory, background automation. No API keys. No cloud
 
 [daymon.io](https://daymon.io)
 
+<p align="center">
+  <img src="docs/demo.gif" alt="Daymon demo — scheduling tasks from Claude" width="800">
+</p>
+
 ---
 
 ## Why Daymon?
@@ -94,6 +98,8 @@ Your Claude subscription only works when you do. Daymon puts it to work 24/7.
 **Persistent Memory** — "Remember I'm fundraising Series A." Say it once, it sticks forever. Knowledge graph with semantic search, no API keys.
 
 **Workers** — Named agent personalities with system prompts. Assign a Researcher, Chief of Staff, or Code Reviewer to any task. 9 templates included.
+
+**Self-Improving Tasks** — Tasks get smarter every time they run. Daymon learns what works and skips the guesswork on future runs — faster results, no configuration needed.
 
 **Session Continuity** — Tasks resume where they left off. "Compare today's results to yesterday's" just works.
 
