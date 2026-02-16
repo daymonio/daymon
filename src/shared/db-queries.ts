@@ -495,31 +495,38 @@ let lastPruneTime = 0
 /**
  * Delete old task runs (keeping last N per task) and their console logs.
  * Runs at most once per hour to avoid overhead.
+ * Uses ROW_NUMBER() window function for O(n) instead of O(n²) correlated subquery.
  */
 export function pruneOldRuns(db: Database.Database): number {
   const now = Date.now()
   if (now - lastPruneTime < PRUNE_INTERVAL_MS) return 0
   lastPruneTime = now
 
-  // Delete console logs for runs that will be pruned
-  const result = db.prepare(`
-    DELETE FROM console_logs WHERE run_id IN (
-      SELECT tr.id FROM task_runs tr
-      WHERE (SELECT COUNT(*) FROM task_runs tr2
-             WHERE tr2.task_id = tr.task_id AND tr2.id >= tr.id) > ?
-    )
-  `).run(MAX_RUNS_PER_TASK)
+  // Find run IDs to prune using window function (O(n) scan)
+  const staleIds = db.prepare(`
+    SELECT id FROM (
+      SELECT id, ROW_NUMBER() OVER (PARTITION BY task_id ORDER BY id DESC) AS rn
+      FROM task_runs
+    ) WHERE rn > ?
+  `).all(MAX_RUNS_PER_TASK) as Array<{ id: number }>
 
-  // Delete old runs beyond the limit per task
-  const runResult = db.prepare(`
-    DELETE FROM task_runs WHERE id IN (
-      SELECT tr.id FROM task_runs tr
-      WHERE (SELECT COUNT(*) FROM task_runs tr2
-             WHERE tr2.task_id = tr.task_id AND tr2.id >= tr.id) > ?
-    )
-  `).run(MAX_RUNS_PER_TASK)
+  if (staleIds.length === 0) return 0
 
-  return result.changes + runResult.changes
+  const ids = staleIds.map(r => r.id)
+  const placeholders = ids.map(() => '?').join(',')
+
+  // Delete console logs then runs in a single transaction
+  const deleteAll = db.transaction(() => {
+    const logResult = db.prepare(
+      `DELETE FROM console_logs WHERE run_id IN (${placeholders})`
+    ).run(...ids)
+    const runResult = db.prepare(
+      `DELETE FROM task_runs WHERE id IN (${placeholders})`
+    ).run(...ids)
+    return logResult.changes + runResult.changes
+  })
+
+  return deleteAll()
 }
 
 // ─── Console Logs ──────────────────────────────────────────

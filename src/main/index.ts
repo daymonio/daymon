@@ -99,10 +99,16 @@ function bootstrap(): void {
 
     registerIpcHandlers()
     createTray(largeWindow)
-    ensureClaudeConfig()
-    startScheduler()
-    startAllWatches()
-    initUpdater()
+
+    // Defer heavy I/O + DB work so the tray icon becomes responsive immediately.
+    // Without this, synchronous DB queries (cleanup, pruning, listTasks) block
+    // the main thread and the tray icon never responds to clicks.
+    setImmediate(() => {
+      ensureClaudeConfig()
+      startScheduler()
+      startAllWatches()
+      initUpdater()
+    })
   }).catch((err) => {
     fatalMainError('Failed during app startup', err)
   })
