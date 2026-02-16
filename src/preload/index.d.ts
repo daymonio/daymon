@@ -64,6 +64,7 @@ interface AppAPI {
   checkForUpdates: () => Promise<void>
   downloadUpdate: () => Promise<void>
   installUpdate: () => Promise<void>
+  setWindowSize: (large: boolean) => Promise<void>
 }
 
 interface WorkersAPI {

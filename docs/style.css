@@ -115,6 +115,20 @@ nav a:hover {
   line-height: 1.8;
 }
 
+/* === Demo === */
+.demo {
+  margin-top: 36px;
+  text-align: center;
+}
+
+.demo img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  border: 1px solid rgba(232, 106, 26, 0.15);
+  box-shadow: 0 4px 40px rgba(0, 0, 0, 0.4);
+}
+
 /* === CTA Buttons === */
 .cta {
   display: flex;
@@ -339,6 +353,47 @@ nav a:hover {
 .steps p {
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+/* === Limit Callout === */
+.limit-callout {
+  padding: 60px 0;
+}
+
+.limit-card {
+  max-width: 680px;
+  margin: 0 auto;
+  background: var(--bg-surface);
+  border: 1px solid rgba(232, 106, 26, 0.15);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 36px 40px;
+  text-align: left;
+}
+
+.limit-card h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--text);
+}
+
+.limit-card p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.limit-kicker {
+  margin-top: 14px;
+  color: var(--accent-hover) !important;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .limit-card {
+    padding: 28px 24px;
+  }
 }
 
 /* === Features === */

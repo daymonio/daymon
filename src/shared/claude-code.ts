@@ -12,6 +12,9 @@ export type ConsoleLogCallback = (entry: ConsoleLogEvent) => void
 
 export interface ExecutionOptions {
   timeoutMs?: number
+  maxTurns?: number
+  allowedTools?: string
+  disallowedTools?: string
   onProgress?: ProgressCallback
   onConsoleLog?: ConsoleLogCallback
   resumeSessionId?: string
@@ -135,6 +138,15 @@ export function executeClaudeCode(
     if (options?.model) {
       args.push('--model', options.model)
     }
+    if (options?.maxTurns) {
+      args.push('--max-turns', String(options.maxTurns))
+    }
+    if (options?.allowedTools) {
+      args.push('--allowedTools', options.allowedTools)
+    }
+    if (options?.disallowedTools) {
+      args.push('--disallowedTools', options.disallowedTools)
+    }
 
     const claudePath = resolveClaudePath()
     if (!claudePath) {
@@ -150,6 +162,7 @@ export function executeClaudeCode(
     }
 
     const proc = spawn(claudePath, args, {
+      cwd: homedir(),
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: timeoutMs
@@ -159,26 +172,8 @@ export function executeClaudeCode(
     let toolCallCount = 0
     const onConsoleLog = options?.onConsoleLog
 
-    // Block accumulation state for console logging
-    let currentBlockType: 'text' | 'tool_result' | null = null
-    let blockAccumulator = ''
-
-    function flushBlock(): void {
-      if (!onConsoleLog || !currentBlockType || !blockAccumulator) {
-        currentBlockType = null
-        blockAccumulator = ''
-        return
-      }
-      const maxLen = currentBlockType === 'text' ? 2000 : 500
-      const content = blockAccumulator.length > maxLen
-        ? blockAccumulator.slice(0, maxLen) + '...'
-        : blockAccumulator
-      onConsoleLog({
-        entryType: currentBlockType === 'text' ? 'assistant_text' : 'tool_result',
-        content
-      })
-      currentBlockType = null
-      blockAccumulator = ''
+    function truncate(text: string, maxLen: number): string {
+      return text.length > maxLen ? text.slice(0, maxLen) + '...' : text
     }
 
     proc.stdout!.on('data', (data: Buffer) => {
@@ -194,58 +189,33 @@ export function executeClaudeCode(
           const event = JSON.parse(line)
           const type = event.type as string | undefined
 
-          // Capture session_id from result event
-          if (type === 'result') {
-            flushBlock()
-            if (event.result) lastResultText = event.result
-            if (event.session_id) capturedSessionId = event.session_id as string
-            if (onConsoleLog && event.result) {
-              const text = String(event.result)
-              onConsoleLog({
-                entryType: 'result',
-                content: text.length > 2000 ? text.slice(0, 2000) + '...' : text
-              })
-            }
-          }
-
-          // Console log: track block starts
-          if (type === 'content_block_start') {
-            flushBlock()
-            const block = event.content_block as Record<string, unknown> | undefined
-            if (block?.type === 'text') {
-              currentBlockType = 'text'
-              blockAccumulator = ''
-            } else if (block?.type === 'tool_result') {
-              currentBlockType = 'tool_result'
-              blockAccumulator = typeof block.content === 'string' ? block.content : ''
-            }
-          }
-
-          // Console log: accumulate deltas
-          if (type === 'content_block_delta') {
-            const delta = event.delta as Record<string, unknown> | undefined
-            if (delta?.type === 'text_delta' && typeof delta.text === 'string') {
-              blockAccumulator += delta.text
-            }
-          }
-
-          // Console log: flush on block stop
-          if (type === 'content_block_stop') {
-            flushBlock()
-          }
-
-          if (onProgress) {
-            const progress = parseStreamEvent(event, toolCallCount)
-            if (progress) {
-              if (progress.isToolUse) {
-                toolCallCount++
-                // Also emit console log for tool calls
-                if (onConsoleLog) {
-                  onConsoleLog({ entryType: 'tool_call', content: progress.message })
+          // CLI format: {"type":"assistant","message":{"content":[...]}}
+          if (type === 'assistant') {
+            const message = event.message as Record<string, unknown> | undefined
+            const content = message?.content as Array<Record<string, unknown>> | undefined
+            if (Array.isArray(content)) {
+              for (const block of content) {
+                if (block.type === 'text' && typeof block.text === 'string') {
+                  onConsoleLog?.({ entryType: 'assistant_text', content: truncate(block.text, 2000) })
+                } else if (block.type === 'tool_use') {
+                  toolCallCount++
+                  const toolName = (block.name as string) ?? 'tool'
+                  onConsoleLog?.({ entryType: 'tool_call', content: `Step ${toolCallCount}: Using ${toolName}` })
+                  onProgress?.({ fraction: null, message: `Step ${toolCallCount}: Using ${toolName}...` })
+                } else if (block.type === 'tool_result') {
+                  const resultContent = typeof block.content === 'string' ? block.content : JSON.stringify(block.content ?? '')
+                  onConsoleLog?.({ entryType: 'tool_result', content: truncate(resultContent, 500) })
                 }
               }
-              onProgress({ fraction: progress.fraction, message: progress.message })
             }
+          }
+
+          // Capture session_id and result from result event
+          if (type === 'result') {
+            if (event.result) lastResultText = event.result
+            if (event.session_id) capturedSessionId = event.session_id as string
+            onConsoleLog?.({ entryType: 'result', content: truncate(String(event.result ?? ''), 2000) })
+            onProgress?.({ fraction: 1.0, message: 'Completed' })
           }
         } catch {
           // Not valid JSON line, skip
@@ -307,14 +277,20 @@ export interface ParsedProgress {
 export function parseStreamEvent(event: Record<string, unknown>, toolCallCount: number): ParsedProgress | null {
   const type = event.type as string | undefined
 
-  if (type === 'content_block_start') {
-    const block = event.content_block as Record<string, unknown> | undefined
-    if (block?.type === 'tool_use') {
-      const toolName = (block.name as string) ?? 'tool'
-      return {
-        fraction: null,
-        message: `Step ${toolCallCount + 1}: Using ${toolName}...`,
-        isToolUse: true
+  // CLI format: {"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash",...}]}}
+  if (type === 'assistant') {
+    const message = event.message as Record<string, unknown> | undefined
+    const content = message?.content as Array<Record<string, unknown>> | undefined
+    if (Array.isArray(content)) {
+      for (const block of content) {
+        if (block.type === 'tool_use') {
+          const toolName = (block.name as string) ?? 'tool'
+          return {
+            fraction: null,
+            message: `Step ${toolCallCount + 1}: Using ${toolName}...`,
+            isToolUse: true
+          }
+        }
       }
     }
   }

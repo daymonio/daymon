@@ -37,6 +37,8 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
   const [integrationStatus, setIntegrationStatus] = useState<ClaudeIntegrationStatus | null>(null)
   const [autoLaunch, setAutoLaunch] = useState<boolean | null>(null)
   const [notifications, setNotifications] = useState<boolean>(true)
+  const [autoNudge, setAutoNudge] = useState<boolean>(false)
+  const [largeWindow, setLargeWindow] = useState<boolean>(false)
   const [confirmUninstall, setConfirmUninstall] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
 
@@ -49,6 +51,12 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     window.api.app.getAutoLaunch().then(setAutoLaunch)
     window.api.settings.get('notifications_enabled').then((v) => {
       setNotifications(v !== 'false')
+    })
+    window.api.settings.get('auto_nudge_enabled').then((v) => {
+      setAutoNudge(v === 'true')
+    })
+    window.api.settings.get('large_window_enabled').then((v) => {
+      setLargeWindow(v === 'true')
     })
     window.api.app.getUpdateStatus().then(setUpdateStatus)
   }, [])
@@ -63,6 +71,19 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     const next = !notifications
     await window.api.settings.set('notifications_enabled', String(next))
     setNotifications(next)
+  }
+
+  async function toggleAutoNudge(): Promise<void> {
+    const next = !autoNudge
+    await window.api.settings.set('auto_nudge_enabled', String(next))
+    setAutoNudge(next)
+  }
+
+  async function toggleLargeWindow(): Promise<void> {
+    const next = !largeWindow
+    await window.api.settings.set('large_window_enabled', String(next))
+    await window.api.app.setWindowSize(next)
+    setLargeWindow(next)
   }
 
   async function toggleAdvancedMode(): Promise<void> {
@@ -119,6 +140,8 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
         <div className="bg-gray-50 rounded-lg p-2 space-y-1">
           {toggle('Launch at login', autoLaunch, toggleAutoLaunch)}
           {toggle('Notifications', notifications, toggleNotifications)}
+          {toggle('Auto-show results in Claude Code', autoNudge, toggleAutoNudge)}
+          {toggle('Large window', largeWindow, toggleLargeWindow)}
           {toggle('Advanced mode', advancedMode, toggleAdvancedMode)}
         </div>
       </div>

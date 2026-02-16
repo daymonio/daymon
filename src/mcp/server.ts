@@ -4,6 +4,7 @@ import { registerMemoryTools } from './tools/memory'
 import { registerSchedulerTools } from './tools/scheduler'
 import { registerWatcherTools } from './tools/watcher'
 import { registerWorkerTools } from './tools/workers'
+import { registerSettingsTools } from './tools/settings'
 import { closeMcpDatabase } from './db'
 
 declare const __APP_VERSION__: string
@@ -18,6 +19,7 @@ async function main(): Promise<void> {
   registerSchedulerTools(server)
   registerWatcherTools(server)
   registerWorkerTools(server)
+  registerSettingsTools(server)
 
   // Clean up database on process exit
   const cleanup = (): void => {

@@ -1,4 +1,5 @@
 import { ipcMain, app, BrowserWindow } from 'electron'
+import { resizePopoverWindow } from './tray'
 import * as memory from './db/memory'
 import * as tasks from './db/tasks'
 import { executeTask } from './scheduler/runner'
@@ -174,6 +175,9 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:checkForUpdates', () => checkForUpdates())
   ipcMain.handle('app:downloadUpdate', () => downloadUpdate())
   ipcMain.handle('app:installUpdate', () => installUpdate())
+  ipcMain.handle('app:setWindowSize', (_e, large: boolean) => {
+    resizePopoverWindow(large)
+  })
   ipcMain.handle('app:hideWindow', (e) => {
     BrowserWindow.fromWebContents(e.sender)?.hide()
   })

@@ -30,7 +30,7 @@ export function registerWatcherTools(server: McpServer): void {
       }
 
       const db = getMcpDatabase()
-      const watch = queries.createWatch(db, path, description, actionPrompt)
+      queries.createWatch(db, path, description, actionPrompt)
       return {
         content: [
           {

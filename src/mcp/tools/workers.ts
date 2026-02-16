@@ -26,7 +26,7 @@ export function registerWorkerTools(server: McpServer): void {
     },
     async ({ name, systemPrompt, description, isDefault }) => {
       const db = getMcpDatabase()
-      const worker = queries.createWorker(db, { name, systemPrompt, description, isDefault })
+      queries.createWorker(db, { name, systemPrompt, description, isDefault })
       return {
         content: [{
           type: 'text' as const,

@@ -95,8 +95,10 @@ function bootstrap(): void {
       setSetting('setup_complete', 'true')
     }
 
+    const largeWindow = getSetting('large_window_enabled') === 'true'
+
     registerIpcHandlers()
-    createTray()
+    createTray(largeWindow)
     ensureClaudeConfig()
     startScheduler()
     startAllWatches()

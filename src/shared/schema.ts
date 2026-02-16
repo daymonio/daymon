@@ -1,12 +1,19 @@
-export const SCHEMA_V1 = `
+/**
+ * Combined schema — final state of all tables.
+ * New installs create everything in one shot.
+ * Existing databases (user_version >= 1) skip this and use incremental migrations below.
+ */
+export const SCHEMA = `
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
+-- Memory: entities, observations, relations
 CREATE TABLE IF NOT EXISTS entities (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     type TEXT NOT NULL DEFAULT 'fact',
     category TEXT,
+    embedded_at DATETIME,
     created_at DATETIME DEFAULT (datetime('now','localtime')),
     updated_at DATETIME DEFAULT (datetime('now','localtime'))
 );
@@ -47,83 +54,22 @@ CREATE TRIGGER IF NOT EXISTS entities_au AFTER UPDATE ON entities BEGIN
     INSERT INTO memory_fts(rowid, name, content, category) VALUES (new.id, new.name, '', new.category);
 END;
 
-CREATE TABLE IF NOT EXISTS tasks (
+-- Embeddings (semantic search)
+CREATE TABLE IF NOT EXISTS embeddings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    description TEXT,
-    prompt TEXT NOT NULL,
-    cron_expression TEXT,
-    trigger_type TEXT NOT NULL DEFAULT 'cron',
-    trigger_config TEXT,
-    executor TEXT NOT NULL DEFAULT 'claude_code',
-    status TEXT NOT NULL DEFAULT 'active',
-    last_run DATETIME,
-    last_result TEXT,
-    error_count INTEGER NOT NULL DEFAULT 0,
-    created_at DATETIME DEFAULT (datetime('now','localtime')),
-    updated_at DATETIME DEFAULT (datetime('now','localtime'))
-);
-CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
-
-CREATE TABLE IF NOT EXISTS task_runs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-    started_at DATETIME DEFAULT (datetime('now','localtime')),
-    finished_at DATETIME,
-    status TEXT NOT NULL DEFAULT 'running',
-    result TEXT,
-    result_file TEXT,
-    error_message TEXT,
-    duration_ms INTEGER
-);
-CREATE INDEX IF NOT EXISTS idx_task_runs_task_id ON task_runs(task_id);
-CREATE INDEX IF NOT EXISTS idx_task_runs_started_at ON task_runs(started_at);
-
-CREATE TABLE IF NOT EXISTS watches (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    path TEXT NOT NULL,
-    description TEXT,
-    action_prompt TEXT,
-    status TEXT NOT NULL DEFAULT 'active',
-    last_triggered DATETIME,
-    trigger_count INTEGER NOT NULL DEFAULT 0,
+    entity_id INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+    source_type TEXT NOT NULL DEFAULT 'entity',
+    source_id INTEGER NOT NULL,
+    text_hash TEXT NOT NULL,
+    vector BLOB NOT NULL,
+    model TEXT NOT NULL DEFAULT 'all-MiniLM-L6-v2',
+    dimensions INTEGER NOT NULL DEFAULT 384,
     created_at DATETIME DEFAULT (datetime('now','localtime'))
 );
+CREATE INDEX IF NOT EXISTS idx_embeddings_entity_id ON embeddings(entity_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_embeddings_source ON embeddings(source_type, source_id, model);
 
-CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT,
-    updated_at DATETIME DEFAULT (datetime('now','localtime'))
-);
-
-CREATE TABLE IF NOT EXISTS schema_version (
-    version INTEGER PRIMARY KEY,
-    applied_at DATETIME DEFAULT (datetime('now','localtime'))
-);
-INSERT OR IGNORE INTO schema_version (version) VALUES (1);
-`
-
-export const SCHEMA_V2 = `
-ALTER TABLE tasks ADD COLUMN scheduled_at DATETIME;
-ALTER TABLE task_runs ADD COLUMN progress REAL;
-ALTER TABLE task_runs ADD COLUMN progress_message TEXT;
-CREATE INDEX IF NOT EXISTS idx_tasks_scheduled_at ON tasks(scheduled_at);
-CREATE INDEX IF NOT EXISTS idx_tasks_trigger_type ON tasks(trigger_type);
-INSERT OR IGNORE INTO schema_version (version) VALUES (2);
-`
-
-export const SCHEMA_V3 = `
-ALTER TABLE tasks ADD COLUMN max_runs INTEGER;
-ALTER TABLE tasks ADD COLUMN run_count INTEGER NOT NULL DEFAULT 0;
-INSERT OR IGNORE INTO schema_version (version) VALUES (3);
-`
-
-export const SCHEMA_V4 = `
-ALTER TABLE tasks ADD COLUMN memory_entity_id INTEGER REFERENCES entities(id) ON DELETE SET NULL;
-INSERT OR IGNORE INTO schema_version (version) VALUES (4);
-`
-
-export const SCHEMA_V5 = `
+-- Workers
 CREATE TABLE IF NOT EXISTS workers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -137,11 +83,156 @@ CREATE TABLE IF NOT EXISTS workers (
 );
 CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(name);
 
+-- Tasks
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    prompt TEXT NOT NULL,
+    cron_expression TEXT,
+    trigger_type TEXT NOT NULL DEFAULT 'cron',
+    trigger_config TEXT,
+    executor TEXT NOT NULL DEFAULT 'claude_code',
+    status TEXT NOT NULL DEFAULT 'active',
+    last_run DATETIME,
+    last_result TEXT,
+    error_count INTEGER NOT NULL DEFAULT 0,
+    scheduled_at DATETIME,
+    max_runs INTEGER,
+    run_count INTEGER NOT NULL DEFAULT 0,
+    memory_entity_id INTEGER REFERENCES entities(id) ON DELETE SET NULL,
+    worker_id INTEGER REFERENCES workers(id) ON DELETE SET NULL,
+    session_continuity INTEGER NOT NULL DEFAULT 0,
+    session_id TEXT,
+    timeout_minutes INTEGER,
+    max_turns INTEGER,
+    allowed_tools TEXT,
+    disallowed_tools TEXT,
+    created_at DATETIME DEFAULT (datetime('now','localtime')),
+    updated_at DATETIME DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_scheduled_at ON tasks(scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_trigger_type ON tasks(trigger_type);
+
+-- Task runs
+CREATE TABLE IF NOT EXISTS task_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    started_at DATETIME DEFAULT (datetime('now','localtime')),
+    finished_at DATETIME,
+    status TEXT NOT NULL DEFAULT 'running',
+    result TEXT,
+    result_file TEXT,
+    error_message TEXT,
+    duration_ms INTEGER,
+    progress REAL,
+    progress_message TEXT,
+    session_id TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_task_runs_task_id ON task_runs(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_runs_started_at ON task_runs(started_at);
+CREATE INDEX IF NOT EXISTS idx_task_runs_status ON task_runs(status);
+
+-- Console logs
+CREATE TABLE IF NOT EXISTS console_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL REFERENCES task_runs(id) ON DELETE CASCADE,
+    seq INTEGER NOT NULL,
+    entry_type TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_console_logs_run_seq ON console_logs(run_id, seq);
+
+-- File watchers
+CREATE TABLE IF NOT EXISTS watches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    path TEXT NOT NULL,
+    description TEXT,
+    action_prompt TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    last_triggered DATETIME,
+    trigger_count INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT (datetime('now','localtime'))
+);
+
+-- Settings
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at DATETIME DEFAULT (datetime('now','localtime'))
+);
+
+-- Schema version tracking
+CREATE TABLE IF NOT EXISTS schema_version (
+    version INTEGER PRIMARY KEY,
+    applied_at DATETIME DEFAULT (datetime('now','localtime'))
+);
+INSERT OR IGNORE INTO schema_version (version) VALUES (1);
+INSERT OR IGNORE INTO schema_version (version) VALUES (2);
+INSERT OR IGNORE INTO schema_version (version) VALUES (3);
+INSERT OR IGNORE INTO schema_version (version) VALUES (4);
+INSERT OR IGNORE INTO schema_version (version) VALUES (5);
+INSERT OR IGNORE INTO schema_version (version) VALUES (6);
+INSERT OR IGNORE INTO schema_version (version) VALUES (7);
+INSERT OR IGNORE INTO schema_version (version) VALUES (8);
+INSERT OR IGNORE INTO schema_version (version) VALUES (9);
+INSERT OR IGNORE INTO schema_version (version) VALUES (10);
+`
+
+/**
+ * Incremental migrations for existing databases.
+ * Only applied when schema_version is behind.
+ * New installs (no schema_version table) get the combined SCHEMA above.
+ */
+export const MIGRATIONS: Array<{ version: number; sql: string; label: string }> = [
+  {
+    version: 2,
+    label: 'one-time tasks + progress tracking',
+    sql: `
+ALTER TABLE tasks ADD COLUMN scheduled_at DATETIME;
+ALTER TABLE task_runs ADD COLUMN progress REAL;
+ALTER TABLE task_runs ADD COLUMN progress_message TEXT;
+CREATE INDEX IF NOT EXISTS idx_tasks_scheduled_at ON tasks(scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_trigger_type ON tasks(trigger_type);
+INSERT OR IGNORE INTO schema_version (version) VALUES (2);`
+  },
+  {
+    version: 3,
+    label: 'max runs',
+    sql: `
+ALTER TABLE tasks ADD COLUMN max_runs INTEGER;
+ALTER TABLE tasks ADD COLUMN run_count INTEGER NOT NULL DEFAULT 0;
+INSERT OR IGNORE INTO schema_version (version) VALUES (3);`
+  },
+  {
+    version: 4,
+    label: 'memory-task integration',
+    sql: `
+ALTER TABLE tasks ADD COLUMN memory_entity_id INTEGER REFERENCES entities(id) ON DELETE SET NULL;
+INSERT OR IGNORE INTO schema_version (version) VALUES (4);`
+  },
+  {
+    version: 5,
+    label: 'workers, sessions, embeddings',
+    sql: `
+CREATE TABLE IF NOT EXISTS workers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    system_prompt TEXT NOT NULL,
+    description TEXT,
+    model TEXT,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    task_count INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT (datetime('now','localtime')),
+    updated_at DATETIME DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_workers_name ON workers(name);
 ALTER TABLE tasks ADD COLUMN worker_id INTEGER REFERENCES workers(id) ON DELETE SET NULL;
 ALTER TABLE tasks ADD COLUMN session_continuity INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE tasks ADD COLUMN session_id TEXT;
 ALTER TABLE task_runs ADD COLUMN session_id TEXT;
-
 CREATE TABLE IF NOT EXISTS embeddings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entity_id INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
@@ -156,21 +247,26 @@ CREATE TABLE IF NOT EXISTS embeddings (
 CREATE INDEX IF NOT EXISTS idx_embeddings_entity_id ON embeddings(entity_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_embeddings_source ON embeddings(source_type, source_id, model);
 ALTER TABLE entities ADD COLUMN embedded_at DATETIME;
-
-INSERT OR IGNORE INTO schema_version (version) VALUES (5);
-`
-
-export const SCHEMA_V6 = `
+INSERT OR IGNORE INTO schema_version (version) VALUES (5);`
+  },
+  {
+    version: 6,
+    label: 'task timeout',
+    sql: `
 ALTER TABLE tasks ADD COLUMN timeout_minutes INTEGER;
-INSERT OR IGNORE INTO schema_version (version) VALUES (6);
-`
-
-export const SCHEMA_V7 = `
+INSERT OR IGNORE INTO schema_version (version) VALUES (6);`
+  },
+  {
+    version: 7,
+    label: 'task_runs status index',
+    sql: `
 CREATE INDEX IF NOT EXISTS idx_task_runs_status ON task_runs(status);
-INSERT OR IGNORE INTO schema_version (version) VALUES (7);
-`
-
-export const SCHEMA_V8 = `
+INSERT OR IGNORE INTO schema_version (version) VALUES (7);`
+  },
+  {
+    version: 8,
+    label: 'console logs for task runs',
+    sql: `
 CREATE TABLE IF NOT EXISTS console_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     run_id INTEGER NOT NULL REFERENCES task_runs(id) ON DELETE CASCADE,
@@ -180,5 +276,21 @@ CREATE TABLE IF NOT EXISTS console_logs (
     created_at DATETIME DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_console_logs_run_seq ON console_logs(run_id, seq);
-INSERT OR IGNORE INTO schema_version (version) VALUES (8);
-`
+INSERT OR IGNORE INTO schema_version (version) VALUES (8);`
+  },
+  {
+    version: 9,
+    label: 'task max turns',
+    sql: `
+ALTER TABLE tasks ADD COLUMN max_turns INTEGER;
+INSERT OR IGNORE INTO schema_version (version) VALUES (9);`
+  },
+  {
+    version: 10,
+    label: 'task tool restrictions',
+    sql: `
+ALTER TABLE tasks ADD COLUMN allowed_tools TEXT;
+ALTER TABLE tasks ADD COLUMN disallowed_tools TEXT;
+INSERT OR IGNORE INTO schema_version (version) VALUES (10);`
+  }
+]

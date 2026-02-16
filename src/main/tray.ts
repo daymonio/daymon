@@ -7,11 +7,11 @@ import { APP_NAME, DEFAULTS } from '../shared/constants'
 let tray: Tray | null = null
 let popoverWindow: BrowserWindow | null = null
 
-function createPopoverWindow(): BrowserWindow {
+function createPopoverWindow(width?: number, height?: number): BrowserWindow {
 
   const window = new BrowserWindow({
-    width: DEFAULTS.WINDOW_WIDTH,
-    height: DEFAULTS.WINDOW_HEIGHT,
+    width: width ?? DEFAULTS.WINDOW_WIDTH,
+    height: height ?? DEFAULTS.WINDOW_HEIGHT,
     show: false,
     frame: false,
     resizable: false,
@@ -88,9 +88,11 @@ function showPopover(): void {
   const y = Math.round(trayBounds.y + trayBounds.height + 4)
 
   const maxX = display.workArea.x + display.workArea.width - windowBounds.width
+  const maxY = display.workArea.y + display.workArea.height - windowBounds.height
   const clampedX = Math.min(Math.max(x, display.workArea.x), maxX)
+  const clampedY = Math.min(y, maxY)
 
-  popoverWindow.setPosition(clampedX, y)
+  popoverWindow.setPosition(clampedX, clampedY)
   popoverWindow.show()
   popoverWindow.focus()
 }
@@ -133,14 +135,43 @@ function togglePopover(): void {
   }
 }
 
-export function createTray(): BrowserWindow {
+export function resizePopoverWindow(large: boolean): void {
+  if (!popoverWindow) return
+
+  const width = large ? DEFAULTS.WINDOW_WIDTH_LARGE : DEFAULTS.WINDOW_WIDTH
+  const height = large ? DEFAULTS.WINDOW_HEIGHT_LARGE : DEFAULTS.WINDOW_HEIGHT
+
+  popoverWindow.setSize(width, height)
+
+  if (popoverWindow.isVisible() && tray) {
+    const trayBounds = tray.getBounds()
+    const display = screen.getDisplayNearestPoint({
+      x: trayBounds.x,
+      y: trayBounds.y
+    })
+
+    const x = Math.round(trayBounds.x + trayBounds.width / 2 - width / 2)
+    const y = Math.round(trayBounds.y + trayBounds.height + 4)
+
+    const maxX = display.workArea.x + display.workArea.width - width
+    const maxY = display.workArea.y + display.workArea.height - height
+    const clampedX = Math.min(Math.max(x, display.workArea.x), maxX)
+    const clampedY = Math.min(y, maxY)
+
+    popoverWindow.setPosition(clampedX, clampedY)
+  }
+}
+
+export function createTray(largeWindow?: boolean): BrowserWindow {
   const icon = loadTrayIcon()
   const resizedIcon = icon.resize({ width: 22, height: 22 })
 
   tray = new Tray(resizedIcon)
   tray.setToolTip(APP_NAME)
 
-  popoverWindow = createPopoverWindow()
+  const width = largeWindow ? DEFAULTS.WINDOW_WIDTH_LARGE : undefined
+  const height = largeWindow ? DEFAULTS.WINDOW_HEIGHT_LARGE : undefined
+  popoverWindow = createPopoverWindow(width, height)
 
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Show Daymon', click: () => showPopover() },

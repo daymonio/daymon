@@ -7,6 +7,7 @@ import { getMcpDatabase } from '../db'
 import * as queries from '../../shared/db-queries'
 import { APP_NAME, TASK_STATUSES } from '../../shared/constants'
 import { executeTask, isTaskRunning } from '../../shared/task-runner'
+import { nudgeClaudeCode } from '../../shared/auto-nudge'
 
 export function generateTaskName(prompt: string): string {
   const cleaned = prompt.replace(/^(please |can you |i want you to |i need you to )/i, '').trim()
@@ -63,10 +64,25 @@ export function registerSchedulerTools(server: McpServer): void {
           'Maximum execution time in minutes. Omit for the default (30 minutes). '
           + 'Set higher for complex tasks like research or multi-step analysis. '
           + 'Example: 60 for one hour, 120 for two hours.'
+        ),
+        maxTurns: z.number().int().positive().max(1000).optional().describe(
+          'Maximum number of agentic turns (tool use rounds) per run. '
+          + 'Prevents runaway tasks. Omit for unlimited. Example: 25 for a typical web research task.'
+        ),
+        allowedTools: z.string().max(500).optional().describe(
+          'Comma-separated list of tools the task is allowed to use. '
+          + 'When set, ONLY these tools are available. '
+          + 'Common tools: WebSearch, WebFetch, Read, Edit, Write, Bash, Grep, Glob. '
+          + 'Example: "WebSearch,Read,Grep" for research-only tasks.'
+        ),
+        disallowedTools: z.string().max(500).optional().describe(
+          'Comma-separated list of tools the task is NOT allowed to use. '
+          + 'Example: "WebFetch" to force WebSearch-only (avoids slow URL fetches). '
+          + '"Edit,Write" to make a task read-only.'
         )
       }
     },
-    async ({ name, prompt, cronExpression, scheduledAt, description, maxRuns, workerId, sessionContinuity, timeout }) => {
+    async ({ name, prompt, cronExpression, scheduledAt, description, maxRuns, workerId, sessionContinuity, timeout, maxTurns, allowedTools, disallowedTools }) => {
       const db = getMcpDatabase()
 
       // Auto-determine trigger type
@@ -121,7 +137,7 @@ export function registerSchedulerTools(server: McpServer): void {
         }
       }
 
-      const task = queries.createTask(db, {
+      queries.createTask(db, {
         name: taskName,
         prompt,
         cronExpression: cronExpression ?? undefined,
@@ -133,7 +149,10 @@ export function registerSchedulerTools(server: McpServer): void {
         maxRuns: maxRuns ?? undefined,
         workerId: workerId ?? undefined,
         sessionContinuity: sessionContinuity ?? false,
-        timeoutMinutes: timeout ?? undefined
+        timeoutMinutes: timeout ?? undefined,
+        maxTurns: maxTurns ?? undefined,
+        allowedTools: allowedTools ?? undefined,
+        disallowedTools: disallowedTools ?? undefined
       })
 
       if (triggerType === 'cron') {
@@ -256,6 +275,22 @@ export function registerSchedulerTools(server: McpServer): void {
           if (!result.success) {
             console.error(`Task ${id} ("${task.name}") failed: ${result.errorMessage}`)
           }
+
+          // Auto-nudge Claude Code chat if enabled
+          try {
+            const autoNudge = process.env.DAYMON_AUTO_NUDGE
+              ? ['true', '1'].includes(process.env.DAYMON_AUTO_NUDGE)
+              : queries.getSetting(db, 'auto_nudge_enabled') === 'true'
+            if (autoNudge) {
+              setTimeout(() => nudgeClaudeCode({
+                taskId: id,
+                taskName: task.name,
+                success: result.success,
+                durationMs: result.durationMs,
+                errorMessage: result.errorMessage
+              }), 500)
+            }
+          } catch { /* non-fatal */ }
         })
         .catch((err) => {
           console.error(`Task ${id} ("${task.name}") execution error:`, err)

@@ -5,10 +5,10 @@ import { parseStreamEvent } from '../claude-code'
 // ─── parseStreamEvent ─────────────────────────────────────────
 
 describe('parseStreamEvent', () => {
-  it('returns tool_use progress for content_block_start with tool_use', () => {
+  it('returns tool_use progress for assistant message with tool_use', () => {
     const event = {
-      type: 'content_block_start',
-      content_block: { type: 'tool_use', name: 'Bash' }
+      type: 'assistant',
+      message: { content: [{ type: 'tool_use', name: 'Bash' }] }
     }
     const result = parseStreamEvent(event, 0)
     expect(result).not.toBeNull()
@@ -19,8 +19,8 @@ describe('parseStreamEvent', () => {
 
   it('increments step number based on toolCallCount', () => {
     const event = {
-      type: 'content_block_start',
-      content_block: { type: 'tool_use', name: 'Edit' }
+      type: 'assistant',
+      message: { content: [{ type: 'tool_use', name: 'Edit' }] }
     }
     const result = parseStreamEvent(event, 3)
     expect(result!.message).toBe('Step 4: Using Edit...')
@@ -28,8 +28,8 @@ describe('parseStreamEvent', () => {
 
   it('uses "tool" as default name when name is missing', () => {
     const event = {
-      type: 'content_block_start',
-      content_block: { type: 'tool_use' }
+      type: 'assistant',
+      message: { content: [{ type: 'tool_use' }] }
     }
     const result = parseStreamEvent(event, 0)
     expect(result!.message).toBe('Step 1: Using tool...')
@@ -44,22 +44,22 @@ describe('parseStreamEvent', () => {
     expect(result!.isToolUse).toBe(false)
   })
 
-  it('returns null for content_block_start without tool_use', () => {
+  it('returns null for assistant message with only text', () => {
     const event = {
-      type: 'content_block_start',
-      content_block: { type: 'text' }
+      type: 'assistant',
+      message: { content: [{ type: 'text', text: 'Hello' }] }
     }
     expect(parseStreamEvent(event, 0)).toBeNull()
   })
 
   it('returns null for unrecognized event types', () => {
-    expect(parseStreamEvent({ type: 'content_block_delta' }, 0)).toBeNull()
+    expect(parseStreamEvent({ type: 'system' }, 0)).toBeNull()
     expect(parseStreamEvent({ type: 'message_start' }, 0)).toBeNull()
     expect(parseStreamEvent({}, 0)).toBeNull()
   })
 
-  it('returns null for content_block_start without content_block', () => {
-    const event = { type: 'content_block_start' }
+  it('returns null for assistant message without content', () => {
+    const event = { type: 'assistant', message: {} }
     expect(parseStreamEvent(event, 0)).toBeNull()
   })
 })
@@ -322,7 +322,7 @@ describe('executeClaudeCode', () => {
     })
 
     proc.stdout.emit('data', Buffer.from(
-      '{"type":"content_block_start","content_block":{"type":"tool_use","name":"Bash"}}\n'
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash"}]}}\n'
     ))
     proc.stdout.emit('data', Buffer.from('{"type":"result","result":"done"}\n'))
     proc.emit('close', 0)
@@ -407,5 +407,74 @@ describe('executeClaudeCode', () => {
     await promise
 
     expect(mockSpawn.mock.calls[0][2].timeout).toBe(5000)
+  })
+
+  it('passes --max-turns flag when maxTurns is set', async () => {
+    const proc = createMockProcess()
+    mockSpawn.mockReturnValue(proc)
+    const executeClaudeCode = await importWithMock()
+
+    const promise = executeClaudeCode('Test', { maxTurns: 25 })
+    proc.emit('close', 0)
+    await promise
+
+    const args = mockSpawn.mock.calls[0][1] as string[]
+    expect(args).toContain('--max-turns')
+    expect(args).toContain('25')
+  })
+
+  it('does not pass --max-turns flag when maxTurns is not set', async () => {
+    const proc = createMockProcess()
+    mockSpawn.mockReturnValue(proc)
+    const executeClaudeCode = await importWithMock()
+
+    const promise = executeClaudeCode('Test')
+    proc.emit('close', 0)
+    await promise
+
+    const args = mockSpawn.mock.calls[0][1] as string[]
+    expect(args).not.toContain('--max-turns')
+  })
+
+  it('passes --allowedTools flag when allowedTools is set', async () => {
+    const proc = createMockProcess()
+    mockSpawn.mockReturnValue(proc)
+    const executeClaudeCode = await importWithMock()
+
+    const promise = executeClaudeCode('Test', { allowedTools: 'WebSearch,Read,Grep' })
+    proc.emit('close', 0)
+    await promise
+
+    const args = mockSpawn.mock.calls[0][1] as string[]
+    expect(args).toContain('--allowedTools')
+    expect(args).toContain('WebSearch,Read,Grep')
+  })
+
+  it('passes --disallowedTools flag when disallowedTools is set', async () => {
+    const proc = createMockProcess()
+    mockSpawn.mockReturnValue(proc)
+    const executeClaudeCode = await importWithMock()
+
+    const promise = executeClaudeCode('Test', { disallowedTools: 'WebFetch' })
+    proc.emit('close', 0)
+    await promise
+
+    const args = mockSpawn.mock.calls[0][1] as string[]
+    expect(args).toContain('--disallowedTools')
+    expect(args).toContain('WebFetch')
+  })
+
+  it('does not pass tool restriction flags when not set', async () => {
+    const proc = createMockProcess()
+    mockSpawn.mockReturnValue(proc)
+    const executeClaudeCode = await importWithMock()
+
+    const promise = executeClaudeCode('Test')
+    proc.emit('close', 0)
+    await promise
+
+    const args = mockSpawn.mock.calls[0][1] as string[]
+    expect(args).not.toContain('--allowedTools')
+    expect(args).not.toContain('--disallowedTools')
   })
 })

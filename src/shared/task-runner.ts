@@ -151,8 +151,11 @@ export async function executeTask(
       console.warn('Non-fatal: memory injection failed:', err)
     }
 
-    // Resolve timeout: task-specific > default (30 min)
+    // Resolve execution constraints
     const timeoutMs = task.timeoutMinutes != null ? task.timeoutMinutes * 60 * 1000 : undefined
+    const maxTurns = task.maxTurns ?? undefined
+    const allowedTools = task.allowedTools ?? undefined
+    const disallowedTools = task.disallowedTools ?? undefined
 
     const consoleLog = createConsoleLogBuffer(db, run.id)
     let lastProgressUpdate = 0
@@ -161,6 +164,9 @@ export async function executeTask(
       model,
       resumeSessionId,
       timeoutMs,
+      maxTurns,
+      allowedTools,
+      disallowedTools,
       onConsoleLog: consoleLog.onConsoleLog,
       onProgress: (progress) => {
         const now = Date.now()
@@ -193,6 +199,9 @@ export async function executeTask(
         systemPrompt,
         model,
         timeoutMs,
+        maxTurns,
+        allowedTools,
+        disallowedTools,
         onConsoleLog: retryConsoleLog.onConsoleLog,
         onProgress: (progress) => {
           const now = Date.now()

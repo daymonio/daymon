@@ -80,7 +80,8 @@ const api = {
     getUpdateStatus: () => ipcRenderer.invoke('app:getUpdateStatus'),
     checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
     downloadUpdate: () => ipcRenderer.invoke('app:downloadUpdate'),
-    installUpdate: () => ipcRenderer.invoke('app:installUpdate')
+    installUpdate: () => ipcRenderer.invoke('app:installUpdate'),
+    setWindowSize: (large: boolean) => ipcRenderer.invoke('app:setWindowSize', large)
   }
 }
 
