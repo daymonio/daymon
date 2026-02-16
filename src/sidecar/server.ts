@@ -129,9 +129,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
         const task = getTaskFromDb(db, taskId)
         const name = task?.name || `Task ${taskId}`
         if (result.success) {
-          notifyTaskComplete(db, taskId, name, result.output?.slice(0, 200), result.durationMs)
+          notifyTaskComplete(db, taskId, name, result.output?.slice(0, 200), result.durationMs, task?.nudgeMode)
         } else {
-          notifyTaskFailed(db, taskId, name, result.errorMessage || 'Unknown error')
+          notifyTaskFailed(db, taskId, name, result.errorMessage || 'Unknown error', task?.nudgeMode)
         }
       }).catch((err) => {
         console.error(`Sidecar: Task ${taskId} execution error:`, err)

@@ -5,6 +5,7 @@ import { formatRelativeTime } from '../utils/time'
 
 export function WatchesPanel(): React.JSX.Element {
   const { data: watches, error, isLoading, refresh } = usePolling(() => window.api.watches.list(), 5000)
+  const [showCreateForm, setShowCreateForm] = useState(false)
   const [path, setPath] = useState('')
   const [description, setDescription] = useState('')
   const [actionPrompt, setActionPrompt] = useState('')
@@ -30,6 +31,7 @@ export function WatchesPanel(): React.JSX.Element {
       setPath('')
       setDescription('')
       setActionPrompt('')
+      setShowCreateForm(false)
       refresh()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create watch'
@@ -60,39 +62,56 @@ export function WatchesPanel(): React.JSX.Element {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 border-b border-gray-200 bg-gray-50 space-y-2">
-        <input
-          type="text"
-          value={path}
-          onChange={(e) => { setPath(e.target.value); setCreateError(null) }}
-          placeholder="Absolute path (e.g. /Users/me/Downloads)"
-          className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white"
-        />
-        <input
-          type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Description (optional)"
-          className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white"
-        />
-        <textarea
-          value={actionPrompt}
-          onChange={(e) => setActionPrompt(e.target.value)}
-          rows={3}
-          placeholder="Action prompt (optional)"
-          className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white resize-y"
-        />
-        {createError && (
-          <div className="text-xs text-red-500">{createError}</div>
-        )}
+      <div className="px-3 py-1.5 border-b border-gray-200 flex items-center justify-between">
+        <span className="text-xs text-gray-500">
+          {watches.length} watch(es)
+        </span>
         <button
-          onClick={createWatch}
-          disabled={!path.trim()}
-          className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => setShowCreateForm(!showCreateForm)}
+          className="text-xs text-blue-500 hover:text-blue-700 font-medium"
         >
-          Add Watch
+          {showCreateForm ? 'Cancel' : '+ New Watch'}
         </button>
       </div>
+
+      {showCreateForm && (
+        <div className="p-3 border-b-2 border-blue-300 bg-blue-50/50 space-y-2">
+          <input
+            type="text"
+            value={path}
+            onChange={(e) => { setPath(e.target.value); setCreateError(null) }}
+            placeholder="Absolute path (e.g. /Users/me/Downloads)"
+            className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white"
+          />
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description (optional)"
+            className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white"
+          />
+          <textarea
+            value={actionPrompt}
+            onChange={(e) => setActionPrompt(e.target.value)}
+            rows={3}
+            placeholder="Action prompt (optional)"
+            className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white resize-y"
+          />
+          <div className="flex items-center justify-between">
+            {createError && (
+              <span className="text-xs text-red-500 truncate">{createError}</span>
+            )}
+            <div className="flex-1" />
+            <button
+              onClick={createWatch}
+              disabled={!path.trim()}
+              className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Add Watch
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="px-3 py-2 text-xs text-yellow-700 bg-yellow-50">

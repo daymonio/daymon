@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-12Y9442YL6"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-12Y9442YL6');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workers in Action — Same Task, Different Personalities</title>
+  <meta name="description" content="See how Daymon workers transform task output. Same prompt, 4 different personalities — from academic professor to pirate to minimalist.">
+  <meta property="og:title" content="Workers in Action — Same Task, Different Personalities">
+  <meta property="og:description" content="Real test: same prompt given to 4 workers with different system prompts. See the dramatic difference.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://daymon.io/workers-in-action">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .article { padding: 60px 0 80px; }
+    .article h1 {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+    .article .lead {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 48px;
+      line-height: 1.7;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+      text-decoration: none;
+    }
+    .back-link:hover { color: var(--accent-hover); text-decoration: none; }
+
+    /* Experiment setup */
+    .experiment-setup {
+      background: var(--bg-surface);
+      border: 1px solid rgba(232, 106, 26, 0.15);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 48px;
+    }
+    .experiment-setup h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-hover);
+      margin-bottom: 12px;
+    }
+    .experiment-setup p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+    .prompt-box {
+      background: var(--bg);
+      border: 1px solid rgba(232, 106, 26, 0.2);
+      border-radius: 8px;
+      padding: 14px 20px;
+      margin-top: 12px;
+      font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    /* Result cards */
+    .result-card {
+      background: var(--bg-surface);
+      border: 1px solid rgba(232, 106, 26, 0.12);
+      border-radius: var(--radius);
+      margin-bottom: 32px;
+      overflow: hidden;
+    }
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .result-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .result-icon {
+      font-size: 1.4rem;
+    }
+    .result-title {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .result-subtitle {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+    .result-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .result-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .result-meta .val {
+      color: var(--accent-hover);
+      font-weight: 600;
+    }
+    .result-body {
+      padding: 24px;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .result-body h1, .result-body h2, .result-body h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 16px 0 8px;
+      color: var(--text);
+    }
+    .result-body h1:first-child, .result-body h2:first-child, .result-body h3:first-child {
+      margin-top: 0;
+    }
+    .result-body p {
+      margin-bottom: 12px;
+    }
+    .result-body strong {
+      color: var(--text);
+    }
+    .result-body hr {
+      border: none;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin: 16px 0;
+    }
+    .result-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .tag-control { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+    .tag-professor { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+    .tag-pirate { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+    .tag-minimalist { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+
+    /* Comparison table */
+    .comparison-section { margin-top: 48px; }
+    .comparison-section h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent-hover);
+      margin-bottom: 8px;
+    }
+    .comparison-section > p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+    .cmp-table {
+      width: 100%;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid rgba(232, 106, 26, 0.12);
+      margin-bottom: 24px;
+    }
+    .cmp-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 1fr 1fr 1fr;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .cmp-row:last-child { border-bottom: none; }
+    .cmp-row.cmp-header {
+      background: var(--bg-surface);
+    }
+    .cmp-row.cmp-header > div {
+      padding: 14px 16px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    .cmp-row:nth-child(even):not(.cmp-header) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .cmp-label {
+      padding: 12px 16px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+    }
+    .cmp-cell {
+      padding: 12px 16px;
+      font-size: 0.8rem;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.4;
+    }
+
+    /* Takeaway */
+    .takeaway {
+      background: var(--bg-surface);
+      border: 1px solid rgba(232, 106, 26, 0.15);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-top: 32px;
+    }
+    .takeaway strong {
+      color: var(--accent-hover);
+      font-size: 0.95rem;
+    }
+    .takeaway p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+    .takeaway ul {
+      margin-top: 12px;
+      padding-left: 20px;
+    }
+    .takeaway li {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+      line-height: 1.5;
+    }
+    .takeaway li strong {
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 640px) {
+      .result-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .cmp-row {
+        grid-template-columns: 100px 1fr 1fr 1fr 1fr;
+        min-width: 600px;
+      }
+      .cmp-table {
+        overflow-x: auto;
+      }
+      .experiment-setup {
+        padding: 20px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container header-inner">
+      <a href="/" class="logo">
+        <img src="logo.png" alt="Daymon logo" width="40" height="40">
+        <span>Daymon</span>
+      </a>
+      <nav>
+        <a href="/#features">Features</a>
+        <a href="/#workers">Workers</a>
+        <a href="/#compare">Compare</a>
+        <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="article">
+      <div class="container">
+        <a href="/" class="back-link">&larr; Back to Daymon</a>
+
+        <h1>Workers in Action</h1>
+        <p class="lead">
+          Same task. Same prompt. Four completely different outputs.<br>
+          Workers inject a system prompt into every execution, transforming how Claude thinks, writes, and responds.
+        </p>
+
+        <!-- Experiment Setup -->
+        <div class="experiment-setup">
+          <h2>The Experiment</h2>
+          <p>We created 3 workers with extreme personalities and ran the exact same task through each one, plus a control with no worker. All 4 tasks used identical settings: <strong>maxTurns: 3</strong>, <strong>timeout: 2 min</strong>.</p>
+          <p>The shared prompt:</p>
+          <div class="prompt-box">Give me 3 tips for better code reviews. For each tip, provide a short title and 1-2 sentences of explanation.</div>
+        </div>
+
+        <!-- Result 1: No Worker -->
+        <div class="result-card">
+          <div class="result-header">
+            <div class="result-header-left">
+              <span class="result-icon">&#9898;</span>
+              <div>
+                <div class="result-title">No Worker <span class="result-tag tag-control">Control</span></div>
+                <div class="result-subtitle">Default Claude behavior &mdash; no system prompt</div>
+              </div>
+            </div>
+            <div class="result-meta">
+              <span>Duration: <span class="val">9.2s</span></span>
+              <span>Words: <span class="val">~120</span></span>
+            </div>
+          </div>
+          <div class="result-body">
+            <p><strong>1. Review in small batches</strong><br>
+            Large PRs lead to superficial reviews. Aim to review changes under 400 lines &mdash; smaller diffs let you catch real bugs instead of just skimming.</p>
+            <p><strong>2. Focus on logic, not style</strong><br>
+            Don't waste review cycles on formatting or naming preferences that a linter can catch. Spend your attention on correctness, edge cases, and potential failures.</p>
+            <p><strong>3. Ask questions instead of making demands</strong><br>
+            "What happens if this is null?" is more productive than "Handle the null case." Questions invite discussion, reduce defensiveness, and often surface context you didn't have.</p>
+          </div>
+        </div>
+
+        <!-- Result 2: The Professor -->
+        <div class="result-card">
+          <div class="result-header">
+            <div class="result-header-left">
+              <span class="result-icon">&#127891;</span>
+              <div>
+                <div class="result-title">The Professor <span class="result-tag tag-professor">Worker</span></div>
+                <div class="result-subtitle">Formal academic CS professor &mdash; scholarly language, cites principles</div>
+              </div>
+            </div>
+            <div class="result-meta">
+              <span>Duration: <span class="val">14.8s</span></span>
+              <span>Words: <span class="val">~250</span></span>
+            </div>
+          </div>
+          <div class="result-body">
+            <h3>Three Principles for Conducting Rigorous Code Reviews</h3>
+            <p>Drawing upon established software engineering literature and empirical evidence, I present the following three recommendations:</p>
+            <hr>
+            <p><strong>1. Limit Review Scope to Reduce Cognitive Load</strong><br>
+            It is well-established in the literature on cognitive load theory (Sweller, 1988) that human working memory is finite and easily overwhelmed. Empirical evidence suggests that reviewing no more than 200&ndash;400 lines of code per session yields significantly higher defect detection rates; beyond this threshold, reviewer attention degrades markedly, and critical defects are far more likely to be overlooked.</p>
+            <p><strong>2. Employ a Structured Checklist, in the Tradition of Fagan Inspections</strong><br>
+            Michael Fagan's seminal work on formal software inspections (1976) demonstrated that systematic, checklist-driven reviews outperform ad hoc examination by a substantial margin. One should maintain and refine a review checklist that addresses recurring concerns &mdash; such as error handling, boundary conditions, naming conventions, and security vulnerabilities &mdash; to ensure consistency and completeness across all reviews.</p>
+            <p><strong>3. Critique the Code, Not the Author &mdash; Prioritize Constructive, Specific Feedback</strong><br>
+            The psychological safety of the development team is a prerequisite for effective peer review, as established by Edmondson's research on team dynamics. Feedback should be depersonalized (e.g., "this function exceeds a single level of abstraction" rather than "you wrote this poorly") and should, wherever possible, reference concrete principles &mdash; such as the Single Responsibility Principle or the DRY principle &mdash; so that the critique is grounded in objective reasoning rather than subjective preference.</p>
+            <hr>
+            <p>These three tenets, when applied rigorously, have been shown to improve both defect detection efficacy and team cohesion in professional software engineering practice.</p>
+          </div>
+        </div>
+
+        <!-- Result 3: The Pirate -->
+        <div class="result-card">
+          <div class="result-header">
+            <div class="result-header-left">
+              <span class="result-icon">&#9876;&#65039;</span>
+              <div>
+                <div class="result-title">The Pirate <span class="result-tag tag-pirate">Worker</span></div>
+                <div class="result-subtitle">Senior engineer who speaks in full pirate dialect</div>
+              </div>
+            </div>
+            <div class="result-meta">
+              <span>Duration: <span class="val">15.6s</span></span>
+              <span>Words: <span class="val">~200</span></span>
+            </div>
+          </div>
+          <div class="result-body">
+            <p>Ahoy, matey! Gather 'round the mast and let this old sea dog share three treasures of wisdom fer reviewin' yer crew's code! &#127988;&#8205;&#9760;&#65039;</p>
+            <hr>
+            <p><strong>&#9875; 1. Chart the Course Before Inspectin' the Rigging</strong><br>
+            Before ye dive into the lines of code, read the pull request description and understand <em>why</em> the changes be made, not just <em>what</em> changed. A captain who doesn't know where the ship be headin' can't tell if the sails be set right!</p>
+            <p><strong>&#128481;&#65039; 2. Don't Just Hunt fer Bugs &mdash; Share Yer Treasure Map</strong><br>
+            Aye, when ye leave comments, don't just say "this be wrong!" &mdash; explain <em>why</em> it be wrong and offer a better headin'. A good shipmate doesn't just point out the reef, they help steer around it. Suggest alternatives and share the reasoning behind yer wisdom, so the whole crew grows stronger.</p>
+            <p><strong>&#129436; 3. Keep Yer Cannons Aimed at the Code, Not the Sailor</strong><br>
+            Shiver me timbers, nothin' sinks a crew's morale faster than makin' it personal! Say <em>"this function could be simplified"</em> instead of <em>"ye wrote this poorly."</em> Review the craft, not the craftsman. A ship sails smoothest when every pirate aboard feels respected and trusted to hoist the sails.</p>
+            <hr>
+            <p>Now hoist the Jolly Roger and go make yer crew's code seaworthy, ye scallywag! &#127988;&#8205;&#9760;&#65039;</p>
+          </div>
+        </div>
+
+        <!-- Result 4: The Minimalist -->
+        <div class="result-card">
+          <div class="result-header">
+            <div class="result-header-left">
+              <span class="result-icon">&#9899;</span>
+              <div>
+                <div class="result-title">The Minimalist <span class="result-tag tag-minimalist">Worker</span></div>
+                <div class="result-subtitle">Ultra-terse &mdash; fewest words possible, bullets only, under 50 words</div>
+              </div>
+            </div>
+            <div class="result-meta">
+              <span>Duration: <span class="val">5.2s</span></span>
+              <span>Words: <span class="val">~80</span></span>
+            </div>
+          </div>
+          <div class="result-body">
+            <p><strong>Professor:</strong></p>
+            <ul style="padding-left: 20px; margin-bottom: 12px;">
+              <li>Limit scope to 200&ndash;400 lines per session</li>
+              <li>Use structured checklists (Fagan inspections)</li>
+              <li>Critique code, not the author</li>
+            </ul>
+            <p><strong>Pirate:</strong></p>
+            <ul style="padding-left: 20px; margin-bottom: 12px;">
+              <li>Understand the <em>why</em> before reviewing</li>
+              <li>Explain fixes, don't just flag problems</li>
+              <li>Keep feedback aimed at code, not the sailor</li>
+            </ul>
+            <p><strong>No Worker:</strong></p>
+            <ul style="padding-left: 20px;">
+              <li>Review in small batches (&lt;400 lines)</li>
+              <li>Focus on logic, not style (let linters handle formatting)</li>
+              <li>Ask questions instead of making demands</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Comparison Table -->
+        <div class="comparison-section">
+          <h2>Side-by-Side Comparison</h2>
+          <p>How the same prompt produced dramatically different results.</p>
+          <div class="cmp-table">
+            <div class="cmp-row cmp-header">
+              <div></div>
+              <div style="color: #9ca3af;">No Worker</div>
+              <div style="color: #60a5fa;">Professor</div>
+              <div style="color: #f87171;">Pirate</div>
+              <div style="color: #34d399;">Minimalist</div>
+            </div>
+            <div class="cmp-row">
+              <div class="cmp-label">Duration</div>
+              <div class="cmp-cell">9.2s</div>
+              <div class="cmp-cell">14.8s</div>
+              <div class="cmp-cell">15.6s</div>
+              <div class="cmp-cell">5.2s</div>
+            </div>
+            <div class="cmp-row">
+              <div class="cmp-label">Word count</div>
+              <div class="cmp-cell">~120</div>
+              <div class="cmp-cell">~250</div>
+              <div class="cmp-cell">~200</div>
+              <div class="cmp-cell">~80</div>
+            </div>
+            <div class="cmp-row">
+              <div class="cmp-label">Tone</div>
+              <div class="cmp-cell">Conversational</div>
+              <div class="cmp-cell">Scholarly</div>
+              <div class="cmp-cell">Swashbuckling</div>
+              <div class="cmp-cell">Compressed</div>
+            </div>
+            <div class="cmp-row">
+              <div class="cmp-label">Contractions?</div>
+              <div class="cmp-cell">Yes ("Don't")</div>
+              <div class="cmp-cell">None</div>
+              <div class="cmp-cell">Pirate ("nothin'")</div>
+              <div class="cmp-cell">N/A</div>
+            </div>
+            <div class="cmp-row">
+              <div class="cmp-label">References</div>
+              <div class="cmp-cell">None</div>
+              <div class="cmp-cell">Sweller, Fagan, Edmondson, SRP, DRY</div>
+              <div class="cmp-cell">Nautical metaphors</div>
+              <div class="cmp-cell">None</div>
+            </div>
+            <div class="cmp-row">
+              <div class="cmp-label">Personality</div>
+              <div class="cmp-cell" style="color: #6b7280;">Neutral</div>
+              <div class="cmp-cell" style="color: #60a5fa;">Strong</div>
+              <div class="cmp-cell" style="color: #f87171;">Strong</div>
+              <div class="cmp-cell" style="color: #34d399;">Strong</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Takeaway -->
+        <div class="takeaway">
+          <strong>What This Proves</strong>
+          <p>Workers fundamentally change how tasks execute. The same 20-word prompt produced four completely different outputs &mdash; from a 250-word academic paper with citations to an 80-word bullet summary. This isn't cosmetic: workers shape reasoning, structure, length, vocabulary, and approach.</p>
+          <ul>
+            <li><strong>The Professor</strong> cited Sweller (1988), Fagan (1976), and Edmondson &mdash; zero contractions, formal numbered sections</li>
+            <li><strong>The Pirate</strong> delivered the same advice through nautical metaphors &mdash; "Ahoy", "matey", "shiver me timbers"</li>
+            <li><strong>The Minimalist</strong> compressed everything into terse bullets under 80 words &mdash; 3x shorter than the Professor</li>
+            <li><strong>No Worker</strong> gave standard helpful Claude output &mdash; the baseline</li>
+          </ul>
+          <p style="margin-top: 16px;">Workers are attached to tasks with a single field (<code style="background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">workerId</code>). Create once, reuse across any number of tasks. 9 templates included, or write your own system prompt.</p>
+        </div>
+
+        <!-- Final CTA -->
+        <div style="text-align: center; margin-top: 64px;">
+          <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 12px;">Build your own team of workers.</h2>
+          <p style="color: var(--text-muted); margin-bottom: 28px;">Free, open source, 100% local.</p>
+          <div class="cta">
+            <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary">Download for Mac</a>
+            <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+            <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" style="gap:10px" target="_blank" rel="noopener"><span class="star-badge" style="display:none;align-items:center;gap:4px;background:rgba(245,149,66,0.25);border:1px solid rgba(245,149,66,0.5);padding:3px 10px;border-radius:20px;font-size:0.8rem;font-weight:700;color:#f59542;line-height:1">&#9733; <span class="star-count"></span></span><span>Star Us on GitHub</span></a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>MIT &middot; &copy; 2026 Daymon &middot; <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a> &middot; <a href="https://www.youtube.com/@daymon_io" target="_blank" rel="noopener">YouTube</a> &middot; <a href="https://x.com/Daymon_io" target="_blank" rel="noopener">&#120143;</a></p>
+    </div>
+  </footer>
+
+  <script>
+    fetch('https://api.github.com/repos/daymonio/daymon')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.stargazers_count != null) {
+          var text = d.stargazers_count >= 1000
+            ? (d.stargazers_count / 1000).toFixed(1) + 'k'
+            : String(d.stargazers_count);
+          document.querySelectorAll('.star-count').forEach(function(el) { el.textContent = text; });
+          document.querySelectorAll('.star-badge').forEach(function(el) { el.style.display = 'inline-flex'; });
+        }
+      })
+      .catch(function() {});
+  </script>
+</body>
+</html>

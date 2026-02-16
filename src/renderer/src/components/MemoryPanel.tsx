@@ -39,6 +39,26 @@ export function MemoryPanel(): React.JSX.Element {
     setObservations(obs)
   }
 
+  function buildMemoryPrompt(entity: Entity, obs: Observation[]): string {
+    const parts = [`Here is a Daymon memory entity "${entity.name}" (${entity.type}${entity.category ? `, ${entity.category}` : ''}):`]
+    if (obs.length > 0) {
+      parts.push('')
+      for (const o of obs) parts.push(`- ${o.content}`)
+    }
+    parts.push('', 'Present this information in a well-formatted way.')
+    return parts.join('\n')
+  }
+
+  async function openInApp(entity: Entity, target: 'claude-code' | 'claude-desktop'): Promise<void> {
+    // Ensure we have observations loaded
+    let obs = observations
+    if (expandedId !== entity.id) {
+      obs = await window.api.memory.getObservations(entity.id)
+    }
+    const message = buildMemoryPrompt(entity, obs)
+    await window.api.app.sendToApp(target, message)
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 border-b border-gray-200">
@@ -73,15 +93,35 @@ export function MemoryPanel(): React.JSX.Element {
                       {entity.category && <span> &middot; {entity.category}</span>}
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteEntity(entity.id)
-                    }}
-                    className="ml-2 text-xs text-red-400 hover:text-red-600 shrink-0"
-                  >
-                    Delete
-                  </button>
+                  <div className="ml-2 flex gap-2 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openInApp(entity, 'claude-code')
+                      }}
+                      className="text-xs text-blue-500 hover:text-blue-700"
+                    >
+                      Claude Code
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openInApp(entity, 'claude-desktop')
+                      }}
+                      className="text-xs text-purple-500 hover:text-purple-700"
+                    >
+                      Desktop
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteEntity(entity.id)
+                      }}
+                      className="text-xs text-red-400 hover:text-red-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
 
                 {expandedId === entity.id && (

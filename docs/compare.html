@@ -683,6 +683,7 @@
           <div class="cta">
             <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary">Download for Mac</a>
             <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+            <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" style="gap:10px" target="_blank" rel="noopener"><span class="star-badge" style="display:none;align-items:center;gap:4px;background:rgba(245,149,66,0.25);border:1px solid rgba(245,149,66,0.5);padding:3px 10px;border-radius:20px;font-size:0.8rem;font-weight:700;color:#f59542;line-height:1">&#9733; <span class="star-count"></span></span><span>Star Us on GitHub</span></a>
           </div>
         </div>
 
@@ -696,5 +697,19 @@
     </div>
   </footer>
 
+  <script>
+    fetch('https://api.github.com/repos/daymonio/daymon')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.stargazers_count != null) {
+          var text = d.stargazers_count >= 1000
+            ? (d.stargazers_count / 1000).toFixed(1) + 'k'
+            : String(d.stargazers_count);
+          document.querySelectorAll('.star-count').forEach(function(el) { el.textContent = text; });
+          document.querySelectorAll('.star-badge').forEach(function(el) { el.style.display = 'inline-flex'; });
+        }
+      })
+      .catch(function() {});
+  </script>
 </body>
 </html>

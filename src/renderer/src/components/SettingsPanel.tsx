@@ -36,12 +36,12 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
   const [cliStatus, setCliStatus] = useState<ClaudeCliStatus | null>(null)
   const [integrationStatus, setIntegrationStatus] = useState<ClaudeIntegrationStatus | null>(null)
   const [autoLaunch, setAutoLaunch] = useState<boolean | null>(null)
-  const [notifications, setNotifications] = useState<boolean>(true)
-  const [autoNudge, setAutoNudge] = useState<boolean>(false)
-  const [largeWindow, setLargeWindow] = useState<boolean>(false)
-  const [quietHours, setQuietHours] = useState<boolean>(false)
+  const [notifications, setNotifications] = useState<boolean | null>(null)
+  const [largeWindow, setLargeWindow] = useState<boolean | null>(null)
+  const [quietHours, setQuietHours] = useState<boolean | null>(null)
   const [quietFrom, setQuietFrom] = useState('08:00')
   const [quietUntil, setQuietUntil] = useState('22:00')
+  const [defaultNudgeMode, setDefaultNudgeMode] = useState<string>('always')
   const [confirmUninstall, setConfirmUninstall] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
 
@@ -55,9 +55,6 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     window.api.settings.get('notifications_enabled').then((v) => {
       setNotifications(v !== 'false')
     })
-    window.api.settings.get('auto_nudge_enabled').then((v) => {
-      setAutoNudge(v === 'true')
-    })
     window.api.settings.get('large_window_enabled').then((v) => {
       setLargeWindow(v === 'true')
     })
@@ -69,6 +66,9 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     })
     window.api.settings.get('auto_nudge_quiet_until').then((v) => {
       if (v) setQuietUntil(v)
+    })
+    window.api.settings.get('default_nudge_mode').then((v) => {
+      if (v) setDefaultNudgeMode(v)
     })
     window.api.app.getUpdateStatus().then(setUpdateStatus)
   }, [])
@@ -83,12 +83,6 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     const next = !notifications
     await window.api.settings.set('notifications_enabled', String(next))
     setNotifications(next)
-  }
-
-  async function toggleAutoNudge(): Promise<void> {
-    const next = !autoNudge
-    await window.api.settings.set('auto_nudge_enabled', String(next))
-    setAutoNudge(next)
   }
 
   async function toggleLargeWindow(): Promise<void> {
@@ -120,6 +114,11 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     await window.api.settings.set('auto_nudge_quiet_until', value)
   }
 
+  async function updateDefaultNudgeMode(value: string): Promise<void> {
+    setDefaultNudgeMode(value)
+    await window.api.settings.set('default_nudge_mode', value)
+  }
+
   async function handleUninstall(): Promise<void> {
     if (!confirmUninstall) {
       setConfirmUninstall(true)
@@ -143,21 +142,25 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     onChange: () => void,
     description?: string
   ): React.JSX.Element {
+    const loading = value === null
     return (
       <div className="py-1">
         <div className="flex items-center justify-between text-xs">
           <span className="text-gray-600">{label}</span>
           <button
             onClick={onChange}
+            disabled={loading}
             className={`w-8 h-4 rounded-full transition-colors relative ${
-              value ? 'bg-green-500' : 'bg-gray-300'
+              loading ? 'bg-gray-200' : value ? 'bg-green-500' : 'bg-gray-300'
             }`}
           >
-            <span
-              className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
-                value ? 'left-4' : 'left-0.5'
-              }`}
-            />
+            {!loading && (
+              <span
+                className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
+                  value ? 'left-4' : 'left-0.5'
+                }`}
+              />
+            )}
           </button>
         </div>
         {description && (
@@ -174,42 +177,64 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
         <div className="bg-gray-50 rounded-lg p-2 space-y-1">
           {toggle('Launch at login', autoLaunch, toggleAutoLaunch, 'Start Daymon when you log in')}
           {toggle('Notifications', notifications, toggleNotifications, 'Show macOS notifications when tasks complete')}
-          {toggle(
-            'Auto-show results in Claude Code',
-            autoNudge,
-            toggleAutoNudge,
-            'Type task results into Claude Code chat when tasks complete (macOS only)'
-          )}
-          {autoNudge && (
-            <div className="pl-2 border-l-2 border-gray-200 ml-1 space-y-1">
-              {toggle(
-                'Quiet hours',
-                quietHours,
-                toggleQuietHours,
-                'Suppress nudges during set hours to avoid interrupting your typing'
-              )}
-              {quietHours && (
-                <div className="flex items-center gap-2 text-xs py-1">
-                  <span className="text-gray-500">From</span>
-                  <input
-                    type="time"
-                    value={quietFrom}
-                    onChange={(e) => updateQuietFrom(e.target.value)}
-                    className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs text-gray-600"
-                  />
-                  <span className="text-gray-500">until</span>
-                  <input
-                    type="time"
-                    value={quietUntil}
-                    onChange={(e) => updateQuietUntil(e.target.value)}
-                    className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs text-gray-600"
-                  />
-                </div>
-              )}
-            </div>
-          )}
           {toggle('Large window', largeWindow, toggleLargeWindow, 'Use a bigger popover window')}
           {toggle('Advanced mode', advancedMode, toggleAdvancedMode, 'Show task IDs, debug info, and extra controls')}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-semibold text-gray-700 mb-1">Auto-Nudge</h3>
+        <p className="text-[10px] text-gray-400 mb-1.5 leading-tight">When a task finishes, Daymon can show results in your active Claude Code chat automatically.</p>
+        <div className="bg-gray-50 rounded-lg p-2 space-y-1">
+          <div className="py-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-600">Default for new tasks</span>
+              <div className="flex items-center gap-0.5">
+                {([['always', 'All'], ['failure_only', 'Fail'], ['never', 'Off']] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => updateDefaultNudgeMode(value)}
+                    className={`px-1.5 py-0.5 rounded text-xs cursor-pointer transition-colors ${
+                      defaultNudgeMode === value
+                        ? value === 'always' ? 'bg-green-100 text-green-700' : value === 'failure_only' ? 'bg-orange-100 text-orange-700' : 'bg-gray-700 text-white'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1 leading-tight">
+              <span className="font-medium text-green-600">All</span> — notify on every completion &nbsp;
+              <span className="font-medium text-orange-600">Fail</span> — only when task fails &nbsp;
+              <span className="font-medium text-gray-600">Off</span> — never notify
+            </p>
+          </div>
+          {toggle(
+            'Quiet hours',
+            quietHours,
+            toggleQuietHours,
+            'Suppress nudges during set hours'
+          )}
+          {quietHours && (
+            <div className="flex items-center gap-2 text-xs py-1 pl-2 border-l-2 border-gray-200 ml-1">
+              <span className="text-gray-500">From</span>
+              <input
+                type="time"
+                value={quietFrom}
+                onChange={(e) => updateQuietFrom(e.target.value)}
+                className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs text-gray-600"
+              />
+              <span className="text-gray-500">until</span>
+              <input
+                type="time"
+                value={quietUntil}
+                onChange={(e) => updateQuietUntil(e.target.value)}
+                className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs text-gray-600"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -314,6 +339,18 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
           className="w-full py-1.5 text-xs text-blue-500 hover:text-blue-700 border border-blue-200 hover:border-blue-300 rounded transition-colors"
         >
           Report Bug
+        </button>
+        <button
+          onClick={() => window.open('mailto:hello@daymon.io')}
+          className="w-full py-1.5 text-xs text-blue-500 hover:text-blue-700 border border-blue-200 hover:border-blue-300 rounded transition-colors"
+        >
+          Email Developer
+        </button>
+        <button
+          onClick={() => window.open('https://github.com/daymonio/daymon')}
+          className="w-full py-1.5 text-xs text-yellow-600 hover:text-yellow-700 border border-yellow-200 hover:border-yellow-300 rounded transition-colors"
+        >
+          Star Us on GitHub
         </button>
         <button
           onClick={() => window.api.app.quit()}

@@ -9,12 +9,13 @@ vi.mock('../events', () => ({
 
 vi.mock('../../shared/auto-nudge', () => ({
   isInQuietHours: vi.fn().mockReturnValue(false),
-  enqueueNudge: vi.fn()
+  enqueueNudge: vi.fn(),
+  shouldNudgeTask: vi.fn().mockReturnValue(true)
 }))
 
 import { notifyTaskComplete, notifyTaskFailed } from '../notifications'
 import { emitEvent } from '../events'
-import { isInQuietHours, enqueueNudge } from '../../shared/auto-nudge'
+import { isInQuietHours, enqueueNudge, shouldNudgeTask } from '../../shared/auto-nudge'
 
 let db: Database.Database
 
@@ -24,6 +25,7 @@ beforeEach(() => {
   vi.mocked(isInQuietHours).mockReturnValue(false)
   vi.mocked(enqueueNudge).mockReturnValue(undefined)
   vi.mocked(emitEvent).mockReturnValue(undefined)
+  vi.mocked(shouldNudgeTask).mockReturnValue(true)
 })
 
 afterEach(() => {
@@ -43,43 +45,50 @@ describe('notifyTaskComplete', () => {
     })
   })
 
-  it('triggers auto-nudge when enabled', () => {
-    db.prepare(
-      "INSERT INTO settings (key, value, updated_at) VALUES ('auto_nudge_enabled', 'true', datetime('now','localtime'))"
-    ).run()
-
+  it('triggers auto-nudge when nudgeMode is always', () => {
     vi.useFakeTimers()
-    notifyTaskComplete(db, 1, 'Test', undefined, 3000)
+    notifyTaskComplete(db, 1, 'Test', undefined, 3000, 'always')
     vi.advanceTimersByTime(600)
 
+    expect(shouldNudgeTask).toHaveBeenCalledWith('always', true)
     expect(enqueueNudge).toHaveBeenCalledWith(
       expect.objectContaining({ taskId: 1, taskName: 'Test', success: true })
     )
     vi.useRealTimers()
   })
 
-  it('does not nudge when auto_nudge_enabled is not set', () => {
+  it('does not nudge when nudgeMode is never', () => {
+    vi.mocked(shouldNudgeTask).mockReturnValue(false)
+
     vi.useFakeTimers()
-    notifyTaskComplete(db, 1, 'Test', undefined, 3000)
+    notifyTaskComplete(db, 1, 'Test', undefined, 3000, 'never')
     vi.advanceTimersByTime(600)
 
+    expect(shouldNudgeTask).toHaveBeenCalledWith('never', true)
     expect(enqueueNudge).not.toHaveBeenCalled()
     vi.useRealTimers()
   })
 
   it('does not nudge during quiet hours', () => {
-    db.prepare(
-      "INSERT INTO settings (key, value, updated_at) VALUES ('auto_nudge_enabled', 'true', datetime('now','localtime'))"
-    ).run()
     vi.mocked(isInQuietHours).mockReturnValue(true)
 
     vi.useFakeTimers()
-    notifyTaskComplete(db, 1, 'Test', undefined, 3000)
+    notifyTaskComplete(db, 1, 'Test', undefined, 3000, 'always')
     vi.advanceTimersByTime(600)
 
     expect(enqueueNudge).not.toHaveBeenCalled()
     vi.useRealTimers()
   })
+
+  it('defaults to always when nudgeMode not provided', () => {
+    vi.useFakeTimers()
+    notifyTaskComplete(db, 1, 'Test', undefined, 3000)
+    vi.advanceTimersByTime(600)
+
+    expect(shouldNudgeTask).toHaveBeenCalledWith('always', true)
+    vi.useRealTimers()
+  })
+
 })
 
 describe('notifyTaskFailed', () => {
@@ -95,12 +104,8 @@ describe('notifyTaskFailed', () => {
   })
 
   it('includes error info in nudge', () => {
-    db.prepare(
-      "INSERT INTO settings (key, value, updated_at) VALUES ('auto_nudge_enabled', 'true', datetime('now','localtime'))"
-    ).run()
-
     vi.useFakeTimers()
-    notifyTaskFailed(db, 3, 'Bad Task', 'spawn EBADF')
+    notifyTaskFailed(db, 3, 'Bad Task', 'spawn EBADF', 'always')
     vi.advanceTimersByTime(600)
 
     expect(enqueueNudge).toHaveBeenCalledWith(
@@ -110,6 +115,16 @@ describe('notifyTaskFailed', () => {
         errorMessage: 'spawn EBADF'
       })
     )
+    vi.useRealTimers()
+  })
+
+  it('nudges on failure with failure_only mode', () => {
+    vi.useFakeTimers()
+    notifyTaskFailed(db, 3, 'Monitor', 'site down', 'failure_only')
+    vi.advanceTimersByTime(600)
+
+    expect(shouldNudgeTask).toHaveBeenCalledWith('failure_only', false)
+    expect(enqueueNudge).toHaveBeenCalled()
     vi.useRealTimers()
   })
 })

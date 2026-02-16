@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import type { Entity, Observation, Relation, MemoryStats, Task, CreateTaskInput, TaskRun, Worker, CreateWorkerInput, TriggerType, TaskStatus, Watch, ConsoleLogEntry } from './types'
+import type { Entity, Observation, Relation, MemoryStats, Task, CreateTaskInput, TaskRun, Worker, CreateWorkerInput, TriggerType, TaskStatus, NudgeMode, Watch, ConsoleLogEntry } from './types'
 
 // ─── Entities ───────────────────────────────────────────────
 
@@ -135,10 +135,10 @@ export function createWorker(db: Database.Database, input: CreateWorkerInput): W
   }
   const result = db
     .prepare(
-      `INSERT INTO workers (name, system_prompt, description, model, is_default)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO workers (name, role, system_prompt, description, model, is_default)
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .run(input.name, input.systemPrompt, input.description ?? null, input.model ?? null, input.isDefault ? 1 : 0)
+    .run(input.name, input.role ?? null, input.systemPrompt, input.description ?? null, input.model ?? null, input.isDefault ? 1 : 0)
   return getWorker(db, result.lastInsertRowid as number)!
 }
 
@@ -158,13 +158,13 @@ export function getWorkerCount(db: Database.Database): number {
 }
 
 export function updateWorker(db: Database.Database, id: number, updates: Partial<{
-  name: string; systemPrompt: string; description: string; model: string; isDefault: boolean
+  name: string; role: string | null; systemPrompt: string; description: string; model: string; isDefault: boolean
 }>): void {
   if (updates.isDefault === true) {
     db.prepare('UPDATE workers SET is_default = 0 WHERE is_default = 1').run()
   }
   const fieldMap: Record<string, string> = {
-    name: 'name', systemPrompt: 'system_prompt', description: 'description',
+    name: 'name', role: 'role', systemPrompt: 'system_prompt', description: 'description',
     model: 'model', isDefault: 'is_default'
   }
   const fields: string[] = []
@@ -202,6 +202,7 @@ function mapWorkerRow(row: Record<string, unknown>): Worker {
   return {
     id: row.id as number,
     name: row.name as string,
+    role: (row.role as string | null) ?? null,
     systemPrompt: row.system_prompt as string,
     description: row.description as string | null,
     model: row.model as string | null,
@@ -217,8 +218,8 @@ function mapWorkerRow(row: Record<string, unknown>): Worker {
 export function createTask(db: Database.Database, input: CreateTaskInput): Task {
   const result = db
     .prepare(
-      `INSERT INTO tasks (name, description, prompt, cron_expression, trigger_type, trigger_config, scheduled_at, executor, max_runs, worker_id, session_continuity, timeout_minutes, max_turns, allowed_tools, disallowed_tools)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO tasks (name, description, prompt, cron_expression, trigger_type, trigger_config, scheduled_at, executor, max_runs, worker_id, session_continuity, timeout_minutes, max_turns, allowed_tools, disallowed_tools, nudge_mode)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name,
@@ -235,7 +236,8 @@ export function createTask(db: Database.Database, input: CreateTaskInput): Task 
       input.timeoutMinutes ?? null,
       input.maxTurns ?? null,
       input.allowedTools ?? null,
-      input.disallowedTools ?? null
+      input.disallowedTools ?? null,
+      input.nudgeMode ?? 'always'
     )
   const task = getTask(db, result.lastInsertRowid as number)!
   if (input.workerId) refreshWorkerTaskCount(db, input.workerId)
@@ -262,7 +264,7 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
   workerId: number | null; sessionContinuity: boolean; sessionId: string | null
   timeoutMinutes: number | null; maxTurns: number | null
   allowedTools: string | null; disallowedTools: string | null
-  learnedContext: string | null
+  nudgeMode: NudgeMode; learnedContext: string | null
 }>): void {
   const fieldMap: Record<string, string> = {
     name: 'name', description: 'description', prompt: 'prompt',
@@ -274,7 +276,7 @@ export function updateTask(db: Database.Database, id: number, updates: Partial<{
     workerId: 'worker_id', sessionContinuity: 'session_continuity', sessionId: 'session_id',
     timeoutMinutes: 'timeout_minutes', maxTurns: 'max_turns',
     allowedTools: 'allowed_tools', disallowedTools: 'disallowed_tools',
-    learnedContext: 'learned_context'
+    nudgeMode: 'nudge_mode', learnedContext: 'learned_context'
   }
 
   const fields: string[] = []
@@ -754,6 +756,7 @@ function mapTaskRow(row: Record<string, unknown>): Task {
     maxTurns: row.max_turns as number | null,
     allowedTools: row.allowed_tools as string | null,
     disallowedTools: row.disallowed_tools as string | null,
+    nudgeMode: (row.nudge_mode as NudgeMode) ?? 'always',
     learnedContext: row.learned_context as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string

@@ -73,6 +73,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_embeddings_source ON embeddings(source_typ
 CREATE TABLE IF NOT EXISTS workers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    role TEXT,
     system_prompt TEXT NOT NULL,
     description TEXT,
     model TEXT,
@@ -108,6 +109,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     max_turns INTEGER,
     allowed_tools TEXT,
     disallowed_tools TEXT,
+    nudge_mode TEXT NOT NULL DEFAULT 'always',
     learned_context TEXT,
     created_at DATETIME DEFAULT (datetime('now','localtime')),
     updated_at DATETIME DEFAULT (datetime('now','localtime'))
@@ -181,6 +183,8 @@ INSERT OR IGNORE INTO schema_version (version) VALUES (8);
 INSERT OR IGNORE INTO schema_version (version) VALUES (9);
 INSERT OR IGNORE INTO schema_version (version) VALUES (10);
 INSERT OR IGNORE INTO schema_version (version) VALUES (11);
+INSERT OR IGNORE INTO schema_version (version) VALUES (12);
+INSERT OR IGNORE INTO schema_version (version) VALUES (13);
 `
 
 /**
@@ -301,5 +305,19 @@ INSERT OR IGNORE INTO schema_version (version) VALUES (10);`
     sql: `
 ALTER TABLE tasks ADD COLUMN learned_context TEXT;
 INSERT OR IGNORE INTO schema_version (version) VALUES (11);`
+  },
+  {
+    version: 12,
+    label: 'per-task nudge mode',
+    sql: `
+ALTER TABLE tasks ADD COLUMN nudge_mode TEXT NOT NULL DEFAULT 'always';
+INSERT OR IGNORE INTO schema_version (version) VALUES (12);`
+  },
+  {
+    version: 13,
+    label: 'worker role field',
+    sql: `
+ALTER TABLE workers ADD COLUMN role TEXT;
+INSERT OR IGNORE INTO schema_version (version) VALUES (13);`
   }
 ]

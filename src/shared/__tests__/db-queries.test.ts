@@ -302,6 +302,23 @@ describe('createTask', () => {
     })
     expect(task.timeoutMinutes).toBeNull()
   })
+
+  it('creates a task with nudgeMode', () => {
+    const task = q.createTask(db, {
+      name: 'Monitor',
+      prompt: 'Check website',
+      nudgeMode: 'failure_only'
+    })
+    expect(task.nudgeMode).toBe('failure_only')
+  })
+
+  it('defaults nudgeMode to always', () => {
+    const task = q.createTask(db, {
+      name: 'Regular',
+      prompt: 'Do stuff'
+    })
+    expect(task.nudgeMode).toBe('always')
+  })
 })
 
 describe('getTask', () => {
@@ -377,6 +394,13 @@ describe('updateTask', () => {
     const task = q.createTask(db, { name: 'T', prompt: 'p' })
     q.updateTask(db, task.id, { maxRuns: 10 })
     expect(q.getTask(db, task.id)!.maxRuns).toBe(10)
+  })
+
+  it('updates nudgeMode', () => {
+    const task = q.createTask(db, { name: 'T', prompt: 'p' })
+    expect(task.nudgeMode).toBe('always')
+    q.updateTask(db, task.id, { nudgeMode: 'never' })
+    expect(q.getTask(db, task.id)!.nudgeMode).toBe('never')
   })
 })
 
@@ -703,11 +727,11 @@ describe('schema migration', () => {
     expect(colNames).toContain('learned_context')
   })
 
-  it('schema_version table has versions 1-11', () => {
+  it('schema_version table has versions 1-13', () => {
     const versions = db
       .prepare('SELECT version FROM schema_version ORDER BY version')
       .all() as { version: number }[]
-    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
   })
 })
 
@@ -1014,6 +1038,55 @@ describe('task-worker relationship', () => {
   it('defaults sessionContinuity to false', () => {
     const task = q.createTask(db, { name: 'Normal Task', prompt: 'p' })
     expect(task.sessionContinuity).toBe(false)
+  })
+})
+
+// ─── Worker Role Field ──────────────────────────────────────
+
+describe('worker role field', () => {
+  it('creates worker with name and role', () => {
+    const w = q.createWorker(db, { name: 'John', role: 'Chief of Staff', systemPrompt: 'p' })
+    expect(w.name).toBe('John')
+    expect(w.role).toBe('Chief of Staff')
+  })
+
+  it('creates worker without role (defaults to null)', () => {
+    const w = q.createWorker(db, { name: 'Ada', systemPrompt: 'p' })
+    expect(w.name).toBe('Ada')
+    expect(w.role).toBeNull()
+  })
+
+  it('updates worker role', () => {
+    const w = q.createWorker(db, { name: 'Bot', systemPrompt: 'p' })
+    expect(w.role).toBeNull()
+
+    q.updateWorker(db, w.id, { role: 'Researcher' })
+    expect(q.getWorker(db, w.id)!.role).toBe('Researcher')
+  })
+
+  it('includes role in listWorkers', () => {
+    q.createWorker(db, { name: 'John', role: 'CoS', systemPrompt: 'p' })
+    q.createWorker(db, { name: 'Ada', systemPrompt: 'p' })
+    const list = q.listWorkers(db)
+    expect(list).toHaveLength(2)
+    const john = list.find(w => w.name === 'John')
+    const ada = list.find(w => w.name === 'Ada')
+    expect(john!.role).toBe('CoS')
+    expect(ada!.role).toBeNull()
+  })
+
+  it('clears role back to null', () => {
+    const w = q.createWorker(db, { name: 'Bot', role: 'Analyst', systemPrompt: 'p' })
+    expect(w.role).toBe('Analyst')
+
+    q.updateWorker(db, w.id, { role: null })
+    expect(q.getWorker(db, w.id)!.role).toBeNull()
+  })
+
+  it('changes role from one value to another', () => {
+    const w = q.createWorker(db, { name: 'Bot', role: 'Writer', systemPrompt: 'p' })
+    q.updateWorker(db, w.id, { role: 'Researcher' })
+    expect(q.getWorker(db, w.id)!.role).toBe('Researcher')
   })
 })
 

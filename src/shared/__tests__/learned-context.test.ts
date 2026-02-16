@@ -37,6 +37,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     maxTurns: null,
     allowedTools: null,
     disallowedTools: null,
+    nudgeMode: 'always',
     learnedContext: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

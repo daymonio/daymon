@@ -4,7 +4,8 @@ import type { Worker } from '@shared/types'
 
 const WORKER_TEMPLATES = [
   {
-    name: 'Chief of Staff',
+    name: 'Morgan',
+    role: 'Chief of Staff',
     description: 'Proactive business ops — your autonomous right hand',
     systemPrompt:
       'You are a Chief of Staff — not an assistant who waits for orders, but an operator who anticipates needs and acts.\n\n'
@@ -25,7 +26,8 @@ const WORKER_TEMPLATES = [
       + '- Don\'t wait for a perfect answer. A fast 80% answer beats a slow 100% answer.'
   },
   {
-    name: 'Researcher',
+    name: 'Sage',
+    role: 'Researcher',
     description: 'Deep research with strong opinions on sources',
     systemPrompt:
       'You are a research analyst who delivers actionable intelligence, not book reports.\n\n'
@@ -45,7 +47,8 @@ const WORKER_TEMPLATES = [
       + '- Don\'t include sources just to pad the list. Quality over quantity.'
   },
   {
-    name: 'Code Reviewer',
+    name: 'Reese',
+    role: 'Code Reviewer',
     description: 'Opinionated reviewer — catches what linters miss',
     systemPrompt:
       'You are a senior engineer doing code review. You care about shipping quality software, not about style nitpicks.\n\n'
@@ -65,7 +68,8 @@ const WORKER_TEMPLATES = [
       + '- Don\'t say "consider" when you mean "this is wrong." Be direct.'
   },
   {
-    name: 'Writer',
+    name: 'Harper',
+    role: 'Writer',
     description: 'Sharp writing — cuts fluff, adds clarity',
     systemPrompt:
       'You are a writer who believes every word must earn its place.\n\n'
@@ -85,7 +89,8 @@ const WORKER_TEMPLATES = [
       + '- Don\'t write introductions that restate the title. Jump into the content.'
   },
   {
-    name: 'Email Assistant',
+    name: 'Avery',
+    role: 'Email Assistant',
     description: 'Triage inbox, draft replies — never sends',
     systemPrompt:
       'You manage email like a sharp executive assistant. Your job: surface what matters, draft responses, save time.\n\n'
@@ -107,7 +112,8 @@ const WORKER_TEMPLATES = [
       + 'For each valuable email: Subject | Sender | Why it matters | Draft reply'
   },
   {
-    name: 'Tech Trend Analyst',
+    name: 'Scout',
+    role: 'Tech Trend Analyst',
     description: 'Tech-only trends + tweet drafts with real takes',
     systemPrompt:
       'You track tech trends and draft tweets that have a point of view — not headlines, takes.\n\n'
@@ -127,7 +133,8 @@ const WORKER_TEMPLATES = [
       + '- Use hashtags sparingly (1-2 max). #AI #OpenSource are fine. #Innovation #Disruption are not.'
   },
   {
-    name: 'Competitor Tracker',
+    name: 'Quinn',
+    role: 'Competitor Tracker',
     description: 'Competitive intel — reports only when it matters',
     systemPrompt:
       'You are a competitive intelligence analyst. You report signal, not noise.\n\n'
@@ -149,7 +156,8 @@ const WORKER_TEMPLATES = [
       + 'If nothing noteworthy: "No significant competitor activity detected." (one line, done.)'
   },
   {
-    name: 'DevOps',
+    name: 'Atlas',
+    role: 'DevOps',
     description: 'Infrastructure — reliability over novelty',
     systemPrompt:
       'You are a DevOps engineer who values boring, reliable infrastructure over shiny new tools.\n\n'
@@ -170,7 +178,8 @@ const WORKER_TEMPLATES = [
       + '- Don\'t store secrets in code, env files committed to git, or "temporary" configs.'
   },
   {
-    name: 'Data Analyst',
+    name: 'Nova',
+    role: 'Data Analyst',
     description: 'Analysis that drives decisions, not dashboards',
     systemPrompt:
       'You are a data analyst who exists to help people make better decisions — not to produce charts.\n\n'
@@ -197,11 +206,13 @@ export function WorkersPanel(): React.JSX.Element {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [createName, setCreateName] = useState('')
+  const [createRole, setCreateRole] = useState('')
   const [createDesc, setCreateDesc] = useState('')
   const [createPrompt, setCreatePrompt] = useState('')
 
   // Edit state
   const [editName, setEditName] = useState('')
+  const [editRole, setEditRole] = useState('')
   const [editDesc, setEditDesc] = useState('')
   const [editPrompt, setEditPrompt] = useState('')
 
@@ -209,10 +220,12 @@ export function WorkersPanel(): React.JSX.Element {
     if (!createName.trim() || !createPrompt.trim()) return
     await window.api.workers.create({
       name: createName.trim(),
+      role: createRole.trim() || undefined,
       systemPrompt: createPrompt.trim(),
       description: createDesc.trim() || undefined
     })
     setCreateName('')
+    setCreateRole('')
     setCreateDesc('')
     setCreatePrompt('')
     setShowCreate(false)
@@ -226,6 +239,7 @@ export function WorkersPanel(): React.JSX.Element {
     }
     setExpandedId(worker.id)
     setEditName(worker.name)
+    setEditRole(worker.role ?? '')
     setEditDesc(worker.description ?? '')
     setEditPrompt(worker.systemPrompt)
   }
@@ -233,6 +247,7 @@ export function WorkersPanel(): React.JSX.Element {
   async function handleSave(id: number): Promise<void> {
     await window.api.workers.update(id, {
       name: editName.trim(),
+      role: editRole.trim() || undefined,
       description: editDesc.trim() || undefined,
       systemPrompt: editPrompt.trim()
     })
@@ -252,6 +267,7 @@ export function WorkersPanel(): React.JSX.Element {
 
   function useTemplate(t: (typeof WORKER_TEMPLATES)[number]): void {
     setCreateName(t.name)
+    setCreateRole(t.role)
     setCreateDesc(t.description)
     setCreatePrompt(t.systemPrompt)
     setShowCreate(true)
@@ -259,10 +275,18 @@ export function WorkersPanel(): React.JSX.Element {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-        <span className="text-xs text-gray-500">
-          {workers ? `${workers.length} worker(s)` : 'Loading...'}
-        </span>
+      <div className="px-3 py-1.5 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">
+            {workers ? `${workers.length} worker(s)` : 'Loading...'}
+          </span>
+          <button
+            onClick={() => window.open('https://daymon.io/workers-in-action.html')}
+            className="text-[10px] text-blue-400 hover:text-blue-600"
+          >
+            See examples
+          </button>
+        </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
           className="text-xs text-blue-500 hover:text-blue-700 font-medium"
@@ -272,12 +296,19 @@ export function WorkersPanel(): React.JSX.Element {
       </div>
 
       {showCreate && (
-        <div className="p-3 border-b border-gray-200 bg-gray-50 space-y-2">
+        <div className="p-3 border-b-2 border-blue-300 bg-blue-50/50 space-y-2">
           <input
             type="text"
-            placeholder="Worker name"
+            placeholder="Name (e.g. John, Ada)"
             value={createName}
             onChange={(e) => setCreateName(e.target.value)}
+            className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white"
+          />
+          <input
+            type="text"
+            placeholder="Role (optional, e.g. Chief of Staff)"
+            value={createRole}
+            onChange={(e) => setCreateRole(e.target.value)}
             className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white"
           />
           <input
@@ -325,6 +356,7 @@ export function WorkersPanel(): React.JSX.Element {
                       )}
                     </div>
                     <div className="text-xs text-gray-400">
+                      {worker.role && <span>{worker.role} &middot; </span>}
                       {worker.taskCount} task(s)
                       {worker.description && <span> &middot; {worker.description}</span>}
                     </div>
@@ -342,6 +374,13 @@ export function WorkersPanel(): React.JSX.Element {
                       onChange={(e) => setEditName(e.target.value)}
                       className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white"
                       placeholder="Name"
+                    />
+                    <input
+                      type="text"
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:border-gray-500 bg-white"
+                      placeholder="Role (optional)"
                     />
                     <input
                       type="text"
@@ -394,7 +433,7 @@ export function WorkersPanel(): React.JSX.Element {
               onClick={() => useTemplate(t)}
               className="w-full text-left px-3 py-2 rounded border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
             >
-              <div className="text-xs font-medium text-gray-700">{t.name}</div>
+              <div className="text-xs font-medium text-gray-700">{t.name} <span className="text-gray-400 font-normal">— {t.role}</span></div>
               <div className="text-xs text-gray-400">{t.description}</div>
             </button>
           ))}

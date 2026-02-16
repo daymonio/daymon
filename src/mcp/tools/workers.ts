@@ -13,7 +13,8 @@ export function registerWorkerTools(server: McpServer): void {
         + 'Tasks can be assigned to workers. The worker\'s system prompt is passed to Claude CLI via --system-prompt on every task run. '
         + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
-        name: z.string().min(1).max(200).describe('Short name for the worker (e.g., "Research Assistant", "Code Reviewer", "News Curator")'),
+        name: z.string().min(1).max(200).describe('Name for the worker — can be a personal name (e.g., "John", "Ada") or a role title (e.g., "Research Assistant")'),
+        role: z.string().min(1).max(200).optional().describe('Optional role/function title (e.g., "Chief of Staff", "Code Reviewer"). Shown as subtitle under the name.'),
         systemPrompt: z.string().min(1).max(50000).describe(
           'The system prompt / "soul" that defines this worker\'s personality, capabilities, and constraints. '
           + 'This is passed via --system-prompt to every task assigned to this worker.'
@@ -24,13 +25,14 @@ export function registerWorkerTools(server: McpServer): void {
         )
       }
     },
-    async ({ name, systemPrompt, description, isDefault }) => {
+    async ({ name, role, systemPrompt, description, isDefault }) => {
       const db = getMcpDatabase()
-      queries.createWorker(db, { name, systemPrompt, description, isDefault })
+      queries.createWorker(db, { name, role, systemPrompt, description, isDefault })
+      const label = role ? `"${name}" (${role})` : `"${name}"`
       return {
         content: [{
           type: 'text' as const,
-          text: `Created worker "${name}".`
+          text: `Created worker ${label}.`
         }]
       }
     }
@@ -52,6 +54,7 @@ export function registerWorkerTools(server: McpServer): void {
       const list = workers.map(w => ({
         id: w.id,
         name: w.name,
+        role: w.role,
         description: w.description,
         isDefault: w.isDefault,
         taskCount: w.taskCount,
@@ -66,17 +69,18 @@ export function registerWorkerTools(server: McpServer): void {
     'daymon_update_worker',
     {
       title: 'Update Worker',
-      description: 'Update a worker\'s name, system prompt, description, or default status. '
+      description: 'Update a worker\'s name, role, system prompt, description, or default status. '
         + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
       inputSchema: {
         id: z.number().describe('The worker ID to update'),
         name: z.string().optional().describe('New name'),
+        role: z.string().optional().describe('New role/function title'),
         systemPrompt: z.string().optional().describe('New system prompt'),
         description: z.string().optional().describe('New description'),
         isDefault: z.boolean().optional().describe('Set or unset as default worker')
       }
     },
-    async ({ id, name, systemPrompt, description, isDefault }) => {
+    async ({ id, name, role, systemPrompt, description, isDefault }) => {
       const db = getMcpDatabase()
       const worker = queries.getWorker(db, id)
       if (!worker) {
@@ -84,6 +88,7 @@ export function registerWorkerTools(server: McpServer): void {
       }
       const updates: Record<string, unknown> = {}
       if (name !== undefined) updates.name = name
+      if (role !== undefined) updates.role = role
       if (systemPrompt !== undefined) updates.systemPrompt = systemPrompt
       if (description !== undefined) updates.description = description
       if (isDefault !== undefined) updates.isDefault = isDefault

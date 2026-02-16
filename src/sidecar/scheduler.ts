@@ -132,11 +132,11 @@ async function runTask(taskId: number, resultsDir: string): Promise<void> {
 
   if (result.success) {
     console.log(`Sidecar: Task ${taskId} (${task.name}) completed in ${result.durationMs}ms`)
-    notifyTaskComplete(db, taskId, task.name, result.output?.slice(0, 200), result.durationMs)
+    notifyTaskComplete(db, taskId, task.name, result.output?.slice(0, 200), result.durationMs, task.nudgeMode)
   } else {
     const error = result.errorMessage || 'Unknown error'
     console.error(`Sidecar: Task ${taskId} (${task.name}) failed: ${error}`)
-    notifyTaskFailed(db, taskId, task.name, error)
+    notifyTaskFailed(db, taskId, task.name, error, task.nudgeMode)
   }
 }
 

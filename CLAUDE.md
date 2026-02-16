@@ -154,7 +154,7 @@ Tasks are **not isolated** — they have access to Daymon's memory system. Befor
 
 All memory operations are wrapped in try/catch — if memory fails, the task still executes normally. Memory is an enhancement, never a blocker.
 
-### DB Schema (V4–V10)
+### DB Schema (V4–V13)
 
 ```
 memory_entity_id  INTEGER  — FK to entities.id, links task to its memory entity (V4)
@@ -165,6 +165,12 @@ timeout_minutes   INTEGER  — per-task timeout in minutes, NULL = default 30 (V
 max_turns         INTEGER  — max agentic turns per run, NULL = unlimited (V9)
 allowed_tools     TEXT     — comma-separated list of allowed tools, NULL = all (V10)
 disallowed_tools  TEXT     — comma-separated list of blocked tools, NULL = none (V10)
+nudge_mode        TEXT     — per-task nudge: 'always' (default), 'failure_only', 'never' (V12)
+```
+
+Workers table (V13):
+```
+role              TEXT     — optional worker role/title (V13)
 ```
 
 ### Key files
@@ -205,7 +211,7 @@ Common patterns:
 - **Code review tasks**: `allowedTools: "Read,Grep,Glob"` — read-only, no modifications
 - **Analysis tasks**: `disallowedTools: "Edit,Write"` — can read and run commands but won't modify files
 
-### DB Schema (V10)
+### DB Schema (V13)
 
 The tasks table has these scheduling-relevant columns:
 
@@ -223,6 +229,7 @@ timeout_minutes    INTEGER  — per-task timeout in minutes, NULL = default 30 (
 max_turns          INTEGER  — max agentic turns per run, NULL = unlimited (V9)
 allowed_tools      TEXT     — comma-separated allowed tools, NULL = all (V10)
 disallowed_tools   TEXT     — comma-separated blocked tools, NULL = none (V10)
+nudge_mode         TEXT     — 'always' (default), 'failure_only', or 'never' (V12)
 status             TEXT     — 'active', 'paused', or 'completed'
 ```
 
@@ -230,7 +237,7 @@ status             TEXT     — 'active', 'paused', or 'completed'
 
 | Tool | Description |
 |------|-------------|
-| `daymon_schedule` | Create task (cron/once/manual). Params: `prompt`, `cronExpression?`, `scheduledAt?`, `maxRuns?`, `maxTurns?`, `allowedTools?`, `disallowedTools?`, `name?`, `description?`, `workerId?`, `sessionContinuity?`, `timeout?` |
+| `daymon_schedule` | Create task (cron/once/manual). Params: `prompt`, `cronExpression?`, `scheduledAt?`, `maxRuns?`, `maxTurns?`, `allowedTools?`, `disallowedTools?`, `nudge?`, `name?`, `description?`, `workerId?`, `sessionContinuity?`, `timeout?` |
 | `daymon_run_task` | Execute a task immediately by ID (async — returns instantly, runs in background) |
 | `daymon_list_tasks` | List all tasks (includes `maxRuns`, `runCount`, worker info) |
 | `daymon_pause_task` | Pause a task |
@@ -243,19 +250,19 @@ status             TEXT     — 'active', 'paused', or 'completed'
 | `daymon_recall` | Search memories by keyword (FTS + semantic hybrid search) |
 | `daymon_forget` | Delete a memory entity and its observations |
 | `daymon_memory_list` | List all memories, optionally filtered by category |
-| `daymon_create_worker` | Create a worker with name, system prompt, description |
+| `daymon_create_worker` | Create a worker with name, role, system prompt, description |
 | `daymon_list_workers` | List all workers |
-| `daymon_update_worker` | Update a worker's name, prompt, or description |
+| `daymon_update_worker` | Update a worker's name, role, prompt, or description |
 | `daymon_delete_worker` | Delete a worker |
 | `daymon_watch` | Watch a file/folder for changes |
 | `daymon_unwatch` | Stop watching a file/folder |
 | `daymon_list_watches` | List all active watches |
 | `daymon_get_setting` | Get a setting value by key |
-| `daymon_set_setting` | Set a setting value (e.g. `auto_nudge_enabled`) |
+| `daymon_set_setting` | Set a setting value (e.g. `auto_nudge_quiet_hours`) |
 
 ## Workers
 
-Workers are named agent configs with system prompts. Each worker defines a personality, values, and anti-patterns that shape how tasks execute.
+Workers are named agent configs with system prompts. Each worker has a required **name** (e.g., "John") and an optional **role** (e.g., "Chief of Staff"). The name is always shown primary, role as subtitle when set. Each worker defines a personality, values, and anti-patterns that shape how tasks execute.
 
 ### Resolution order
 
@@ -297,33 +304,41 @@ Tasks can optionally resume Claude CLI sessions across runs using `--resume <ses
 
 When a task completes, Daymon can automatically show results in the active Claude Code chat. Uses macOS `osascript` to activate the IDE, focus Claude Code input (Cmd+L), and type a trigger message.
 
+### Per-Task Nudge Mode
+
+Each task has a `nudge_mode` that controls when it triggers auto-nudge:
+
+| Mode | Behavior |
+|------|----------|
+| `always` (default) | Nudge on every completion (success + failure) |
+| `failure_only` | Only nudge when the task fails (ideal for monitoring/health checks) |
+| `never` | Never nudge |
+
+- **MCP**: `daymon_schedule` has a `nudge` param (enum: always/failure_only/never)
+- **UI**: Each task card has a nudge mode dropdown
+- **Logic**: `shouldNudgeTask(nudgeMode, success)` in `src/shared/auto-nudge.ts`
+
 ### How it works
 
-1. Task completes (success or failure) in either MCP server or Electron runner
-2. Checks `auto_nudge_enabled` setting (or `DAYMON_AUTO_NUDGE` env var override)
-3. If enabled, detects running IDE (Cursor, VSCode, VSCode Insiders) by bundle ID
-4. Activates the IDE, sends Cmd+L to focus Claude Code input
-5. Types: `Daymon task "..." (id: N) completed successfully in Xs. Show me the results using daymon_task_history.`
-6. Claude reacts by calling `daymon_task_history` and displaying results
+1. Task completes (success or failure) in either MCP server or sidecar
+2. Checks task's `nudge_mode` via `shouldNudgeTask()`
+3. Checks quiet hours (orthogonal gate)
+4. If allowed, detects running IDE (Cursor, VSCode, VSCode Insiders) by bundle ID
+5. Activates the IDE, sends Cmd+L to focus Claude Code input
+6. Types: `Daymon task "..." (id: N) completed successfully in Xs. Show me the results using daymon_task_history.`
+7. Claude reacts by calling `daymon_task_history` and displaying results
 
 ### Quiet Hours
 
-Suppress nudges during working hours to avoid mixing with user typing. Tasks that complete outside quiet hours nudge immediately.
+Suppress nudges during set hours to avoid mixing with user typing. Quiet hours are a global setting that applies on top of per-task nudge mode.
 
 - **Settings**: `auto_nudge_quiet_hours` (true/false), `auto_nudge_quiet_from` (HH:MM, default 08:00), `auto_nudge_quiet_until` (HH:MM, default 22:00)
 - Supports inverted ranges (e.g., 22:00–08:00 for nighttime quiet)
-- UI: nested under auto-nudge toggle with time pickers
+- UI: Settings tab toggle with time pickers
 
 ### Nudge Queue
 
 When multiple tasks complete simultaneously, nudges are serialized via an async queue with a 3s gap between messages. This prevents concurrent osascript keystrokes from mixing.
-
-### Settings
-
-- **UI toggle**: Settings tab → "Auto-show results in Claude Code"
-- **MCP tool**: `daymon_set_setting` key=`auto_nudge_enabled` value=`true`
-- **Env var**: `DAYMON_AUTO_NUDGE=true` (overrides DB setting)
-- Default: **disabled** (opt-in)
 
 ### Requirements
 
@@ -333,10 +348,10 @@ When multiple tasks complete simultaneously, nudges are serialized via an async 
 
 ### Key files
 
-- `src/shared/auto-nudge.ts` — `nudgeClaudeCode()`, `isInQuietHours()`, `enqueueNudge()`, IDE detection
+- `src/shared/auto-nudge.ts` — `shouldNudgeTask()`, `nudgeClaudeCode()`, `isInQuietHours()`, `enqueueNudge()`, IDE detection
 - `src/mcp/tools/scheduler.ts` — nudge in `daymon_run_task` fire-and-forget `.then()` handler
 - `src/sidecar/notifications.ts` — nudge in sidecar task completion callbacks
-- `src/mcp/tools/settings.ts` — `daymon_get_setting` / `daymon_set_setting` MCP tools
+- `src/mcp/tools/settings.ts` — `daymon_get_setting` / `daymon_set_setting` MCP tools (quiet hours)
 
 ## Project Structure
 
@@ -371,7 +386,7 @@ daymon/
 │       ├── db-queries.ts        # Pure DB query functions (tasks, workers, memory, embeddings)
 │       ├── embeddings.ts        # Local vector embeddings (HuggingFace transformers)
 │       ├── embedding-indexer.ts # Background batch embedding processor
-│       ├── db-migrations.ts     # DB schema migrations (V1–V10)
+│       ├── db-migrations.ts     # DB schema migrations (V1–V13)
 │       ├── types.ts             # Shared TypeScript types
 │       └── constants.ts         # App constants
 ├── .mcp.json                    # Claude Code MCP server config
@@ -451,11 +466,37 @@ npm run build:linux       # Build + package Linux
 - Tests pass (if they exist)
 - Feature works in the running Electron app (verified)
 
-## Progress Tracking
+## Progress Tracking — MANDATORY
 
-- A shared progress file exists at `PROGRESS.md` in the project root.
-- **Before starting work**, check `PROGRESS.md` to see what's already done and in progress.
-- **Every agent MUST add their planned tasks** as unchecked `[ ]` items to `PROGRESS.md` BEFORE beginning execution — include an agent identifier so work can be tracked. Format: `- [ ] Task description (@agent-name)`
-- Mark each task `[x]` immediately after completing it — do not batch completions.
+**CRITICAL: PROGRESS.md is the source of truth for all work. EVERY task — no matter how small — MUST be logged there. Failure to update PROGRESS.md is a violation of project rules.**
+
+A shared progress file exists at `PROGRESS.md` in the project root.
+
+### BEFORE writing ANY code or making ANY changes:
+
+1. **Read `PROGRESS.md`** — check what's already done, what's in progress, avoid duplicating work
+2. **Add a new section header** for your task (e.g., `## Worker Role Field`)
+3. **List ALL planned tasks** as unchecked `- [ ]` items with your agent name BEFORE you start executing:
+   ```
+   ## Worker Role Field
+   - [ ] Add DB migration V13 (@executor)
+   - [ ] Update types and validation (@executor)
+   - [ ] Update DB queries (@executor)
+   - [ ] Update MCP tools (@executor)
+   - [ ] Update UI components (@executor)
+   - [ ] Write tests (@executor)
+   - [ ] Typecheck + test + build (@executor)
+   ```
+4. **Only AFTER writing tasks to PROGRESS.md** may you begin implementation
+
+### DURING execution:
+
+- Mark each task `[x]` **immediately** after completing it — do NOT batch completions
+- If you discover new sub-tasks during work, add them as new `- [ ]` items before doing them
+
+### Rules:
+
 - Do NOT remove or reorder existing items. Only add new items and mark them complete.
-- Agent names: use a short descriptive label (e.g., `@executor`, `@refactor`, `@tests`, `@docs`, or the agent's role in team mode).
+- Do NOT skip this step for "small" changes — ALL work gets logged.
+- Agent names: use a short descriptive label (e.g., `@executor`, `@refactor`, `@tests`, `@docs`)
+- This applies to EVERY agent, including sub-agents in team mode.

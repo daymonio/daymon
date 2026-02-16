@@ -4,12 +4,14 @@ import type { TRIGGER_TYPES, TASK_STATUSES } from './constants'
 
 export type TriggerType = typeof TRIGGER_TYPES[keyof typeof TRIGGER_TYPES]
 export type TaskStatus = typeof TASK_STATUSES[keyof typeof TASK_STATUSES]
+export type NudgeMode = 'always' | 'failure_only' | 'never'
 
 // ─── Worker Types ──────────────────────────────────────────
 
 export interface Worker {
   id: number
   name: string
+  role: string | null
   systemPrompt: string
   description: string | null
   model: string | null
@@ -21,6 +23,7 @@ export interface Worker {
 
 export interface CreateWorkerInput {
   name: string
+  role?: string
   systemPrompt: string
   description?: string
   model?: string
@@ -80,6 +83,7 @@ export interface Task {
   maxTurns: number | null
   allowedTools: string | null
   disallowedTools: string | null
+  nudgeMode: NudgeMode
   learnedContext: string | null
   createdAt: string
   updatedAt: string
@@ -101,6 +105,7 @@ export interface CreateTaskInput {
   maxTurns?: number
   allowedTools?: string
   disallowedTools?: string
+  nudgeMode?: NudgeMode
 }
 
 export interface TaskRun {

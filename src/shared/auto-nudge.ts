@@ -64,6 +64,20 @@ export function isInQuietHours(db: Database.Database): boolean {
   }
 }
 
+// ─── Per-Task Nudge Decision ─────────────────────────────────
+
+/**
+ * Determine whether a task should trigger an auto-nudge based on its
+ * nudge mode and success/failure status. Pure function — does not check quiet hours.
+ */
+export function shouldNudgeTask(nudgeMode: string, success: boolean): boolean {
+  switch (nudgeMode) {
+    case 'never': return false
+    case 'failure_only': return !success
+    default: return true // 'always' + unknown values
+  }
+}
+
 // ─── Nudge Queue (serialize concurrent nudges) ──────────────
 
 const nudgeQueue: NudgeOptions[] = []

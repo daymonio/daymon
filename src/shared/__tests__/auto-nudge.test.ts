@@ -1,4 +1,38 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { shouldNudgeTask } from '../auto-nudge'
+
+// ─── shouldNudgeTask ─────────────────────────────────────────
+
+describe('shouldNudgeTask', () => {
+  // 'always' mode — always nudge regardless of success/failure
+  it('always + success → true', () => {
+    expect(shouldNudgeTask('always', true)).toBe(true)
+  })
+  it('always + failure → true', () => {
+    expect(shouldNudgeTask('always', false)).toBe(true)
+  })
+
+  // 'failure_only' mode — only nudge on failure
+  it('failure_only + success → false', () => {
+    expect(shouldNudgeTask('failure_only', true)).toBe(false)
+  })
+  it('failure_only + failure → true', () => {
+    expect(shouldNudgeTask('failure_only', false)).toBe(true)
+  })
+
+  // 'never' mode — never nudge
+  it('never + success → false', () => {
+    expect(shouldNudgeTask('never', true)).toBe(false)
+  })
+  it('never + failure → false', () => {
+    expect(shouldNudgeTask('never', false)).toBe(false)
+  })
+
+  // unknown mode falls through to default (always)
+  it('unknown mode + success → true (defaults to always)', () => {
+    expect(shouldNudgeTask('unknown_value', true)).toBe(true)
+  })
+})
 
 // ─── isInQuietHours ──────────────────────────────────────────
 
@@ -227,3 +261,4 @@ describe('nudgeClaudeCode', () => {
     expect(opts.stdio).toBe('ignore')
   })
 })
+

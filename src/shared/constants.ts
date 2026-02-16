@@ -27,6 +27,5 @@ export const TASK_STATUSES = {
 
 export const SETTINGS = {
   NOTIFICATIONS_ENABLED: 'notifications_enabled',
-  AUTO_NUDGE_ENABLED: 'auto_nudge_enabled',
   LARGE_WINDOW_ENABLED: 'large_window_enabled'
 } as const

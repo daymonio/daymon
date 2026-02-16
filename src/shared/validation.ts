@@ -3,11 +3,13 @@ import { validateWatchPath } from './watch-path'
 
 const taskStatusValues = ['active', 'paused', 'completed'] as const
 const triggerTypeValues = ['cron', 'once', 'manual'] as const
+const nudgeModeValues = ['always', 'failure_only', 'never'] as const
 
 export const idSchema = z.number().int().positive()
 
 export const createWorkerSchema = z.object({
   name: z.string().trim().min(1).max(200),
+  role: z.string().trim().min(1).max(200).optional(),
   systemPrompt: z.string().trim().min(1).max(50000),
   description: z.string().trim().max(1000).optional(),
   model: z.string().trim().max(200).optional(),
@@ -16,6 +18,7 @@ export const createWorkerSchema = z.object({
 
 export const updateWorkerSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
+  role: z.string().trim().min(1).max(200).optional(),
   systemPrompt: z.string().trim().min(1).max(50000).optional(),
   description: z.string().trim().max(1000).optional(),
   model: z.string().trim().max(200).optional(),
@@ -38,7 +41,8 @@ export const createTaskSchema = z.object({
   maxRuns: z.number().int().positive().optional(),
   workerId: idSchema.optional(),
   sessionContinuity: z.boolean().optional(),
-  timeoutMinutes: z.number().int().positive().max(1440).optional()
+  timeoutMinutes: z.number().int().positive().max(1440).optional(),
+  nudgeMode: z.enum(nudgeModeValues).optional()
 }).strict()
 
 export const updateTaskSchema = z.object({
@@ -60,7 +64,8 @@ export const updateTaskSchema = z.object({
   workerId: idSchema.nullable().optional(),
   sessionContinuity: z.boolean().optional(),
   sessionId: z.string().trim().max(200).nullable().optional(),
-  timeoutMinutes: z.number().int().positive().max(1440).nullable().optional()
+  timeoutMinutes: z.number().int().positive().max(1440).nullable().optional(),
+  nudgeMode: z.enum(nudgeModeValues).optional()
 }).strict()
 
 export const watchPathSchema = z.string().trim().min(1).superRefine((path, ctx) => {

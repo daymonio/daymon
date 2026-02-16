@@ -9,13 +9,12 @@ export function registerSettingsTools(server: McpServer): void {
     {
       title: 'Get Setting',
       description: 'Get a Daymon setting value by key. '
-        + 'Available settings: auto_nudge_enabled (true/false) — auto-show task results in Claude Code chat when a task completes. '
-        + 'large_window_enabled (true/false) — use a larger popover window in the Daymon desktop app. '
+        + 'Available settings: large_window_enabled (true/false) — use a larger popover window in the Daymon desktop app. '
         + 'auto_nudge_quiet_hours (true/false) — suppress nudges during quiet hours. '
         + 'auto_nudge_quiet_from (HH:MM) — quiet hours start time (default: 08:00). '
         + 'auto_nudge_quiet_until (HH:MM) — quiet hours end time (default: 22:00).',
       inputSchema: {
-        key: z.string().describe('The setting key (e.g. "auto_nudge_enabled")')
+        key: z.string().describe('The setting key (e.g. "auto_nudge_quiet_hours")')
       }
     },
     async ({ key }) => {
@@ -37,8 +36,7 @@ export function registerSettingsTools(server: McpServer): void {
     {
       title: 'Set Setting',
       description: 'Set a Daymon setting. '
-        + 'Available settings: auto_nudge_enabled (true/false) — auto-show task results in Claude Code chat when a task completes. '
-        + 'large_window_enabled (true/false) — use a larger popover window in the Daymon desktop app. '
+        + 'Available settings: large_window_enabled (true/false) — use a larger popover window in the Daymon desktop app. '
         + 'auto_nudge_quiet_hours (true/false) — suppress nudges during quiet hours. '
         + 'auto_nudge_quiet_from (HH:MM) — quiet hours start time (default: 08:00). '
         + 'auto_nudge_quiet_until (HH:MM) — quiet hours end time (default: 22:00). '

@@ -7,7 +7,7 @@ import { getMcpDatabase } from '../db'
 import * as queries from '../../shared/db-queries'
 import { APP_NAME, TASK_STATUSES } from '../../shared/constants'
 import { executeTask, isTaskRunning } from '../../shared/task-runner'
-import { isInQuietHours, enqueueNudge } from '../../shared/auto-nudge'
+import { isInQuietHours, enqueueNudge, shouldNudgeTask } from '../../shared/auto-nudge'
 
 export function generateTaskName(prompt: string): string {
   const cleaned = prompt.replace(/^(please |can you |i want you to |i need you to )/i, '').trim()
@@ -79,10 +79,16 @@ export function registerSchedulerTools(server: McpServer): void {
           'Comma-separated list of tools the task is NOT allowed to use. '
           + 'Example: "WebFetch" to force WebSearch-only (avoids slow URL fetches). '
           + '"Edit,Write" to make a task read-only.'
+        ),
+        nudge: z.enum(['always', 'failure_only', 'never']).optional().describe(
+          'When to auto-nudge Claude Code about this task\'s completion. '
+          + 'Use \'failure_only\' for monitoring/health check tasks that should only alert on errors. '
+          + 'Use \'never\' for frequent cron tasks that don\'t need attention. '
+          + 'Default: \'always\' (nudge on every completion).'
         )
       }
     },
-    async ({ name, prompt, cronExpression, scheduledAt, description, maxRuns, workerId, sessionContinuity, timeout, maxTurns, allowedTools, disallowedTools }) => {
+    async ({ name, prompt, cronExpression, scheduledAt, description, maxRuns, workerId, sessionContinuity, timeout, maxTurns, allowedTools, disallowedTools, nudge }) => {
       const db = getMcpDatabase()
 
       // Auto-determine trigger type
@@ -152,7 +158,8 @@ export function registerSchedulerTools(server: McpServer): void {
         timeoutMinutes: timeout ?? undefined,
         maxTurns: maxTurns ?? undefined,
         allowedTools: allowedTools ?? undefined,
-        disallowedTools: disallowedTools ?? undefined
+        disallowedTools: disallowedTools ?? undefined,
+        nudgeMode: nudge ?? undefined
       })
 
       if (triggerType === 'cron') {
@@ -215,7 +222,9 @@ export function registerSchedulerTools(server: McpServer): void {
           description: t.description,
           workerId: t.workerId,
           workerName: worker?.name ?? null,
+          workerRole: worker?.role ?? null,
           sessionContinuity: t.sessionContinuity,
+          nudgeMode: t.nudgeMode,
           learnedContext: t.learnedContext ? t.learnedContext.slice(0, 200) + (t.learnedContext.length > 200 ? '...' : '') : null
         }
       })
@@ -277,12 +286,9 @@ export function registerSchedulerTools(server: McpServer): void {
             console.error(`Task ${id} ("${task.name}") failed: ${result.errorMessage}`)
           }
 
-          // Auto-nudge Claude Code chat if enabled and not in quiet hours
+          // Auto-nudge Claude Code chat based on per-task nudge mode
           try {
-            const autoNudge = process.env.DAYMON_AUTO_NUDGE
-              ? ['true', '1'].includes(process.env.DAYMON_AUTO_NUDGE)
-              : queries.getSetting(db, 'auto_nudge_enabled') === 'true'
-            if (autoNudge && !isInQuietHours(db)) {
+            if (shouldNudgeTask(task.nudgeMode, result.success) && !isInQuietHours(db)) {
               setTimeout(() => enqueueNudge({
                 taskId: id,
                 taskName: task.name,

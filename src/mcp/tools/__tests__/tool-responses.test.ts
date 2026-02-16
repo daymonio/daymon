@@ -274,6 +274,31 @@ describe('daymon_create_worker response', () => {
     expect(text).toContain('News Curator')
     expect(text).not.toContain('default')
   })
+
+  it('includes role in response when provided', async () => {
+    const handler = toolHandlers.get('daymon_create_worker')!
+    const result = await handler({
+      name: 'Morgan',
+      role: 'Chief of Staff',
+      systemPrompt: 'You are a chief of staff.'
+    })
+    const text = getResponseText(result)
+    assertCleanResponse(text)
+    expect(text).toContain('Morgan')
+    expect(text).toContain('Chief of Staff')
+  })
+
+  it('omits role from response when not provided', async () => {
+    const handler = toolHandlers.get('daymon_create_worker')!
+    const result = await handler({
+      name: 'Solo Worker',
+      systemPrompt: 'You work alone.'
+    })
+    const text = getResponseText(result)
+    assertCleanResponse(text)
+    expect(text).toContain('Solo Worker')
+    expect(text).not.toContain('(')
+  })
 })
 
 describe('daymon_update_worker response', () => {
@@ -286,6 +311,33 @@ describe('daymon_update_worker response', () => {
     const result = await handler({ id: worker.id, name: 'New Name' })
     const text = getResponseText(result)
     assertCleanResponse(text)
+  })
+
+  it('updates role field', async () => {
+    const worker = queries.createWorker(db, {
+      name: 'Morgan',
+      systemPrompt: 'prompt'
+    })
+    const handler = toolHandlers.get('daymon_update_worker')!
+    await handler({ id: worker.id, role: 'Chief of Staff' })
+    const updated = queries.getWorker(db, worker.id)!
+    expect(updated.role).toBe('Chief of Staff')
+  })
+})
+
+describe('daymon_list_workers response', () => {
+  it('includes role for each worker', async () => {
+    queries.createWorker(db, { name: 'Morgan', role: 'Chief of Staff', systemPrompt: 'p' })
+    queries.createWorker(db, { name: 'Ada', systemPrompt: 'p' })
+    const handler = toolHandlers.get('daymon_list_workers')!
+    const result = await handler({})
+    const text = getResponseText(result)
+    const data = JSON.parse(text)
+    expect(data).toHaveLength(2)
+    const morgan = data.find((w: Record<string, unknown>) => w.name === 'Morgan')
+    const ada = data.find((w: Record<string, unknown>) => w.name === 'Ada')
+    expect(morgan.role).toBe('Chief of Staff')
+    expect(ada.role).toBeNull()
   })
 })
 
