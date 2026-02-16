@@ -35,7 +35,7 @@ No API keys. No token costs. No cloud. Just your existing Claude subscription, w
 
 ## Requirements
 
-- **macOS 12 (Monterey) or later**, Apple Silicon
+- **macOS 12 (Monterey) or later** (Apple Silicon & Intel)
 - **[Claude Desktop](https://claude.ai/download)** or **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** (you need at least one)
 - A Claude subscription (Pro, Max, or Team) — Daymon uses your existing subscription, no API keys needed
 
