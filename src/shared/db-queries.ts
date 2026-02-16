@@ -875,6 +875,29 @@ export function getUnembeddedEntities(db: Database.Database, limit: number = 50)
   ).all(limit) as Entity[]
 }
 
+// ─── Semantic Search (sqlite-vec) ─────────────────────────
+
+/**
+ * Vector similarity search using sqlite-vec's vec_distance_cosine().
+ * Runs entirely in SQLite — no JS loop, no loading all embeddings into memory.
+ * Returns entity IDs with similarity scores (1 - cosine_distance).
+ */
+export function semanticSearchSql(
+  db: Database.Database,
+  queryVector: Buffer,
+  limit: number = 20,
+  minSimilarity: number = 0.3
+): Array<{ entityId: number; score: number }> {
+  const rows = db.prepare(`
+    SELECT entity_id, 1.0 - vec_distance_cosine(vector, ?) AS similarity
+    FROM embeddings
+    WHERE similarity >= ?
+    ORDER BY similarity DESC
+    LIMIT ?
+  `).all(queryVector, minSimilarity, limit) as Array<{ entity_id: number; similarity: number }>
+  return rows.map(r => ({ entityId: r.entity_id, score: r.similarity }))
+}
+
 // ─── Hybrid Search (FTS + Semantic) ───────────────────────
 
 interface HybridSearchResult {
@@ -895,7 +918,7 @@ export function hybridSearch(
   const ftsMap = new Map<number, { entity: Entity; rank: number }>()
   ftsEntities.forEach((e, i) => ftsMap.set(e.id, { entity: e, rank: i + 1 }))
 
-  // 2. Semantic results (pre-computed externally)
+  // 2. Semantic results (pre-computed by caller — either sqlite-vec SQL or JS fallback)
   const semMap = new Map<number, number>()
   if (semanticResults) {
     for (const r of semanticResults) {

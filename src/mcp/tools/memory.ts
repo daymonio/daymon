@@ -1,9 +1,8 @@
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type Database from 'better-sqlite3'
 import { getMcpDatabase } from '../db'
 import * as queries from '../../shared/db-queries'
-import { embed, isEngineReady, cosineSimilarity, blobToVector, initEngine } from '../../shared/embeddings'
+import { embed, isEngineReady, vectorToBlob, initEngine, isSqliteVecReady } from '../../shared/embeddings'
 
 // Fire-and-forget engine init on first memory tool registration
 let engineInitStarted = false
@@ -12,27 +11,6 @@ function ensureEngineInit(): void {
     engineInitStarted = true
     initEngine().catch(() => { /* non-fatal */ })
   }
-}
-
-// ─── Embedding cache ────────────────────────────────────────
-// Avoids reloading all embeddings from disk on every recall query.
-// Cache is invalidated every 60s so new memories are picked up.
-let embeddingCache: Array<{ entityId: number; vector: Float32Array }> | null = null
-let embeddingCacheTime = 0
-const EMBEDDING_CACHE_TTL_MS = 60_000
-
-function getCachedEmbeddings(db: Database.Database): Array<{ entityId: number; vector: Float32Array }> {
-  const now = Date.now()
-  if (embeddingCache && now - embeddingCacheTime < EMBEDDING_CACHE_TTL_MS) {
-    return embeddingCache
-  }
-  const raw = queries.getAllEmbeddings(db)
-  embeddingCache = raw.map(e => ({
-    entityId: e.entityId,
-    vector: blobToVector(e.vector)
-  }))
-  embeddingCacheTime = now
-  return embeddingCache
 }
 
 export function registerMemoryTools(server: McpServer): void {
@@ -86,21 +64,13 @@ export function registerMemoryTools(server: McpServer): void {
     async ({ query }) => {
       const db = getMcpDatabase()
 
-      // Try hybrid search if embedding engine is ready
+      // Semantic search via sqlite-vec (single SQL query, no JS loop)
       let semanticResults: Array<{ entityId: number; score: number }> | null = null
-      if (isEngineReady()) {
+      if (isEngineReady() && isSqliteVecReady()) {
         try {
           const queryVec = await embed(query)
           if (queryVec) {
-            const cached = getCachedEmbeddings(db)
-            semanticResults = cached
-              .map(e => ({
-                entityId: e.entityId,
-                score: cosineSimilarity(queryVec, e.vector)
-              }))
-              .filter(e => e.score > 0.3)
-              .sort((a, b) => b.score - a.score)
-              .slice(0, 20)
+            semanticResults = queries.semanticSearchSql(db, vectorToBlob(queryVec))
           }
         } catch {
           // Non-fatal: fall through to FTS-only

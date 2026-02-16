@@ -18,6 +18,7 @@ export function startWatch(watch: Watch): void {
 
   const watcher = chokidarWatch(watch.path, {
     ignoreInitial: true,
+    depth: 1,
     awaitWriteFinish: { stabilityThreshold: 1000, pollInterval: 200 }
   })
 

@@ -7,7 +7,7 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        external: ['better-sqlite3', '@huggingface/transformers', 'onnxruntime-node']
+        external: ['better-sqlite3', 'sqlite-vec', '@huggingface/transformers', 'onnxruntime-node']
       }
     }
   },

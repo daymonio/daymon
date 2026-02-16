@@ -9,6 +9,7 @@ const esbuildArgs = [
   '--target=node18',
   '--outfile=out/mcp/server.js',
   '--external:better-sqlite3',
+  '--external:sqlite-vec',
   '--external:@huggingface/transformers',
   '--external:onnxruntime-node',
   `--define:__APP_VERSION__='"${version}"'`
@@ -24,6 +25,7 @@ writeFileSync('out/mcp/package.json', JSON.stringify({
   private: true,
   dependencies: {
     'better-sqlite3': '11.10.0',
+    'sqlite-vec': '*',
     '@huggingface/transformers': '*'
   }
 }, null, 2))

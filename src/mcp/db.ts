@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { homedir } from 'os'
 import { runMigrations } from '../shared/db-migrations'
 import { cleanupAllRunningRuns } from '../shared/db-queries'
+import { loadSqliteVec } from '../shared/embeddings'
 
 let db: Database.Database | null = null
 
@@ -26,6 +27,7 @@ export function getMcpDatabase(): Database.Database {
   db.pragma('foreign_keys = ON')
   db.pragma('busy_timeout = 5000')
 
+  loadSqliteVec(db)
   runMigrations(db, (msg) => console.error(`MCP server: ${msg}`))
 
   const cleaned = cleanupAllRunningRuns(db)

@@ -1,7 +1,32 @@
 import { createHash } from 'crypto'
+import type Database from 'better-sqlite3'
 
 let pipeline: ((text: string | string[]) => Promise<{ tolist: () => number[][] }>) | null = null
 let pipelineLoading = false
+
+let sqliteVecLoaded = false
+
+/**
+ * Load the sqlite-vec extension into a better-sqlite3 connection.
+ * Provides vec_distance_cosine() for vector search in SQL.
+ * Non-fatal: if sqlite-vec is unavailable, falls back to JS cosine similarity.
+ */
+export function loadSqliteVec(db: Database.Database): boolean {
+  if (sqliteVecLoaded) return true
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const sqliteVec = require('sqlite-vec')
+    sqliteVec.load(db)
+    sqliteVecLoaded = true
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function isSqliteVecReady(): boolean {
+  return sqliteVecLoaded
+}
 
 const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2'
 const DIMENSIONS = 384
