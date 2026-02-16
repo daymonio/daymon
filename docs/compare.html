@@ -556,6 +556,12 @@
               <div class="detail-cell partial"><span class="partial-mark">Partial</span><span class="detail-note">Run logs, session transcripts</span></div>
             </div>
             <div class="detail-row">
+              <div class="detail-label">Auto-show results</div>
+              <div class="detail-cell yes"><span class="check">Auto-Nudge</span><span class="detail-note">Results appear in your active Claude Code chat. Per-task: always, failures only, or never</span></div>
+              <div class="detail-cell no"><span class="cross">N/A</span></div>
+              <div class="detail-cell no"><span class="cross">No</span><span class="detail-note">Must check logs manually</span></div>
+            </div>
+            <div class="detail-row">
               <div class="detail-label">Sandboxing</div>
               <div class="detail-cell no"><span class="cross">No</span></div>
               <div class="detail-cell no"><span class="cross">No</span></div>
@@ -564,7 +570,7 @@
           </div>
           <div class="verdict">
             <strong>Verdict</strong>
-            <p>Daymon's key advantage: zero API keys and zero infrastructure. It uses your existing Claude subscription through the CLI. OpenClaw runs its own agent runtime, which is more powerful but requires API keys and significant setup. Both inject system prompts, but only Daymon automatically injects memory context and stores results.</p>
+            <p>Daymon's key advantage: zero API keys and zero infrastructure. It uses your existing Claude subscription through the CLI. OpenClaw runs its own agent runtime, which is more powerful but requires API keys and significant setup. Both inject system prompts, but only Daymon automatically injects memory context, stores results, and shows them in your chat when tasks complete.</p>
           </div>
         </div>
 

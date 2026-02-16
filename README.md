@@ -101,6 +101,8 @@ Your Claude subscription only works when you do. Daymon puts it to work 24/7.
 
 **Self-Improving Tasks** — Tasks get smarter every time they run. Daymon learns what works and skips the guesswork on future runs — faster results, no configuration needed.
 
+**Auto-Nudge** — When a background task finishes, Daymon shows results in your active Claude Code chat automatically. Per-task control: always, failures only, or never. Quiet hours keep nudges out of your way.
+
 **Session Continuity** — Tasks resume where they left off. "Compare today's results to yesterday's" just works.
 
 **File Watchers** — "When a new file appears in Downloads, organize it." Daymon watches folders and acts automatically.
@@ -170,6 +172,13 @@ Create workers in the Daymon UI or via Claude: "Create a worker called 'My Analy
 | `daymon_unwatch` | Stop watching |
 | `daymon_list_watches` | List active watches |
 
+### Settings
+
+| Tool | Description |
+|------|-------------|
+| `daymon_get_setting` | Get a setting value |
+| `daymon_set_setting` | Update a setting (quiet hours, etc.) |
+
 </details>
 
 ## Development
@@ -188,18 +197,17 @@ npm run build:mac    # Build + package macOS DMG
 ```
 daymon/
 ├── src/
-│   ├── main/           # Main process
-│   │   ├── scheduler/  # node-cron task scheduling
-│   │   └── db/         # SQLite database layer
+│   ├── main/           # Electron main process (thin UI shell)
+│   ├── sidecar/        # Standalone Node.js server (cron, watchers, task execution)
 │   ├── mcp/            # MCP server (stdio)
-│   │   └── tools/      # Memory, scheduler, watcher tools
+│   │   └── tools/      # Memory, scheduler, worker, watcher, settings tools
 │   ├── renderer/       # React + Tailwind UI
-│   └── shared/         # Types, schema, constants
+│   └── shared/         # Shared logic (DB queries, task runner, auto-nudge)
 ├── docs/               # Landing page (daymon.io)
 └── resources/          # App icons
 ```
 
-**Tech stack**: React 18, Tailwind CSS 4, TypeScript, Vite 7, better-sqlite3, node-cron, chokidar, zod, MCP SDK, HuggingFace Transformers (local embeddings), Vitest
+**Tech stack**: Electron 35, React 18, Tailwind CSS 4, TypeScript, Vite 7, better-sqlite3, node-cron, zod, MCP SDK, HuggingFace Transformers (local embeddings), Vitest
 
 </details>
 
