@@ -397,6 +397,25 @@ describe('executeClaudeCode', () => {
     expect(result.stdout).toBe('ok')
   })
 
+  it('handles null stdout/stderr (EBADF guard)', async () => {
+    const proc = new EventEmitter() as EventEmitter & {
+      stdout: null
+      stderr: null
+      kill: ReturnType<typeof vi.fn>
+    }
+    proc.stdout = null
+    proc.stderr = null
+    proc.kill = vi.fn()
+    mockSpawn.mockReturnValue(proc)
+    const executeClaudeCode = await importWithMock()
+
+    const result = await executeClaudeCode('Test')
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('Failed to create stdio pipes')
+    expect(result.sessionId).toBeNull()
+    expect(proc.kill).toHaveBeenCalled()
+  })
+
   it('uses custom timeout from options', async () => {
     const proc = createMockProcess()
     mockSpawn.mockReturnValue(proc)

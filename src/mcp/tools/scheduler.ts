@@ -7,7 +7,7 @@ import { getMcpDatabase } from '../db'
 import * as queries from '../../shared/db-queries'
 import { APP_NAME, TASK_STATUSES } from '../../shared/constants'
 import { executeTask, isTaskRunning } from '../../shared/task-runner'
-import { nudgeClaudeCode } from '../../shared/auto-nudge'
+import { isInQuietHours, enqueueNudge } from '../../shared/auto-nudge'
 
 export function generateTaskName(prompt: string): string {
   const cleaned = prompt.replace(/^(please |can you |i want you to |i need you to )/i, '').trim()
@@ -277,13 +277,13 @@ export function registerSchedulerTools(server: McpServer): void {
             console.error(`Task ${id} ("${task.name}") failed: ${result.errorMessage}`)
           }
 
-          // Auto-nudge Claude Code chat if enabled
+          // Auto-nudge Claude Code chat if enabled and not in quiet hours
           try {
             const autoNudge = process.env.DAYMON_AUTO_NUDGE
               ? ['true', '1'].includes(process.env.DAYMON_AUTO_NUDGE)
               : queries.getSetting(db, 'auto_nudge_enabled') === 'true'
-            if (autoNudge) {
-              setTimeout(() => nudgeClaudeCode({
+            if (autoNudge && !isInQuietHours(db)) {
+              setTimeout(() => enqueueNudge({
                 taskId: id,
                 taskName: task.name,
                 success: result.success,

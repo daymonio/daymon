@@ -1,5 +1,7 @@
 import { execSync } from 'child_process'
 import { platform } from 'os'
+import * as queries from './db-queries'
+import type Database from 'better-sqlite3'
 
 export interface NudgeOptions {
   taskId: number
@@ -32,6 +34,68 @@ function findIdeBundle(): string | null {
   }
   return null
 }
+
+// ─── Quiet Hours ─────────────────────────────────────────────
+
+/**
+ * Check if current time falls within configured quiet hours.
+ * During quiet hours, nudges are suppressed to avoid interrupting user typing.
+ */
+export function isInQuietHours(db: Database.Database): boolean {
+  try {
+    if (queries.getSetting(db, 'auto_nudge_quiet_hours') !== 'true') return false
+    const from = queries.getSetting(db, 'auto_nudge_quiet_from') ?? '08:00'
+    const until = queries.getSetting(db, 'auto_nudge_quiet_until') ?? '22:00'
+    const now = new Date()
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    const [fH, fM] = from.split(':').map(Number)
+    const [uH, uM] = until.split(':').map(Number)
+    const fromMinutes = fH * 60 + fM
+    const untilMinutes = uH * 60 + uM
+    if (fromMinutes <= untilMinutes) {
+      // e.g., 08:00 to 22:00 — quiet during the day
+      return currentMinutes >= fromMinutes && currentMinutes < untilMinutes
+    } else {
+      // e.g., 22:00 to 08:00 — quiet during the night (inverted)
+      return currentMinutes >= fromMinutes || currentMinutes < untilMinutes
+    }
+  } catch {
+    return false // Non-fatal: if settings read fails, don't block nudges
+  }
+}
+
+// ─── Nudge Queue (serialize concurrent nudges) ──────────────
+
+const nudgeQueue: NudgeOptions[] = []
+let nudgeRunning = false
+const NUDGE_GAP_MS = 3000
+
+/**
+ * Enqueue a nudge to be sent. Nudges are serialized so that if multiple
+ * tasks complete at the same time, each gets its own separate message.
+ */
+export function enqueueNudge(options: NudgeOptions): void {
+  nudgeQueue.push(options)
+  processNudgeQueue()
+}
+
+async function processNudgeQueue(): Promise<void> {
+  if (nudgeRunning || nudgeQueue.length === 0) return
+  nudgeRunning = true
+  try {
+    while (nudgeQueue.length > 0) {
+      const options = nudgeQueue.shift()!
+      nudgeClaudeCode(options)
+      if (nudgeQueue.length > 0) {
+        await new Promise(r => setTimeout(r, NUDGE_GAP_MS))
+      }
+    }
+  } finally {
+    nudgeRunning = false
+  }
+}
+
+// ─── Nudge Execution ─────────────────────────────────────────
 
 /**
  * Send a nudge message to the active Claude Code chat via osascript.

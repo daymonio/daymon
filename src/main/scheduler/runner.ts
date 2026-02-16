@@ -2,7 +2,7 @@ import { getDatabase } from '../db'
 import { getConfig } from '../config'
 import { notifyTaskComplete, notifyTaskFailed } from '../notifications'
 import { executeTask as sharedExecuteTask } from '../../shared/task-runner'
-import { nudgeClaudeCode } from '../../shared/auto-nudge'
+import { isInQuietHours, enqueueNudge } from '../../shared/auto-nudge'
 import * as queries from '../../shared/db-queries'
 
 export async function executeTask(taskId: number): Promise<void> {
@@ -38,8 +38,8 @@ function tryNudge(
   errorMessage?: string
 ): void {
   try {
-    if (queries.getSetting(db, 'auto_nudge_enabled') === 'true') {
-      setTimeout(() => nudgeClaudeCode({ taskId, taskName, success, durationMs, errorMessage }), 500)
-    }
+    if (queries.getSetting(db, 'auto_nudge_enabled') !== 'true') return
+    if (isInQuietHours(db)) return
+    setTimeout(() => enqueueNudge({ taskId, taskName, success, durationMs, errorMessage }), 500)
   } catch { /* non-fatal */ }
 }

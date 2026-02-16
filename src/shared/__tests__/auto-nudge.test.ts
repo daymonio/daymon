@@ -1,4 +1,138 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
+// ─── isInQuietHours ──────────────────────────────────────────
+
+describe('isInQuietHours', () => {
+  let mockGetSetting: ReturnType<typeof vi.fn>
+  let importMod: () => Promise<typeof import('../auto-nudge')>
+
+  beforeEach(() => {
+    vi.resetModules()
+    mockGetSetting = vi.fn()
+  })
+
+  async function setup() {
+    vi.doMock('../db-queries', () => ({ getSetting: mockGetSetting }))
+    vi.doMock('child_process', () => ({ execSync: vi.fn() }))
+    vi.doMock('os', () => ({ platform: vi.fn().mockReturnValue('darwin') }))
+    return await import('../auto-nudge')
+  }
+
+  it('returns false when quiet hours disabled', async () => {
+    mockGetSetting.mockReturnValue(null)
+    const mod = await setup()
+    expect(mod.isInQuietHours({} as never)).toBe(false)
+  })
+
+  it('returns true when current time is within quiet hours (normal range)', async () => {
+    mockGetSetting.mockImplementation((_db: unknown, key: string) => {
+      if (key === 'auto_nudge_quiet_hours') return 'true'
+      if (key === 'auto_nudge_quiet_from') return '00:00'
+      if (key === 'auto_nudge_quiet_until') return '23:59'
+      return null
+    })
+    const mod = await setup()
+    expect(mod.isInQuietHours({} as never)).toBe(true)
+  })
+
+  it('returns false when current time is outside quiet hours (normal range)', async () => {
+    // Set a 1-minute window in the past
+    const now = new Date()
+    const pastHour = (now.getHours() + 22) % 24 // 2 hours ago
+    const from = `${String(pastHour).padStart(2, '0')}:00`
+    const until = `${String(pastHour).padStart(2, '0')}:01`
+    mockGetSetting.mockImplementation((_db: unknown, key: string) => {
+      if (key === 'auto_nudge_quiet_hours') return 'true'
+      if (key === 'auto_nudge_quiet_from') return from
+      if (key === 'auto_nudge_quiet_until') return until
+      return null
+    })
+    const mod = await setup()
+    expect(mod.isInQuietHours({} as never)).toBe(false)
+  })
+
+  it('handles inverted range (e.g., 22:00 to 08:00)', async () => {
+    // Set inverted range that covers all hours
+    mockGetSetting.mockImplementation((_db: unknown, key: string) => {
+      if (key === 'auto_nudge_quiet_hours') return 'true'
+      if (key === 'auto_nudge_quiet_from') return '00:01'
+      if (key === 'auto_nudge_quiet_until') return '00:00'
+      return null
+    })
+    const mod = await setup()
+    // This inverted range covers almost all day
+    expect(mod.isInQuietHours({} as never)).toBe(true)
+  })
+
+  it('uses default values when settings are null', async () => {
+    mockGetSetting.mockImplementation((_db: unknown, key: string) => {
+      if (key === 'auto_nudge_quiet_hours') return 'true'
+      return null // from/until will use defaults 08:00/22:00
+    })
+    const mod = await setup()
+    const now = new Date()
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    const expected = currentMinutes >= 480 && currentMinutes < 1320 // 08:00–22:00
+    expect(mod.isInQuietHours({} as never)).toBe(expected)
+  })
+
+  it('returns false on error (non-fatal)', async () => {
+    mockGetSetting.mockImplementation(() => { throw new Error('DB error') })
+    const mod = await setup()
+    expect(mod.isInQuietHours({} as never)).toBe(false)
+  })
+})
+
+// ─── enqueueNudge ────────────────────────────────────────────
+
+describe('enqueueNudge', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  async function setup() {
+    const mockExecSync = vi.fn()
+    vi.doMock('child_process', () => ({ execSync: mockExecSync }))
+    vi.doMock('os', () => ({ platform: vi.fn().mockReturnValue('darwin') }))
+    vi.doMock('../db-queries', () => ({ getSetting: vi.fn() }))
+    const mod = await import('../auto-nudge')
+    return { mod, mockExecSync }
+  }
+
+  it('processes multiple enqueued nudges', async () => {
+    const { mod, mockExecSync } = await setup()
+
+    mod.enqueueNudge({ taskId: 1, taskName: 'Task A', success: true, durationMs: 1000 })
+    mod.enqueueNudge({ taskId: 2, taskName: 'Task B', success: true, durationMs: 2000 })
+
+    // Let any pending timers flush
+    await vi.advanceTimersByTimeAsync(5000)
+
+    // Both nudges should have been sent (each has findIdeBundle + nudge = 2 calls)
+    const nudgeCalls = mockExecSync.mock.calls.filter(c => (c[0] as string).includes('keystroke'))
+    expect(nudgeCalls.length).toBe(2)
+    expect(nudgeCalls[0][0]).toContain('Task A')
+    expect(nudgeCalls[1][0]).toContain('Task B')
+  })
+
+  it('processes single nudge without gap', async () => {
+    const { mod, mockExecSync } = await setup()
+
+    mod.enqueueNudge({ taskId: 1, taskName: 'Solo Task', success: true, durationMs: 1000 })
+
+    // Should have made calls for findIdeBundle + nudge
+    const calls = mockExecSync.mock.calls
+    const nudgeCalls = calls.filter(c => (c[0] as string).includes('keystroke'))
+    expect(nudgeCalls.length).toBe(1)
+  })
+})
+
+// ─── nudgeClaudeCode ─────────────────────────────────────────
 
 describe('nudgeClaudeCode', () => {
   let mockExecSync: ReturnType<typeof vi.fn>

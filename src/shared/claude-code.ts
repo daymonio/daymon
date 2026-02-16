@@ -168,6 +168,20 @@ export function executeClaudeCode(
       timeout: timeoutMs
     })
 
+    // Guard against failed pipe creation (EBADF, fd exhaustion)
+    if (!proc.stdout || !proc.stderr) {
+      resolve({
+        stdout: '',
+        stderr: 'Failed to create stdio pipes for Claude CLI (bad file descriptor)',
+        exitCode: 1,
+        durationMs: Date.now() - startTime,
+        timedOut: false,
+        sessionId: null
+      })
+      try { proc.kill() } catch {}
+      return
+    }
+
     let buffer = ''
     let toolCallCount = 0
     const onConsoleLog = options?.onConsoleLog
@@ -176,7 +190,7 @@ export function executeClaudeCode(
       return text.length > maxLen ? text.slice(0, maxLen) + '...' : text
     }
 
-    proc.stdout!.on('data', (data: Buffer) => {
+    proc.stdout.on('data', (data: Buffer) => {
       const chunk = data.toString()
       stdout += chunk
       buffer += chunk
@@ -223,7 +237,7 @@ export function executeClaudeCode(
       }
     })
 
-    proc.stderr!.on('data', (data: Buffer) => {
+    proc.stderr.on('data', (data: Buffer) => {
       stderr += data.toString()
     })
 

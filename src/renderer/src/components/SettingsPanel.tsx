@@ -39,6 +39,9 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
   const [notifications, setNotifications] = useState<boolean>(true)
   const [autoNudge, setAutoNudge] = useState<boolean>(false)
   const [largeWindow, setLargeWindow] = useState<boolean>(false)
+  const [quietHours, setQuietHours] = useState<boolean>(false)
+  const [quietFrom, setQuietFrom] = useState('08:00')
+  const [quietUntil, setQuietUntil] = useState('22:00')
   const [confirmUninstall, setConfirmUninstall] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
 
@@ -57,6 +60,15 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     })
     window.api.settings.get('large_window_enabled').then((v) => {
       setLargeWindow(v === 'true')
+    })
+    window.api.settings.get('auto_nudge_quiet_hours').then((v) => {
+      setQuietHours(v === 'true')
+    })
+    window.api.settings.get('auto_nudge_quiet_from').then((v) => {
+      if (v) setQuietFrom(v)
+    })
+    window.api.settings.get('auto_nudge_quiet_until').then((v) => {
+      if (v) setQuietUntil(v)
     })
     window.api.app.getUpdateStatus().then(setUpdateStatus)
   }, [])
@@ -92,6 +104,22 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     onAdvancedModeChange(next)
   }
 
+  async function toggleQuietHours(): Promise<void> {
+    const next = !quietHours
+    await window.api.settings.set('auto_nudge_quiet_hours', String(next))
+    setQuietHours(next)
+  }
+
+  async function updateQuietFrom(value: string): Promise<void> {
+    setQuietFrom(value)
+    await window.api.settings.set('auto_nudge_quiet_from', value)
+  }
+
+  async function updateQuietUntil(value: string): Promise<void> {
+    setQuietUntil(value)
+    await window.api.settings.set('auto_nudge_quiet_until', value)
+  }
+
   async function handleUninstall(): Promise<void> {
     if (!confirmUninstall) {
       setConfirmUninstall(true)
@@ -112,23 +140,29 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
   function toggle(
     label: string,
     value: boolean | null,
-    onChange: () => void
+    onChange: () => void,
+    description?: string
   ): React.JSX.Element {
     return (
-      <div className="flex items-center justify-between text-xs py-1">
-        <span className="text-gray-600">{label}</span>
-        <button
-          onClick={onChange}
-          className={`w-8 h-4 rounded-full transition-colors relative ${
-            value ? 'bg-green-500' : 'bg-gray-300'
-          }`}
-        >
-          <span
-            className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
-              value ? 'left-4' : 'left-0.5'
+      <div className="py-1">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-gray-600">{label}</span>
+          <button
+            onClick={onChange}
+            className={`w-8 h-4 rounded-full transition-colors relative ${
+              value ? 'bg-green-500' : 'bg-gray-300'
             }`}
-          />
-        </button>
+          >
+            <span
+              className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
+                value ? 'left-4' : 'left-0.5'
+              }`}
+            />
+          </button>
+        </div>
+        {description && (
+          <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{description}</p>
+        )}
       </div>
     )
   }
@@ -138,11 +172,44 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
       <div>
         <h3 className="text-xs font-semibold text-gray-700 mb-1">Preferences</h3>
         <div className="bg-gray-50 rounded-lg p-2 space-y-1">
-          {toggle('Launch at login', autoLaunch, toggleAutoLaunch)}
-          {toggle('Notifications', notifications, toggleNotifications)}
-          {toggle('Auto-show results in Claude Code', autoNudge, toggleAutoNudge)}
-          {toggle('Large window', largeWindow, toggleLargeWindow)}
-          {toggle('Advanced mode', advancedMode, toggleAdvancedMode)}
+          {toggle('Launch at login', autoLaunch, toggleAutoLaunch, 'Start Daymon when you log in')}
+          {toggle('Notifications', notifications, toggleNotifications, 'Show macOS notifications when tasks complete')}
+          {toggle(
+            'Auto-show results in Claude Code',
+            autoNudge,
+            toggleAutoNudge,
+            'Type task results into Claude Code chat when tasks complete (macOS only)'
+          )}
+          {autoNudge && (
+            <div className="pl-2 border-l-2 border-gray-200 ml-1 space-y-1">
+              {toggle(
+                'Quiet hours',
+                quietHours,
+                toggleQuietHours,
+                'Suppress nudges during set hours to avoid interrupting your typing'
+              )}
+              {quietHours && (
+                <div className="flex items-center gap-2 text-xs py-1">
+                  <span className="text-gray-500">From</span>
+                  <input
+                    type="time"
+                    value={quietFrom}
+                    onChange={(e) => updateQuietFrom(e.target.value)}
+                    className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs text-gray-600"
+                  />
+                  <span className="text-gray-500">until</span>
+                  <input
+                    type="time"
+                    value={quietUntil}
+                    onChange={(e) => updateQuietUntil(e.target.value)}
+                    className="bg-white border border-gray-200 rounded px-1.5 py-0.5 text-xs text-gray-600"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          {toggle('Large window', largeWindow, toggleLargeWindow, 'Use a bigger popover window')}
+          {toggle('Advanced mode', advancedMode, toggleAdvancedMode, 'Show task IDs, debug info, and extra controls')}
         </div>
       </div>
 
