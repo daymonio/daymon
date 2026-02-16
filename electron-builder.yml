@@ -12,6 +12,9 @@ files:
 asarUnpack:
   - "node_modules/better-sqlite3/**"
   - "node_modules/onnxruntime-node/**"
+  - "node_modules/sqlite-vec-darwin-arm64/**"
+  - "node_modules/sqlite-vec-darwin-x64/**"
+  - "node_modules/@img/**"
   - "resources/**"
 extraResources:
   - from: "out/mcp/server.js"
@@ -33,9 +36,12 @@ mac:
   entitlementsInherit: build/entitlements.mac.inherit.plist
   notarize: true
   target:
-    - dmg
-    - zip
+    - target: dmg
+      arch: universal
+    - target: zip
+      arch: universal
   type: distribution
+  x64ArchFiles: "Contents/Resources/**"
 dmg:
   contents:
     - x: 130

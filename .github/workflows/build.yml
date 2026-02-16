@@ -24,7 +24,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Rebuild better-sqlite3 for Node.js
+      - name: Install sqlite-vec for x64 (universal build)
+        run: |
+          VEC_VERSION=$(node -p "require('./node_modules/sqlite-vec-darwin-arm64/package.json').version")
+          npm install "sqlite-vec-darwin-x64@${VEC_VERSION}" --no-save
+
+      - name: Rebuild better-sqlite3 for Node.js (tests only)
         run: npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3
 
       - name: TypeScript check
@@ -36,7 +41,22 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Package macOS
+      - name: Build universal MCP native deps
+        run: |
+          cd out/mcp
+          # Install sqlite-vec for x64
+          VEC_VERSION=$(node -p "require('./node_modules/sqlite-vec-darwin-arm64/package.json').version")
+          npm install "sqlite-vec-darwin-x64@${VEC_VERSION}" --no-save
+          # Create fat better-sqlite3 binary via lipo
+          cp node_modules/better-sqlite3/build/Release/better_sqlite3.node better_sqlite3_arm64.node
+          arch -x86_64 npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3 --arch=x64
+          lipo -create \
+            better_sqlite3_arm64.node \
+            node_modules/better-sqlite3/build/Release/better_sqlite3.node \
+            -output node_modules/better-sqlite3/build/Release/better_sqlite3.node
+          rm better_sqlite3_arm64.node
+
+      - name: Package macOS (universal)
         run: npx electron-builder --mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,7 +91,7 @@ jobs:
           body: |
             ## Install
 
-            **[Download Daymon-${{ steps.version.outputs.version }}-arm64.dmg](https://github.com/daymonio/daymon/releases/download/${{ github.ref_name }}/Daymon-${{ steps.version.outputs.version }}-arm64.dmg)** — open it and drag Daymon to Applications.
+            **[Download Daymon-${{ steps.version.outputs.version }}-universal.dmg](https://github.com/daymonio/daymon/releases/download/${{ github.ref_name }}/Daymon-${{ steps.version.outputs.version }}-universal.dmg)** — open it and drag Daymon to Applications.
 
             Or install with Homebrew:
             ```
