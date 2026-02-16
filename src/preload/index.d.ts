@@ -65,6 +65,9 @@ interface AppAPI {
   downloadUpdate: () => Promise<void>
   installUpdate: () => Promise<void>
   setWindowSize: (large: boolean) => Promise<void>
+  openFile: (filePath: string) => Promise<string>
+  showInFolder: (filePath: string) => Promise<void>
+  sendToApp: (target: string, message: string, filePath?: string) => Promise<void>
 }
 
 interface WorkersAPI {

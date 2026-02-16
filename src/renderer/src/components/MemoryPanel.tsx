@@ -80,7 +80,7 @@ export function MemoryPanel(): React.JSX.Element {
                     }}
                     className="ml-2 text-xs text-red-400 hover:text-red-600 shrink-0"
                   >
-                    Del
+                    Delete
                   </button>
                 </div>
 

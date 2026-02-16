@@ -81,7 +81,10 @@ const api = {
     checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
     downloadUpdate: () => ipcRenderer.invoke('app:downloadUpdate'),
     installUpdate: () => ipcRenderer.invoke('app:installUpdate'),
-    setWindowSize: (large: boolean) => ipcRenderer.invoke('app:setWindowSize', large)
+    setWindowSize: (large: boolean) => ipcRenderer.invoke('app:setWindowSize', large),
+    openFile: (filePath: string) => ipcRenderer.invoke('app:openFile', filePath),
+    showInFolder: (filePath: string) => ipcRenderer.invoke('app:showInFolder', filePath),
+    sendToApp: (target: string, message: string, filePath?: string) => ipcRenderer.invoke('app:sendToApp', target, message, filePath)
   }
 }
 

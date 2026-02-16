@@ -1,4 +1,7 @@
-import { ipcMain, app, BrowserWindow } from 'electron'
+import { ipcMain, app, shell, clipboard, BrowserWindow } from 'electron'
+import { execSync } from 'child_process'
+import { readFileSync } from 'fs'
+import { platform } from 'os'
 import { resizePopoverWindow } from './tray'
 import * as memory from './db/memory'
 import * as tasks from './db/tasks'
@@ -200,5 +203,71 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle('app:hideWindow', (e) => {
     BrowserWindow.fromWebContents(e.sender)?.hide()
+  })
+  ipcMain.handle('app:openFile', (_e, filePath: string) => shell.openPath(filePath))
+  ipcMain.handle('app:showInFolder', (_e, filePath: string) => shell.showItemInFolder(filePath))
+  ipcMain.handle('app:sendToApp', (_e, target: string, message: string, filePath?: string) => {
+    if (platform() !== 'darwin') throw new Error('Only supported on macOS')
+    const escaped = message.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+
+    if (target === 'claude-code') {
+      // Find running IDE (Cursor, VSCode, VSCode Insiders)
+      const ideBundles = [
+        'com.todesktop.230313mzl4w4u92', // Cursor
+        'com.microsoft.VSCode',
+        'com.microsoft.VSCodeInsiders'
+      ]
+      let ideBundle: string | null = null
+      for (const bid of ideBundles) {
+        try {
+          execSync(
+            `osascript -e 'tell application "System Events" to get first application process whose bundle identifier is "${bid}"'`,
+            { timeout: 3000, stdio: 'ignore' }
+          )
+          ideBundle = bid
+          break
+        } catch { /* not running */ }
+      }
+      if (!ideBundle) throw new Error('No supported IDE (Cursor, VSCode) found running')
+
+      const script = `
+tell application id "${ideBundle}" to activate
+delay 0.3
+tell application "System Events"
+  keystroke "l" using command down
+  delay 0.3
+  keystroke "${escaped}"
+  keystroke return
+end tell`
+      execSync(`osascript -e '${script.replace(/'/g, "'\"'\"'")}'`, {
+        timeout: 10000,
+        stdio: 'ignore'
+      })
+    } else if (target === 'claude-desktop') {
+      // Claude Desktop can't read local files — paste content via clipboard
+      let fullMessage = message
+      if (filePath) {
+        const content = readFileSync(filePath, 'utf-8')
+        fullMessage = `Present these task results in a well-formatted way:\n\n${content}`
+      }
+      clipboard.writeText(fullMessage)
+
+      const script = `
+tell application "Claude" to activate
+delay 0.5
+tell application "System Events"
+  keystroke "n" using command down
+  delay 0.3
+  keystroke "v" using command down
+  delay 0.2
+  keystroke return
+end tell`
+      execSync(`osascript -e '${script.replace(/'/g, "'\"'\"'")}'`, {
+        timeout: 10000,
+        stdio: 'ignore'
+      })
+    } else {
+      throw new Error(`Unknown target: ${target}`)
+    }
   })
 }

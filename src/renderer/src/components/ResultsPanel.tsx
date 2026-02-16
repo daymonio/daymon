@@ -129,6 +129,39 @@ export function ResultsPanel(): React.JSX.Element {
                 <div className="text-xs text-gray-400 py-1">No output</div>
               )}
               <ConsoleLogHistory runId={run.id} />
+              {run.resultFile && (
+                <div className="flex gap-2 mt-1.5">
+                  <button
+                    onClick={() =>
+                      window.api.app.sendToApp(
+                        'claude-code',
+                        `Read the file at ${run.resultFile} and present the results in a well-formatted way.`
+                      )
+                    }
+                    className="text-xs text-blue-500 hover:text-blue-700"
+                  >
+                    Open in Claude Code
+                  </button>
+                  <button
+                    onClick={() =>
+                      window.api.app.sendToApp(
+                        'claude-desktop',
+                        '',
+                        run.resultFile!
+                      )
+                    }
+                    className="text-xs text-purple-500 hover:text-purple-700"
+                  >
+                    Open in Claude Desktop
+                  </button>
+                  <button
+                    onClick={() => window.api.app.showInFolder(run.resultFile!)}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    Show in Finder
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
