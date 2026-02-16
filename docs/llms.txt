@@ -1,0 +1,81 @@
+# Daymon
+
+> Open source autopilot for Claude. Scheduled tasks, persistent memory, background automation.
+
+Daymon is a macOS menu bar app that gives Claude persistent memory, scheduled tasks, workers, and file watchers — all running locally on your machine. No API keys. No cloud. Uses your existing Claude subscription.
+
+## How It Works
+
+Install Daymon → it auto-configures Claude Desktop and Claude Code → tell Claude what you want scheduled, remembered, or watched → Daymon handles the rest in the background.
+
+## Features
+
+- **Scheduled Tasks**: Cron, one-time, or on-demand. "Every weekday at 9am, check HackerNews for AI news." 24 built-in schedule presets.
+- **Persistent Memory**: Knowledge graph with semantic search. Say it once, it sticks forever. Hybrid FTS + vector search.
+- **Workers**: Named agent personalities with system prompts. 9 templates (Chief of Staff, Researcher, Code Reviewer, Writer, Email Assistant, Tech Trend Analyst, Competitor Tracker, DevOps, Data Analyst) or create your own.
+- **Auto-Nudge**: When a background task finishes, results automatically appear in your active Claude Code chat. Per-task control: always, failures only, or never. Quiet hours support.
+- **Self-Improving Tasks**: Tasks get smarter every run. Memory-aware execution injects past results and cross-task knowledge.
+- **Session Continuity**: Tasks resume where they left off using `--resume`. Each run builds on the last.
+- **File Watchers**: Watch folders for changes and act automatically.
+- **100% Local**: SQLite database on your Mac. No cloud, no account.
+
+## Architecture
+
+- **Electron** menu bar + Dock app (thin UI shell)
+- **Sidecar** standalone Node.js HTTP server (cron scheduler, file watchers, task execution, embeddings)
+- **MCP Server** (stdio transport) for Claude Desktop and Claude Code integration
+- **Shared modules** used by both sidecar and MCP server
+
+## MCP Tools
+
+### Memory
+- `daymon_remember` — Store a fact, preference, or project detail
+- `daymon_recall` — Search memories by keyword (FTS + semantic)
+- `daymon_forget` — Delete a memory
+- `daymon_memory_list` — List all stored memories
+
+### Scheduler
+- `daymon_schedule` — Create a task (cron/once/manual). Params: prompt, cronExpression, scheduledAt, maxRuns, maxTurns, allowedTools, disallowedTools, nudge, name, description, workerId, sessionContinuity, timeout
+- `daymon_list_tasks` — List all tasks
+- `daymon_run_task` — Execute a task immediately (async)
+- `daymon_pause_task` — Pause a task
+- `daymon_resume_task` — Resume a paused task
+- `daymon_delete_task` — Delete a task and its run history
+- `daymon_task_history` — Show recent runs for a task
+- `daymon_task_progress` — Check running task progress
+- `daymon_reset_session` — Clear session for a task
+
+### Workers
+- `daymon_create_worker` — Create a worker with name, system prompt, description
+- `daymon_list_workers` — List all workers
+- `daymon_update_worker` — Update a worker
+- `daymon_delete_worker` — Delete a worker
+
+### File Watching
+- `daymon_watch` — Watch a file/folder for changes
+- `daymon_unwatch` — Stop watching
+- `daymon_list_watches` — List active watches
+
+### Settings
+- `daymon_get_setting` — Get a setting value
+- `daymon_set_setting` — Set a setting value
+
+## Requirements
+
+- macOS 12 (Monterey) or later
+- Claude Desktop or Claude Code
+- Claude subscription (Pro, Max, or Team)
+
+## Installation
+
+```
+brew install daymonio/daymon/daymon
+```
+
+Or download from https://github.com/daymonio/daymon/releases/latest
+
+## Links
+
+- Website: https://daymon.io
+- GitHub: https://github.com/daymonio/daymon
+- License: MIT

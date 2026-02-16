@@ -1,0 +1,268 @@
+# Daymon — Full Documentation
+
+> Open source autopilot for Claude. Scheduled tasks, persistent memory, background automation.
+
+Daymon is a macOS menu bar app that gives Claude persistent memory, scheduled tasks, workers, and file watchers — all running locally on your machine. No API keys. No cloud. Uses your existing Claude subscription (Pro, Max, or Team).
+
+Website: https://daymon.io
+GitHub: https://github.com/daymonio/daymon
+License: MIT
+
+---
+
+## How It Works
+
+1. Install Daymon (`brew install daymonio/daymon/daymon`)
+2. Menu bar icon appears. Daymon auto-configures Claude Desktop and Claude Code on first launch.
+3. Tell Claude what you want: "Every morning, summarize my inbox" — Daymon handles scheduling.
+4. Your subscription works while you sleep. Wake up to results.
+
+## Control Modes
+
+Daymon can be controlled from three places:
+
+| Mode | Transport | Execution |
+|------|-----------|-----------|
+| Claude Code | MCP stdio via .mcp.json | Direct (spawns claude -p) |
+| Claude Desktop | MCP stdio via claude_desktop_config.json | Direct (spawns claude -p) |
+| Daymon UI | Electron IPC → Sidecar HTTP | Via sidecar process |
+
+---
+
+## Features
+
+### Scheduled Tasks
+
+Three trigger types:
+- **Cron**: Runs on a schedule (e.g., `0 9 * * 1-5` = weekdays at 9 AM)
+- **Once**: Runs at a specific time
+- **Manual**: On-demand via `daymon_run_task`
+
+Tasks support:
+- `maxRuns`: Auto-complete after N successful runs. Failed runs don't count.
+- `maxTurns`: Limit agentic turns per run (prevents runaway tasks)
+- `allowedTools`: Whitelist of tools (e.g., "Read,Grep,Glob" for read-only)
+- `disallowedTools`: Blocklist of tools (e.g., "WebFetch" to force WebSearch)
+- `timeout`: Per-task timeout in minutes (default 30)
+
+### Persistent Memory
+
+Knowledge graph stored in SQLite:
+- Entity/observation model
+- Hybrid search: FTS5 full-text + cosine similarity (local embeddings via HuggingFace all-MiniLM-L6-v2)
+- Categories: work, personal, preference, project, person
+- Types: fact, preference, person, project, event
+
+### Workers
+
+Named agent configurations with system prompts. Resolution order: task's workerId > default worker > no worker.
+
+9 built-in templates:
+1. Morgan (Chief of Staff) — Proactive business ops
+2. Sage (Researcher) — Deep research with strong opinions
+3. Lux (Code Reviewer) — Catches what linters miss
+4. Nova (Writer) — Sharp writing, cuts fluff
+5. Iris (Email Assistant) — 3-tier triage, drafts replies
+6. Cipher (Tech Trend Analyst) — Tech trends + tweet drafts
+7. Echo (Competitor Tracker) — Signal, not noise
+8. Atlas (DevOps) — Reliability over novelty
+9. Pixel (Data Analyst) — Analysis that drives decisions
+
+Worker system prompts are passed via Claude CLI's `--system-prompt` flag, kept separate from the task prompt.
+
+### Auto-Nudge
+
+When a background task finishes, Daymon can automatically show results in the active Claude Code chat.
+
+Per-task nudge modes:
+- **always** (default): Nudge on every completion
+- **failure_only**: Only nudge when the task fails (ideal for monitoring)
+- **never**: Never nudge
+
+How it works:
+1. Task completes in MCP server or sidecar
+2. Checks task's nudge_mode via `shouldNudgeTask()`
+3. Checks quiet hours (orthogonal gate)
+4. Detects running IDE (Cursor, VSCode, VSCode Insiders)
+5. Activates IDE, sends Cmd+L to focus Claude Code input
+6. Types trigger message so Claude calls `daymon_task_history`
+
+Quiet hours: Suppress nudges during set hours. Settings: `auto_nudge_quiet_hours`, `auto_nudge_quiet_from` (HH:MM), `auto_nudge_quiet_until` (HH:MM).
+
+Nudge queue: Multiple simultaneous completions are serialized with a 3s gap.
+
+### Self-Improving Tasks (Memory-Aware Execution)
+
+Tasks are not isolated — they have access to Daymon's memory system:
+1. Before execution: injects own history (last 5 observations) + cross-task knowledge (FTS search)
+2. After execution: stores output as a new observation
+3. Results are discoverable via `daymon_recall` in any chat
+
+### Session Continuity
+
+Tasks can resume Claude CLI sessions across runs using `--resume <session-id>`:
+- Session rotation after 20 consecutive runs
+- Error recovery: retries without session if resume fails
+- Reset via `daymon_reset_session`
+
+### File Watchers
+
+Watch files or folders for changes. When a change is detected, executes an action prompt via Claude CLI.
+
+---
+
+## MCP Tools Reference
+
+### Memory Tools
+
+**daymon_remember**
+Store a memory. Creates an entity with an observation.
+- `name` (required): Short name for the memory
+- `content` (required): Detailed information to remember
+- `category`: work, personal, preference, project, person
+- `type`: fact, preference, person, project, event
+
+**daymon_recall**
+Search memories by keyword. Returns matching entities with observations and relations.
+- `query` (required): Search term
+
+**daymon_forget**
+Delete a memory by its ID. Removes all related observations and relations.
+- `id` (required): Entity ID to delete
+
+**daymon_memory_list**
+List all stored memories, optionally filtered by category.
+- `category` (optional): Filter by category
+
+### Scheduler Tools
+
+**daymon_schedule**
+Create a task — recurring (cron), one-time (scheduledAt), or on-demand (manual).
+- `prompt` (required): Self-contained prompt for Claude to execute
+- `name`: Short descriptive name
+- `description`: What the task does
+- `cronExpression`: Cron schedule for recurring tasks
+- `scheduledAt`: ISO-8601 datetime for one-time tasks
+- `maxRuns`: Auto-complete after N successful runs
+- `maxTurns`: Max agentic turns per run
+- `allowedTools`: Comma-separated whitelist
+- `disallowedTools`: Comma-separated blocklist
+- `nudge`: When to auto-nudge (always, failure_only, never)
+- `workerId`: Assign to a specific worker
+- `sessionContinuity`: Enable session resume across runs
+- `timeout`: Max execution time in minutes
+
+**daymon_run_task**
+Execute a task immediately. Returns right away — use daymon_task_progress to check status.
+- `id` (required): Task ID
+
+**daymon_list_tasks**
+List all scheduled tasks, optionally filtered by status.
+- `status` (optional): active, paused, completed
+
+**daymon_pause_task** / **daymon_resume_task** / **daymon_delete_task**
+Manage task lifecycle by ID.
+
+**daymon_task_history**
+Show recent execution history for a task.
+- `taskId` (required): Task ID
+- `limit`: Max runs to return (default 10)
+
+**daymon_task_progress**
+Check current execution progress of a running task.
+- `taskId` (required): Task ID
+
+**daymon_reset_session**
+Clear session for a task, forcing next run to start fresh.
+- `id` (required): Task ID
+
+### Worker Tools
+
+**daymon_create_worker**
+Create a named agent configuration with a system prompt.
+- `name` (required): Worker name
+- `systemPrompt` (required): System prompt defining personality
+- `description`: What this worker does
+- `isDefault`: Set as default worker
+
+**daymon_list_workers** — List all worker configurations.
+
+**daymon_update_worker** — Update name, system prompt, description, or default status.
+
+**daymon_delete_worker** — Delete a worker configuration.
+
+### File Watching Tools
+
+**daymon_watch**
+Watch a file or folder for changes.
+- `path` (required): Absolute path to watch
+- `actionPrompt` (required): Prompt for Claude when change detected
+- `description`: What this watch does
+
+**daymon_unwatch** — Stop watching by watch ID.
+
+**daymon_list_watches** — List all active watches.
+
+### Settings Tools
+
+**daymon_get_setting** — Get a setting value by key.
+**daymon_set_setting** — Set a setting value.
+
+Available settings:
+- `large_window_enabled` (true/false)
+- `auto_nudge_quiet_hours` (true/false)
+- `auto_nudge_quiet_from` (HH:MM, default 08:00)
+- `auto_nudge_quiet_until` (HH:MM, default 22:00)
+
+---
+
+## Architecture
+
+```
+Electron (thin UI shell)                 Sidecar (stock Node.js)
+├── Tray + popover window                ├── HTTP server on 127.0.0.1
+├── IPC bridge to React renderer         ├── Cron scheduler (node-cron)
+├── Native notifications (via SSE)       ├── Task execution (spawn claude)
+├── Auto-updater                         ├── File watchers (native fs.watch)
+├── Auto-launch                          ├── Embedding indexer
+├── Direct DB reads (fast UI)            ├── Auto-nudge (osascript)
+│                                        └── Own SQLite connection (WAL)
+├── Launch sidecar (detached spawn)
+├── HTTP client → sidecar API
+└── SSE listener for task events
+```
+
+### Why Sidecar?
+
+Electron's patched Node.js runtime causes `spawn EBADF` on all `child_process` calls. The sidecar is a standalone Node.js HTTP server that Electron launches as a detached process. All process-spawning work runs there.
+
+### Tech Stack
+
+Electron 35, React 18, Tailwind CSS 4, TypeScript, Vite 7, better-sqlite3, node-cron, zod, MCP SDK, HuggingFace Transformers (local embeddings with all-MiniLM-L6-v2), Vitest
+
+---
+
+## Requirements
+
+- macOS 12 (Monterey) or later (Apple Silicon & Intel)
+- Claude Desktop or Claude Code (at least one)
+- Claude subscription (Pro, Max, or Team)
+
+## Installation
+
+### Homebrew (recommended)
+```
+brew install daymonio/daymon/daymon
+```
+
+### Download
+Download the latest .dmg from https://github.com/daymonio/daymon/releases/latest
+
+### Build from Source
+```
+git clone https://github.com/daymonio/daymon.git
+cd daymon
+npm install
+npm run dev      # Development mode
+npm run build    # Production build
+```
