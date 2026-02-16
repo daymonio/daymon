@@ -12,16 +12,17 @@
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daymon — Open Source Autopilot for Claude</title>
-  <meta name="description" content="Your AI subscription only works when you do. Daymon puts it to work 24/7. Open source scheduled tasks, persistent memory, and background automation for Claude.">
-  <meta property="og:title" content="Daymon — Open Source Autopilot for Claude">
-  <meta property="og:description" content="Your AI subscription only works when you do. Daymon puts it to work 24/7.">
+  <title>Daymon — Open Source Personal Assistant in Claude</title>
+  <meta name="description" content="Daymon puts your Claude subscription to work 24/7. FREE. It schedules, remembers, and acts before you ask. Inside Claude.">
+  <meta property="og:title" content="Daymon — Open Source Personal Assistant in Claude">
+  <meta property="og:description" content="Daymon puts your Claude subscription to work 24/7. FREE. It schedules, remembers, and acts before you ask. Inside Claude.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://daymon.io">
-  <meta property="og:image" content="https://daymon.io/logo.png">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Daymon — Open Source Autopilot for Claude">
-  <meta name="twitter:description" content="Your AI subscription only works when you do. Daymon puts it to work 24/7.">
+  <meta property="og:image" content="https://daymon.io/social.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Daymon — Open Source Personal Assistant in Claude">
+  <meta name="twitter:description" content="Daymon puts your Claude subscription to work 24/7. FREE. It schedules, remembers, and acts before you ask. Inside Claude.">
+  <meta name="twitter:image" content="https://daymon.io/social.png">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -46,15 +47,14 @@
     <section class="hero">
       <div class="container">
         <h1>Your AI subscription only works when you do.</h1>
-        <h2>Daymon puts it to work 24/7.</h2>
+        <h2>Daymon puts your Claude to work 24/7.</h2>
         <p class="subtitle">
-          Open source autopilot for Claude.<br>
-          Works with Claude Desktop and Claude Code.<br>
-          Just talk to Claude — it schedules, remembers, and automates.
+          It schedules, remembers, and acts before you ask. Inside Claude. FREE.
         </p>
         <div class="demo">
           <img src="demo.gif" alt="Daymon demo — scheduling tasks from Claude" width="800">
         </div>
+        <p class="hero-eyebrow">Open source autopilot for Claude. Works with Claude Desktop and Claude Code.</p>
         <div class="cta">
           <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary" onclick="trackDownload()">Download for Mac</a>
           <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
@@ -184,10 +184,40 @@
       </div>
     </section>
 
+    <section class="smart-callout">
+      <div class="container">
+        <div class="limit-card">
+          <h3>Your tasks get smarter every time they run</h3>
+          <p>The first time a task runs, it figures out the best way to get your answer. By the third run, Daymon remembers what worked &mdash; so every run after that is faster and more reliable. You don't configure anything. It just happens.</p>
+          <div class="run-timeline">
+            <div class="run-item">
+              <div class="run-label">Run 1</div>
+              <div class="run-bar-track"><div class="run-bar" style="width: 100%"></div></div>
+              <div class="run-time">12s</div>
+              <div class="run-note">figuring it out</div>
+            </div>
+            <div class="run-item">
+              <div class="run-label">Run 3</div>
+              <div class="run-bar-track"><div class="run-bar" style="width: 33%"></div></div>
+              <div class="run-time">4s</div>
+              <div class="run-note">already knows how</div>
+            </div>
+            <div class="run-item">
+              <div class="run-label">Run 10</div>
+              <div class="run-bar-track"><div class="run-bar" style="width: 33%"></div></div>
+              <div class="run-time">4s</div>
+              <div class="run-note">still getting it right</div>
+            </div>
+          </div>
+          <p class="limit-kicker">Same question. Smarter answer. Every time.</p>
+        </div>
+      </div>
+    </section>
+
     <section id="workers" class="workers">
       <div class="container">
-        <h3>Workers — give your tasks a personality</h3>
-        <p class="workers-subtitle">Named agent profiles with system prompts. 9 templates included — or write your own.</p>
+        <h3>Your team of personal assistants.</h3>
+        <p class="workers-subtitle">Each worker has its own personality and expertise. They act proactively — not when you ask, but at the right moment. 9 templates included, or create your own.</p>
         <div class="worker-grid">
           <div class="worker-card">
             <div class="worker-icon">&#128188;</div>
@@ -313,6 +343,13 @@
             <div class="claude-col">No scheduled tasks</div>
             <div class="chatgpt-col">No scheduled tasks</div>
             <div class="openclaw-col">Fresh session each run</div>
+          </div>
+          <div class="compare-row">
+            <div class="compare-label">Self-improving</div>
+            <div class="daymon-col">Tasks get smarter over time</div>
+            <div class="claude-col">No</div>
+            <div class="chatgpt-col">No</div>
+            <div class="openclaw-col">No</div>
           </div>
           <div class="compare-row">
             <div class="compare-label">Persistent memory</div>

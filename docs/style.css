@@ -93,8 +93,15 @@ nav a:hover {
   padding: 100px 0 80px;
 }
 
+.hero-eyebrow {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 24px;
+  letter-spacing: 0.01em;
+}
+
 .hero h1 {
-  font-size: clamp(1.75rem, 5vw, 2.75rem);
+  font-size: clamp(1.4rem, 3.5vw, 2rem);
   font-weight: 800;
   line-height: 1.2;
   max-width: 700px;
@@ -102,17 +109,17 @@ nav a:hover {
 }
 
 .hero h2 {
-  font-size: clamp(1.25rem, 3vw, 1.75rem);
-  font-weight: 600;
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  font-weight: 700;
   color: var(--accent-hover);
-  margin-top: 12px;
+  margin-top: 16px;
 }
 
 .subtitle {
-  color: var(--text-muted);
-  font-size: 1.05rem;
-  margin-top: 24px;
-  line-height: 1.8;
+  color: var(--text);
+  font-size: clamp(1.15rem, 2.5vw, 1.45rem);
+  margin-top: 20px;
+  line-height: 1.6;
 }
 
 /* === Demo === */
@@ -135,7 +142,7 @@ nav a:hover {
   gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-top: 36px;
+  margin-top: 28px;
 }
 
 .btn {
@@ -393,6 +400,71 @@ nav a:hover {
 @media (max-width: 640px) {
   .limit-card {
     padding: 28px 24px;
+  }
+}
+
+/* === Smart Tasks Callout === */
+.smart-callout {
+  padding: 60px 0;
+}
+
+.run-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 24px 0 8px;
+}
+
+.run-item {
+  display: grid;
+  grid-template-columns: 52px 1fr 40px;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0 12px;
+}
+
+.run-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  grid-row: 1;
+}
+
+.run-bar-track {
+  grid-row: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.run-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+.run-time {
+  grid-row: 1;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-hover);
+  text-align: right;
+}
+
+.run-note {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: -2px;
+}
+
+@media (max-width: 640px) {
+  .run-item {
+    grid-template-columns: 48px 1fr 36px;
+    gap: 0 8px;
   }
 }
 
@@ -684,6 +756,7 @@ nav a:hover {
   color: var(--text-muted);
   margin-bottom: 0;
 }
+
 
 /* === Footer === */
 footer {
