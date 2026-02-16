@@ -28,6 +28,34 @@ const runningTasks = new Set<number>()
 
 const SESSION_MAX_RUNS = 20
 const CONSOLE_LOG_FLUSH_INTERVAL_MS = 1000
+const MAX_CONCURRENT_TASKS = 3
+
+// ─── Concurrency limiter ─────────────────────────────────────
+// Prevents spawning unlimited Claude CLI processes when many tasks fire at once.
+// Uses its own counter (not runningTasks.size) to avoid race conditions between
+// acquireSlot() and runningTasks.add().
+let activeSlots = 0
+const concurrencyQueue: Array<() => void> = []
+
+function acquireSlot(): Promise<void> {
+  if (activeSlots < MAX_CONCURRENT_TASKS) {
+    activeSlots++
+    return Promise.resolve()
+  }
+  return new Promise<void>(resolve => {
+    concurrencyQueue.push(resolve)
+  })
+}
+
+function releaseSlot(): void {
+  const next = concurrencyQueue.shift()
+  if (next) {
+    // Transfer slot to next waiter (don't decrement — they inherit our slot)
+    next()
+  } else {
+    activeSlots--
+  }
+}
 
 function createConsoleLogBuffer(db: Database.Database, runId: number): {
   onConsoleLog: ConsoleLogCallback
@@ -152,6 +180,9 @@ export async function executeTask(
   if (task.status !== 'active') {
     return { success: false, output: '', errorMessage: `Task ${taskId} is ${task.status}, not active`, durationMs: 0 }
   }
+
+  // Wait for a concurrency slot before spawning a Claude process
+  await acquireSlot()
 
   runningTasks.add(taskId)
   const startTime = Date.now()
@@ -305,6 +336,7 @@ export async function executeTask(
     return { success: false, output: '', errorMessage: errorMsg, durationMs: Date.now() - startTime }
   } finally {
     runningTasks.delete(taskId)
+    releaseSlot()
   }
 }
 

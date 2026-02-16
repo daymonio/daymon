@@ -69,6 +69,29 @@ describe('vectorToBlob / blobToVector', () => {
       expect(restored[i]).toBeCloseTo(vec[i], 5)
     }
   })
+
+  it('returns a zero-copy view (no byte-by-byte copy)', () => {
+    const original = new Float32Array([1.0, 2.0, 3.0])
+    const blob = vectorToBlob(original)
+    const restored = blobToVector(blob)
+
+    // The restored array should share the same underlying buffer as the blob
+    expect(restored.buffer).toBe(blob.buffer)
+  })
+
+  it('works with Buffer slices (non-zero byteOffset)', () => {
+    // Simulate a Buffer that's a slice of a larger allocation
+    const large = Buffer.alloc(32)
+    const vec = new Float32Array([42.0, -1.5])
+    const blob = vectorToBlob(vec)
+    blob.copy(large, 8) // copy into offset 8
+
+    const slice = large.subarray(8, 8 + blob.length)
+    const restored = blobToVector(slice)
+    expect(restored.length).toBe(2)
+    expect(restored[0]).toBeCloseTo(42.0, 5)
+    expect(restored[1]).toBeCloseTo(-1.5, 5)
+  })
 })
 
 describe('textHash', () => {

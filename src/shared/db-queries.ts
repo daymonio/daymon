@@ -486,6 +486,42 @@ export function cleanupStaleRuns(db: Database.Database): number {
   return result.changes
 }
 
+// ─── Pruning ──────────────────────────────────────────────
+
+const MAX_RUNS_PER_TASK = 50
+const PRUNE_INTERVAL_MS = 60 * 60_000 // 1 hour
+let lastPruneTime = 0
+
+/**
+ * Delete old task runs (keeping last N per task) and their console logs.
+ * Runs at most once per hour to avoid overhead.
+ */
+export function pruneOldRuns(db: Database.Database): number {
+  const now = Date.now()
+  if (now - lastPruneTime < PRUNE_INTERVAL_MS) return 0
+  lastPruneTime = now
+
+  // Delete console logs for runs that will be pruned
+  const result = db.prepare(`
+    DELETE FROM console_logs WHERE run_id IN (
+      SELECT tr.id FROM task_runs tr
+      WHERE (SELECT COUNT(*) FROM task_runs tr2
+             WHERE tr2.task_id = tr.task_id AND tr2.id >= tr.id) > ?
+    )
+  `).run(MAX_RUNS_PER_TASK)
+
+  // Delete old runs beyond the limit per task
+  const runResult = db.prepare(`
+    DELETE FROM task_runs WHERE id IN (
+      SELECT tr.id FROM task_runs tr
+      WHERE (SELECT COUNT(*) FROM task_runs tr2
+             WHERE tr2.task_id = tr.task_id AND tr2.id >= tr.id) > ?
+    )
+  `).run(MAX_RUNS_PER_TASK)
+
+  return result.changes + runResult.changes
+}
+
 // ─── Console Logs ──────────────────────────────────────────
 
 export function insertConsoleLogs(
@@ -534,24 +570,69 @@ const MAX_MEMORY_LENGTH = 2000
 const MAX_OBSERVATIONS_PER_ENTITY = 10
 
 function buildRelatedKnowledgeSection(db: Database.Database, task: Task): string | null {
+  // Single FTS search with all words joined by OR instead of N separate queries
   const words = task.name.split(/\s+/).filter(w => w.length >= 2)
+  if (words.length === 0) return null
+
   const relatedMap = new Map<number, Entity>()
-  for (const word of words) {
-    for (const entity of searchEntities(db, word)) {
+  try {
+    const ftsQuery = words.join(' OR ')
+    const ftsResults = db
+      .prepare(
+        `SELECT e.* FROM entities e
+         INNER JOIN memory_fts fts ON e.id = fts.rowid
+         WHERE memory_fts MATCH ?
+         ORDER BY rank
+         LIMIT 10`
+      )
+      .all(ftsQuery) as Entity[]
+    for (const entity of ftsResults) {
+      if (entity.id !== task.memoryEntityId) {
+        relatedMap.set(entity.id, entity)
+      }
+    }
+  } catch {
+    // FTS parse error — fall through to LIKE
+    const escaped = words.map(w => w.replace(/[%_]/g, '\\$&'))
+    const likeConditions = escaped.map(() => "name LIKE ? ESCAPE '\\'").join(' OR ')
+    const params = escaped.map(w => `%${w}%`)
+    const rows = db
+      .prepare(`SELECT * FROM entities WHERE ${likeConditions} ORDER BY updated_at DESC LIMIT 10`)
+      .all(...params) as Entity[]
+    for (const entity of rows) {
       if (entity.id !== task.memoryEntityId) {
         relatedMap.set(entity.id, entity)
       }
     }
   }
-  const otherEntities = Array.from(relatedMap.values())
-  if (otherEntities.length === 0) return null
+
+  const entityIds = Array.from(relatedMap.keys()).slice(0, 5)
+  if (entityIds.length === 0) return null
+
+  // Batch fetch observations for all entities in a single query
+  const placeholders = entityIds.map(() => '?').join(',')
+  const allObs = db
+    .prepare(
+      `SELECT * FROM observations WHERE entity_id IN (${placeholders}) ORDER BY id DESC`
+    )
+    .all(...entityIds) as Observation[]
+
+  // Group by entity_id, keeping only top N per entity
+  const obsByEntity = new Map<number, Observation[]>()
+  for (const obs of allObs) {
+    const list = obsByEntity.get(obs.entity_id) ?? []
+    if (list.length < MAX_RELATED_OBSERVATIONS) {
+      list.push(obs)
+      obsByEntity.set(obs.entity_id, list)
+    }
+  }
 
   const relatedParts: string[] = []
-  for (const entity of otherEntities.slice(0, 5)) {
-    const observations = getObservations(db, entity.id)
-    if (observations.length > 0) {
-      const recent = observations.slice(0, MAX_RELATED_OBSERVATIONS)
-      const obsText = recent.map(o => o.content).join('\n')
+  for (const id of entityIds) {
+    const entity = relatedMap.get(id)!
+    const observations = obsByEntity.get(id)
+    if (observations && observations.length > 0) {
+      const obsText = observations.map(o => o.content).join('\n')
       relatedParts.push(`**${entity.name}** (${entity.type}):\n${obsText}`)
     }
   }
@@ -616,12 +697,15 @@ export function storeTaskResultInMemory(
   addObservation(db, entityId, content, 'task_runner')
 
   // Prune old observations — keep last N to prevent unbounded growth
-  const observations = getObservations(db, entityId)
-  if (observations.length > MAX_OBSERVATIONS_PER_ENTITY) {
-    const toDelete = observations.slice(MAX_OBSERVATIONS_PER_ENTITY)
-    for (const obs of toDelete) {
-      deleteObservation(db, obs.id)
-    }
+  // Use COUNT + targeted DELETE instead of loading all observations into memory
+  const countRow = db.prepare('SELECT COUNT(*) as cnt FROM observations WHERE entity_id = ?').get(entityId) as { cnt: number }
+  if (countRow.cnt > MAX_OBSERVATIONS_PER_ENTITY) {
+    db.prepare(
+      `DELETE FROM observations WHERE id IN (
+         SELECT id FROM observations WHERE entity_id = ?
+         ORDER BY id DESC LIMIT -1 OFFSET ?
+       )`
+    ).run(entityId, MAX_OBSERVATIONS_PER_ENTITY)
   }
 }
 

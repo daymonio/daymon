@@ -109,6 +109,10 @@ export function cleanupStaleRuns(): number {
   return queries.cleanupStaleRuns(getDatabase())
 }
 
+export function pruneOldRuns(): number {
+  return queries.pruneOldRuns(getDatabase())
+}
+
 // ─── Console Logs ───────────────────────────────────────────
 
 export function getConsoleLogs(runId: number, afterSeq: number = 0, limit: number = 100) {

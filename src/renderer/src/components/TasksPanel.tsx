@@ -96,7 +96,7 @@ function ConsoleView({ runId }: { runId: number }): React.JSX.Element {
       }
     }
     poll()
-    const timer = setInterval(poll, 1500)
+    const timer = setInterval(poll, 3000)
     return () => { mounted = false; clearInterval(timer) }
   }, [runId])
 
@@ -124,9 +124,9 @@ function ConsoleView({ runId }: { runId: number }): React.JSX.Element {
 export function TasksPanel(): React.JSX.Element {
   const [actionError, setActionError] = useState<string | null>(null)
   const [consoleTaskId, setConsoleTaskId] = useState<number | null>(null)
-  const { data: tasks, refresh, error: tasksError, isLoading } = usePolling(() => window.api.tasks.list(), 5000)
-  const { data: runningRuns } = usePolling(() => window.api.tasks.getRunningRuns(), 2000)
-  const { data: workers } = usePolling(() => window.api.workers.list(), 10000)
+  const { data: tasks, refresh, error: tasksError, isLoading } = usePolling(() => window.api.tasks.list(), 10000)
+  const { data: runningRuns } = usePolling(() => window.api.tasks.getRunningRuns(), 5000)
+  const { data: workers } = usePolling(() => window.api.workers.list(), 30000)
 
   const workerMap = new Map<number, Worker>()
   if (workers) {

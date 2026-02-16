@@ -43,7 +43,7 @@ interface StatusPanelProps {
 }
 
 export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): React.JSX.Element {
-  const { data, error, isLoading } = usePolling(fetchStatus, 3000)
+  const { data, error, isLoading } = usePolling(fetchStatus, 10000)
 
   if (isLoading && !data) {
     return <div className="p-4 text-xs text-gray-400">Loading...</div>

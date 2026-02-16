@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type Database from 'better-sqlite3'
 import { getMcpDatabase } from '../db'
 import * as queries from '../../shared/db-queries'
 import { embed, isEngineReady, cosineSimilarity, blobToVector, initEngine } from '../../shared/embeddings'
@@ -11,6 +12,27 @@ function ensureEngineInit(): void {
     engineInitStarted = true
     initEngine().catch(() => { /* non-fatal */ })
   }
+}
+
+// ─── Embedding cache ────────────────────────────────────────
+// Avoids reloading all embeddings from disk on every recall query.
+// Cache is invalidated every 60s so new memories are picked up.
+let embeddingCache: Array<{ entityId: number; vector: Float32Array }> | null = null
+let embeddingCacheTime = 0
+const EMBEDDING_CACHE_TTL_MS = 60_000
+
+function getCachedEmbeddings(db: Database.Database): Array<{ entityId: number; vector: Float32Array }> {
+  const now = Date.now()
+  if (embeddingCache && now - embeddingCacheTime < EMBEDDING_CACHE_TTL_MS) {
+    return embeddingCache
+  }
+  const raw = queries.getAllEmbeddings(db)
+  embeddingCache = raw.map(e => ({
+    entityId: e.entityId,
+    vector: blobToVector(e.vector)
+  }))
+  embeddingCacheTime = now
+  return embeddingCache
 }
 
 export function registerMemoryTools(server: McpServer): void {
@@ -70,11 +92,11 @@ export function registerMemoryTools(server: McpServer): void {
         try {
           const queryVec = await embed(query)
           if (queryVec) {
-            const allEmbeddings = queries.getAllEmbeddings(db)
-            semanticResults = allEmbeddings
+            const cached = getCachedEmbeddings(db)
+            semanticResults = cached
               .map(e => ({
                 entityId: e.entityId,
-                score: cosineSimilarity(queryVec, blobToVector(e.vector))
+                score: cosineSimilarity(queryVec, e.vector)
               }))
               .filter(e => e.score > 0.3)
               .sort((a, b) => b.score - a.score)

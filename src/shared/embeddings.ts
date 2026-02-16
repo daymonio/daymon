@@ -89,10 +89,7 @@ export function vectorToBlob(vec: Float32Array): Buffer {
 }
 
 export function blobToVector(blob: Buffer): Float32Array {
-  const ab = new ArrayBuffer(blob.length)
-  const view = new Uint8Array(ab)
-  for (let i = 0; i < blob.length; i++) view[i] = blob[i]
-  return new Float32Array(ab)
+  return new Float32Array(blob.buffer, blob.byteOffset, blob.byteLength / 4)
 }
 
 export function textHash(text: string): string {

@@ -1139,3 +1139,83 @@ describe('executeTask - rate limit retry', () => {
     expect(queries.getTask(db, task.id)!.runCount).toBe(0)
   })
 })
+
+// ─── Concurrency Limiter ──────────────────────────────────────
+
+describe('executeTask - concurrency limiter', () => {
+  it('limits concurrent executions to MAX_CONCURRENT_TASKS', async () => {
+    // Create 5 tasks — with MAX_CONCURRENT_TASKS=3, two should queue
+    const taskIds: number[] = []
+    for (let i = 0; i < 5; i++) {
+      taskIds.push(createActiveTask(`Concurrent ${i}`, `Work ${i}`))
+    }
+
+    const resolvers: Array<(value: { stdout: string; stderr: string; exitCode: number; durationMs: number; timedOut: boolean; sessionId: string | null }) => void> = []
+
+    // Each call creates a promise that we control
+    mockExecute.mockImplementation(() => {
+      return new Promise(resolve => {
+        resolvers.push(resolve)
+      })
+    })
+
+    // Start all 5 tasks concurrently
+    const promises = taskIds.map(id => executeTask(id, { db, resultsDir }))
+
+    // Wait for microtasks to settle
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    // Only 3 should have actually called executeClaudeCode (3 resolvers)
+    expect(resolvers.length).toBe(3)
+
+    // Complete first task — should unblock 4th
+    resolvers[0]({ stdout: 'done 0', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null })
+    await new Promise(resolve => setTimeout(resolve, 50))
+    expect(resolvers.length).toBe(4)
+
+    // Complete second task — should unblock 5th
+    resolvers[1]({ stdout: 'done 1', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null })
+    await new Promise(resolve => setTimeout(resolve, 50))
+    expect(resolvers.length).toBe(5)
+
+    // Complete remaining tasks
+    resolvers[2]({ stdout: 'done 2', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null })
+    resolvers[3]({ stdout: 'done 3', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null })
+    resolvers[4]({ stdout: 'done 4', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null })
+
+    const results = await Promise.all(promises)
+    expect(results.every(r => r.success)).toBe(true)
+  })
+
+  it('all tasks complete even when some fail (slots released on failure)', async () => {
+    // 4 tasks, 3 concurrency — all should eventually complete
+    const taskIds: number[] = []
+    for (let i = 0; i < 4; i++) {
+      taskIds.push(createActiveTask(`Task ${i}`, `Work ${i}`))
+    }
+
+    let callCount = 0
+    mockExecute.mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve({
+          stdout: '', stderr: 'error', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+        })
+      }
+      return Promise.resolve({
+        stdout: 'ok', stderr: '', exitCode: 0, durationMs: 100, timedOut: false, sessionId: null
+      })
+    })
+
+    const results = await Promise.all(
+      taskIds.map(id => executeTask(id, { db, resultsDir }))
+    )
+
+    // All should complete (slot released on failure, 4th task unblocked)
+    const succeeded = results.filter(r => r.success).length
+    const failed = results.filter(r => !r.success).length
+    expect(succeeded).toBe(3)
+    expect(failed).toBe(1)
+    expect(callCount).toBe(4) // all 4 tasks actually ran
+  })
+})
