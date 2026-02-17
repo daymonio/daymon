@@ -25,6 +25,13 @@ plutil -replace CFBundleName -string "Daymon" "$PLIST"
 plutil -replace CFBundleDisplayName -string "Daymon" "$PLIST"
 plutil -replace CFBundleIdentifier -string "io.daymon.app" "$PLIST"
 
+# Rename the executable so macOS Accessibility shows "Daymon" instead of "Electron"
+MACOS_DIR="$ELECTRON_APP/Contents/MacOS"
+if [ -f "$MACOS_DIR/Electron" ] && [ ! -f "$MACOS_DIR/Daymon" ]; then
+  mv "$MACOS_DIR/Electron" "$MACOS_DIR/Daymon"
+  plutil -replace CFBundleExecutable -string "Daymon" "$PLIST"
+fi
+
 # Copy pre-built icon (checked into repo at build/icon.icns)
 if [ -f "$ICNS_SRC" ]; then
   cp "$ICNS_SRC" "$ICNS_DIR/daymon.icns"
