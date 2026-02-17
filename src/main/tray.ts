@@ -63,7 +63,7 @@ function createPopoverWindow(width?: number, height?: number): BrowserWindow {
 function isSafeExternalUrl(raw: string): boolean {
   try {
     const url = new URL(raw)
-    return url.protocol === 'https:' || url.protocol === 'http:' || url.protocol === 'mailto:'
+    return url.protocol === 'https:' || url.protocol === 'http:' || url.protocol === 'mailto:' || url.protocol === 'x-apple.systempreferences:'
   } catch {
     return false
   }
