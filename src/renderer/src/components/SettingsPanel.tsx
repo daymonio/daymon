@@ -199,8 +199,20 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange, onRefreshUpd
 
       <div>
         <h3 className="text-xs font-semibold text-gray-700 mb-1">Auto-Nudge</h3>
-        <p className="text-[10px] text-gray-400 mb-1.5 leading-tight">When a task finishes, Daymon can show results in your active Claude Code chat automatically. Requires <button onClick={() => window.api.app.requestAccessibility()} className="text-blue-500 hover:text-blue-700 underline">Accessibility</button> permission.</p>
+        <p className="text-[10px] text-gray-400 mb-1.5 leading-tight">When a task finishes, Daymon can show results in your active Claude Code chat automatically.</p>
         <div className="bg-gray-50 rounded-lg p-2 space-y-1">
+          <div className="py-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-600">Accessibility permission</span>
+              <button
+                onClick={() => window.api.app.requestAccessibility()}
+                className="text-blue-500 hover:text-blue-700 text-xs"
+              >
+                Add permission
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">Required for auto-nudge to type into Claude Code</p>
+          </div>
           <div className="py-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-600">Default for new tasks</span>
