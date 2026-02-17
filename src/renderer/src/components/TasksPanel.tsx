@@ -827,6 +827,14 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
                   <div className="flex items-center justify-end gap-2">
+                    {activeRun && (
+                      <button
+                        onClick={() => setConsoleTaskId(consoleTaskId === task.id ? null : task.id)}
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        {consoleTaskId === task.id ? 'Hide' : 'Console'}
+                      </button>
+                    )}
                     <button
                       onClick={() => runNow(task.id)}
                       disabled={busy}
@@ -850,14 +858,6 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
                     >
                       Delete
                     </button>
-                    {activeRun && (
-                      <button
-                        onClick={() => setConsoleTaskId(consoleTaskId === task.id ? null : task.id)}
-                        className="text-xs text-gray-500 hover:text-gray-700"
-                      >
-                        {consoleTaskId === task.id ? 'Hide' : 'Console'}
-                      </button>
-                    )}
                   </div>
                 </td>
               </tr>
