@@ -1,4 +1,4 @@
-import { ipcMain, app, shell, clipboard, BrowserWindow } from 'electron'
+import { ipcMain, app, shell, clipboard, BrowserWindow, systemPreferences } from 'electron'
 import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
 import { platform } from 'os'
@@ -208,10 +208,13 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:openFile', (_e, filePath: string) => shell.openPath(filePath))
   ipcMain.handle('app:requestAccessibility', () => {
     if (platform() !== 'darwin') return false
-    try {
-      execSync('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"')
-    } catch { /* ignore */ }
-    return false
+    const trusted = systemPreferences.isTrustedAccessibilityClient(true)
+    if (!trusted) {
+      try {
+        execSync('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"')
+      } catch { /* ignore */ }
+    }
+    return trusted
   })
   ipcMain.handle('app:showInFolder', (_e, filePath: string) => shell.showItemInFolder(filePath))
   ipcMain.handle('app:sendToApp', (_e, target: string, message: string, filePath?: string) => {

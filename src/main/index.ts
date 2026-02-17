@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, systemPreferences } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createTray, showPopoverWindowFromDock } from './tray'
 import { initDatabase, closeDatabase, getDatabase } from './db'
@@ -7,7 +7,7 @@ import { ensureClaudeConfig } from './claude-config'
 import { launchSidecar, shutdownSidecar } from './sidecar'
 import { getSetting, setSetting } from './db/tasks'
 import { initUpdater, stopUpdater } from './updater'
-import { release } from 'os'
+import { release, platform } from 'os'
 import { APP_NAME, APP_ID } from '../shared/constants'
 
 function isBrokenPipeError(error: unknown): boolean {
@@ -145,6 +145,11 @@ function bootstrap(): void {
     // Without this, synchronous DB queries (cleanup, pruning, listTasks) block
     // the main thread and the tray icon never responds to clicks.
     setImmediate(() => {
+      // macOS: prompt for Accessibility permission (needed for auto-nudge).
+      // Shows system dialog + adds app to Accessibility list if not yet trusted.
+      if (platform() === 'darwin') {
+        systemPreferences.isTrustedAccessibilityClient(true)
+      }
       ensureClaudeConfig()
       launchSidecar().catch((err) => {
         console.error('Failed to launch sidecar:', err)
