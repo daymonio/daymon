@@ -25,14 +25,13 @@ plutil -replace CFBundleName -string "Daymon" "$PLIST"
 plutil -replace CFBundleDisplayName -string "Daymon" "$PLIST"
 plutil -replace CFBundleIdentifier -string "io.daymon.app" "$PLIST"
 
-# Rename the executable so macOS Accessibility shows "Daymon" instead of "Electron"
-# Keep a symlink at the old path so electron-vite can still find it via path.txt
+# Add a hardlink named "Daymon" so macOS Accessibility shows the right name.
+# The original "Electron" binary stays intact for electron-vite compatibility.
 MACOS_DIR="$ELECTRON_APP/Contents/MacOS"
-if [ -f "$MACOS_DIR/Electron" ] && [ ! -L "$MACOS_DIR/Electron" ]; then
-  mv "$MACOS_DIR/Electron" "$MACOS_DIR/Daymon"
-  ln -s "Daymon" "$MACOS_DIR/Electron"
-  plutil -replace CFBundleExecutable -string "Daymon" "$PLIST"
+if [ -f "$MACOS_DIR/Electron" ] && [ ! -f "$MACOS_DIR/Daymon" ]; then
+  ln "$MACOS_DIR/Electron" "$MACOS_DIR/Daymon"
 fi
+plutil -replace CFBundleExecutable -string "Daymon" "$PLIST"
 
 # Copy pre-built icon (checked into repo at build/icon.icns)
 if [ -f "$ICNS_SRC" ]; then
