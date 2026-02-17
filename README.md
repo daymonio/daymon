@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://daymon.io">
-    <img src="docs/banner.png" alt="Daymon — Make Claude earn its subscription." width="100%">
+    <img src="docs/banner.png" alt="Daymon — Run Claude while you sleep." width="100%">
   </a>
 </p>
 
