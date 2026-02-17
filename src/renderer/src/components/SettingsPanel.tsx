@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useContainerWidth } from '../hooks/useContainerWidth'
 
 interface PathsInfo {
   dbPath: string
@@ -31,6 +32,8 @@ interface UpdateStatus {
 }
 
 export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPanelProps): React.JSX.Element {
+  const [containerRef, containerWidth] = useContainerWidth<HTMLDivElement>()
+  const wide = containerWidth >= 600
   const [version, setVersion] = useState('')
   const [paths, setPaths] = useState<PathsInfo | null>(null)
   const [cliStatus, setCliStatus] = useState<ClaudeCliStatus | null>(null)
@@ -171,13 +174,13 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div ref={containerRef} className={`p-4 ${wide ? 'grid grid-cols-2 gap-4' : 'space-y-4'}`}>
       <div>
         <h3 className="text-xs font-semibold text-gray-700 mb-1">Preferences</h3>
         <div className="bg-gray-50 rounded-lg p-2 space-y-1">
           {toggle('Launch at login', autoLaunch, toggleAutoLaunch, 'Start Daymon when you log in')}
           {toggle('Notifications', notifications, toggleNotifications, 'Show macOS notifications when tasks complete')}
-          {toggle('Large window', largeWindow, toggleLargeWindow, 'Use a bigger popover window')}
+          {toggle('Large window', largeWindow, toggleLargeWindow, 'Bigger window with expanded cards and table layout')}
           {toggle('Advanced mode', advancedMode, toggleAdvancedMode, 'Show task IDs, debug info, and extra controls')}
         </div>
       </div>
@@ -333,7 +336,7 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className={`${wide ? 'col-span-2 grid grid-cols-2 gap-2' : 'space-y-2'}`}>
         <button
           onClick={() => window.open('https://github.com/daymonio/daymon/issues/new')}
           className="w-full py-1.5 text-xs text-blue-500 hover:text-blue-700 border border-blue-200 hover:border-blue-300 rounded transition-colors"

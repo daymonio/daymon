@@ -210,6 +210,24 @@ nav a:hover {
   color: var(--text);
 }
 
+.hero-description {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  max-width: 640px;
+  margin: 20px auto 0;
+}
+
+.hero-trust {
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.hero-trust strong {
+  color: var(--accent-hover);
+}
+
 .requirements {
   margin-top: 14px;
   font-size: 0.85rem;
@@ -751,6 +769,60 @@ nav a:hover {
   margin-bottom: 0;
 }
 
+
+/* === Uninstall === */
+.uninstall-section {
+  padding: 48px 0;
+  border-top: 1px solid rgba(232, 106, 26, 0.1);
+}
+
+.uninstall-section h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+}
+
+.uninstall-intro {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 24px;
+}
+
+.uninstall-steps {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.uninstall-option {
+  flex: 1;
+  text-align: center;
+}
+
+.uninstall-option strong {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.uninstall-option p {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .uninstall-steps {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
 
 /* === Footer === */
 footer {

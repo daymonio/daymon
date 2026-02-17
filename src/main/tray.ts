@@ -14,13 +14,12 @@ function createPopoverWindow(width?: number, height?: number): BrowserWindow {
     height: height ?? DEFAULTS.WINDOW_HEIGHT,
     show: false,
     frame: false,
-    resizable: false,
-    movable: false,
+    resizable: true,
+    movable: true,
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
     skipTaskbar: true,
-    alwaysOnTop: true,
     transparent: false,
     backgroundColor: '#ffffff',
     vibrancy: 'under-window',
@@ -40,12 +39,6 @@ function createPopoverWindow(width?: number, height?: number): BrowserWindow {
       console.warn(`Blocked external URL with disallowed protocol: ${details.url}`)
     }
     return { action: 'deny' }
-  })
-
-  window.on('blur', () => {
-    if (!is.dev) {
-      window.hide()
-    }
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {

@@ -55,7 +55,9 @@
             <source src="demo.mp4" type="video/mp4">
           </video>
         </div>
-        <p class="hero-eyebrow">Open source autopilot for Claude. Works with Claude Desktop and Claude Code.</p>
+        <p class="hero-eyebrow">Works with Claude Desktop and Claude Code.</p>
+        <p class="hero-description">Daymon is a free, open-source macOS desktop app that adds scheduling, persistent memory, and background automation to Claude. It sits in your menu bar, connects to Claude Desktop or Claude Code, and runs tasks on a schedule &mdash; even when the app is closed. No API keys, no cloud servers, no account required.</p>
+        <p class="hero-trust"><strong>100% local. No cloud. No account. No tracking.</strong><br>Your data is a SQLite file on your Mac &mdash; inspect or delete it anytime.</p>
         <div class="cta">
           <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary" onclick="trackDownload()">Download for Mac</a>
           <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
@@ -431,11 +433,28 @@
         </div>
       </div>
     </section>
+
+    <section class="uninstall-section">
+      <div class="container">
+        <h3>Easy to uninstall</h3>
+        <p class="uninstall-intro">Changed your mind? Remove Daymon completely in seconds.</p>
+        <div class="uninstall-steps">
+          <div class="uninstall-option">
+            <strong>Homebrew</strong>
+            <code class="inline-code">brew uninstall daymon</code>
+          </div>
+          <div class="uninstall-option">
+            <strong>Manual</strong>
+            <p>Drag Daymon from Applications to Trash. To remove all data: <code class="inline-code">rm -rf ~/Library/Application\ Support/daymon</code></p>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer>
     <div class="container">
-      <p>MIT &middot; &copy; 2026 Daymon &middot; <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a> &middot; <a href="https://www.youtube.com/@daymon_io" target="_blank" rel="noopener">YouTube</a> &middot; <a href="https://x.com/Daymon_io" target="_blank" rel="noopener">𝕏</a></p>
+      <p>MIT &middot; &copy; 2026 Daymon &middot; <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a> &middot; <a href="https://www.youtube.com/@daymon_io" target="_blank" rel="noopener">YouTube</a> &middot; <a href="https://x.com/Daymon_io" target="_blank" rel="noopener">𝕏</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
     </div>
   </footer>
 

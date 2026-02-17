@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-12Y9442YL6"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-12Y9442YL6');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Use — Daymon</title>
+  <meta name="description" content="Terms of use for Daymon, the open-source autopilot for Claude. MIT licensed, provided as-is.">
+  <meta property="og:title" content="Terms of Use — Daymon">
+  <meta property="og:description" content="Terms of use for Daymon, the open-source autopilot for Claude. MIT licensed, provided as-is.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://daymon.io/terms">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .article { padding: 60px 0 80px; }
+    .article h1 {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+    .article .lead {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 16px;
+      line-height: 1.7;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+      text-decoration: none;
+    }
+    .back-link:hover { color: var(--accent-hover); text-decoration: none; }
+
+    .legal-effective {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-style: italic;
+      margin-bottom: 48px;
+    }
+    .legal-section { margin-bottom: 40px; }
+    .legal-section h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--accent-hover);
+    }
+    .legal-section p,
+    .legal-section li {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .legal-section ul {
+      padding-left: 20px;
+      margin-bottom: 16px;
+    }
+    .legal-section ul li { margin-bottom: 8px; }
+    .legal-section a { color: var(--accent-hover); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container header-inner">
+      <a href="/" class="logo">
+        <img src="logo.png" alt="Daymon logo" width="40" height="40">
+        <span>Daymon</span>
+      </a>
+      <nav>
+        <a href="/#features">Features</a>
+        <a href="/#workers">Workers</a>
+        <a href="/#compare">Compare</a>
+        <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="article">
+      <div class="container">
+        <a href="/" class="back-link">&larr; Back to Daymon</a>
+        <h1>Terms of Use</h1>
+        <p class="lead">Daymon is free, open-source software distributed under the MIT License. By using Daymon, you agree to the following terms.</p>
+        <p class="legal-effective">Effective date: February 16, 2026</p>
+
+        <div class="legal-section">
+          <h2>1. License</h2>
+          <p>Daymon is released under the <a href="https://github.com/daymonio/daymon/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>. You are free to use, modify, and distribute the software in accordance with the terms of that license.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>2. No Warranty</h2>
+          <p>Daymon is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement.</p>
+          <p>In no event shall the authors or copyright holders be liable for any claim, damages, or other liability arising from the use of the software.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>3. Third-Party Services</h2>
+          <ul>
+            <li>Daymon uses <strong>Claude CLI by Anthropic</strong> to execute tasks. Your use of Claude is subject to <a href="https://www.anthropic.com/terms" target="_blank" rel="noopener">Anthropic's terms of service</a> and <a href="https://www.anthropic.com/aup" target="_blank" rel="noopener">acceptable use policy</a>.</li>
+            <li>You are responsible for ensuring your use of Daymon complies with Anthropic's terms, including any rate limits, usage policies, or content restrictions.</li>
+            <li>Daymon is not affiliated with, endorsed by, or sponsored by Anthropic.</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2>4. User Responsibility</h2>
+          <ul>
+            <li>You are solely responsible for the content of the tasks, prompts, and instructions you create in Daymon.</li>
+            <li>You are responsible for the actions taken by automated tasks running on your machine, including any files created, modified, or deleted.</li>
+            <li>You should review task outputs and ensure they meet your expectations before acting on them.</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2>5. Local Execution</h2>
+          <ul>
+            <li>Daymon executes tasks on your local machine using your system resources and your Claude subscription.</li>
+            <li>You are responsible for ensuring that automated tasks do not consume excessive resources, interfere with other software, or perform unintended actions.</li>
+            <li>Daymon provides execution controls (timeout, max turns, allowed/disallowed tools) to help you constrain task behavior.</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2>6. Open Source Contributions</h2>
+          <p>Contributions to Daymon are welcome and are governed by the MIT License. By submitting a pull request or contribution, you agree that your contribution will be licensed under the same MIT License as the rest of the project.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>7. Limitation of Liability</h2>
+          <p>To the maximum extent permitted by applicable law, in no event shall Daymon, its contributors, or copyright holders be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses resulting from:</p>
+          <ul>
+            <li>Your use of or inability to use the software</li>
+            <li>Any actions taken by automated tasks</li>
+            <li>Any unauthorized access to or alteration of your data</li>
+            <li>Any third-party service interruptions (including Claude/Anthropic)</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2>8. Modifications to Terms</h2>
+          <p>We may revise these terms from time to time. Updated terms will be posted on this page with a new effective date. Continued use of Daymon after changes constitutes acceptance of the revised terms.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>9. Contact</h2>
+          <p>If you have questions about these terms, email us at <a href="mailto:hello@daymon.io">hello@daymon.io</a>, open an issue on <a href="https://github.com/daymonio/daymon/issues" target="_blank" rel="noopener">GitHub</a>, or reach out on <a href="https://x.com/Daymon_io" target="_blank" rel="noopener">X (@Daymon_io)</a>.</p>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>MIT &middot; &copy; 2026 Daymon &middot; <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a> &middot; <a href="https://www.youtube.com/@daymon_io" target="_blank" rel="noopener">YouTube</a> &middot; <a href="https://x.com/Daymon_io" target="_blank" rel="noopener">&#120143;</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>

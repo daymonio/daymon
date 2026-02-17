@@ -60,10 +60,10 @@ function App(): React.JSX.Element {
           onClick={() => window.api.app.hideWindow()}
           className="text-gray-400 hover:text-gray-600 transition-colors"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          title="Collapse"
+          title="Close"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M3 5l4 4 4-4" />
+            <path d="M3 3l8 8M11 3l-8 8" />
           </svg>
         </button>
       </div>

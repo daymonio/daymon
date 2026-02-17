@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-12Y9442YL6"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-12Y9442YL6');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Daymon</title>
+  <meta name="description" content="Daymon's privacy policy. Local-first app with no cloud backend, no user accounts, and no data collection.">
+  <meta property="og:title" content="Privacy Policy — Daymon">
+  <meta property="og:description" content="Daymon's privacy policy. Local-first app with no cloud backend, no user accounts, and no data collection.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://daymon.io/privacy">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .article { padding: 60px 0 80px; }
+    .article h1 {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+    .article .lead {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 16px;
+      line-height: 1.7;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+      text-decoration: none;
+    }
+    .back-link:hover { color: var(--accent-hover); text-decoration: none; }
+
+    .legal-effective {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-style: italic;
+      margin-bottom: 48px;
+    }
+    .legal-section { margin-bottom: 40px; }
+    .legal-section h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--accent-hover);
+    }
+    .legal-section p,
+    .legal-section li {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .legal-section ul {
+      padding-left: 20px;
+      margin-bottom: 16px;
+    }
+    .legal-section ul li { margin-bottom: 8px; }
+    .legal-section a { color: var(--accent-hover); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container header-inner">
+      <a href="/" class="logo">
+        <img src="logo.png" alt="Daymon logo" width="40" height="40">
+        <span>Daymon</span>
+      </a>
+      <nav>
+        <a href="/#features">Features</a>
+        <a href="/#workers">Workers</a>
+        <a href="/#compare">Compare</a>
+        <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="article">
+      <div class="container">
+        <a href="/" class="back-link">&larr; Back to Daymon</a>
+        <h1>Privacy Policy</h1>
+        <p class="lead">Daymon is a local-first, open-source desktop application. Your data stays on your machine. This policy explains what data exists, where it lives, and what the website collects.</p>
+        <p class="legal-effective">Effective date: February 16, 2026</p>
+
+        <div class="legal-section">
+          <h2>1. The Daymon Application</h2>
+          <ul>
+            <li>Daymon runs entirely on your local machine. There is no Daymon cloud backend, no user accounts, and no authentication.</li>
+            <li>All data — tasks, memories, workers, run history — is stored in a local SQLite database on your computer.</li>
+            <li>Daymon does not transmit any of your data to Daymon servers because there are no Daymon servers.</li>
+            <li>Daymon does not collect analytics, telemetry, or usage data from the desktop application.</li>
+            <li>You can inspect, export, or delete your data at any time. It is a single SQLite file on your machine.</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2>2. Third-Party Services</h2>
+          <ul>
+            <li>Daymon connects to <strong>Claude CLI</strong> (by Anthropic) to execute tasks. When a task runs, the prompt and any context are sent to Anthropic's API through Claude CLI. This is governed by <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">Anthropic's privacy policy</a> and <a href="https://www.anthropic.com/terms" target="_blank" rel="noopener">terms of service</a>.</li>
+            <li>Daymon does not control, intercept, or store the data transmitted between Claude CLI and Anthropic's servers.</li>
+            <li>Local embeddings are computed using Hugging Face Transformers running entirely on your machine. No data is sent to Hugging Face.</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2>3. The Daymon Website</h2>
+          <ul>
+            <li>The website at daymon.io uses <strong>Google Analytics</strong> to understand visitor traffic. Google Analytics may use cookies to collect anonymous usage data such as page views, referral sources, and browser type.</li>
+            <li>The website also uses <strong>Google Ads conversion tracking</strong> on the homepage to measure download button clicks.</li>
+            <li>The website is hosted on <strong>GitHub Pages</strong>. GitHub may collect server logs (IP addresses, request timestamps). See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub's privacy statement</a>.</li>
+            <li>The website makes a client-side request to the <strong>GitHub API</strong> to display the repository star count. This request is subject to GitHub's privacy policy.</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2>4. Cookies</h2>
+          <ul>
+            <li><strong>The Daymon application</strong> does not use cookies.</li>
+            <li><strong>The Daymon website</strong> may set cookies through Google Analytics and Google Ads conversion tracking. These are third-party cookies managed by Google. You can opt out of Google Analytics by installing the <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">Google Analytics Opt-out Browser Add-on</a>.</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2>5. Data You Create</h2>
+          <ul>
+            <li>Memories, tasks, workers, and run history you create in Daymon are stored locally in a SQLite database.</li>
+            <li>You have full control over this data. You can view, modify, or delete it at any time.</li>
+            <li>Daymon is open source (MIT license) — you can audit exactly what the application does with your data by reviewing the <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">source code</a>.</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2>6. Children's Privacy</h2>
+          <p>Daymon is not directed at children under 13. We do not knowingly collect personal information from children.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>7. Changes to This Policy</h2>
+          <p>We may update this privacy policy from time to time. Changes will be posted on this page with an updated effective date. Since Daymon is open source, all changes are visible in the <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">public repository</a>.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>8. Contact</h2>
+          <p>If you have questions about this privacy policy, email us at <a href="mailto:hello@daymon.io">hello@daymon.io</a>, open an issue on <a href="https://github.com/daymonio/daymon/issues" target="_blank" rel="noopener">GitHub</a>, or reach out on <a href="https://x.com/Daymon_io" target="_blank" rel="noopener">X (@Daymon_io)</a>.</p>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>MIT &middot; &copy; 2026 Daymon &middot; <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a> &middot; <a href="https://www.youtube.com/@daymon_io" target="_blank" rel="noopener">YouTube</a> &middot; <a href="https://x.com/Daymon_io" target="_blank" rel="noopener">&#120143;</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>
