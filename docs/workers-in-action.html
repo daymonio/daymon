@@ -521,6 +521,18 @@
   </footer>
 
   <script>
+    fetch('https://api.github.com/repos/daymonio/daymon/releases/latest')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var dmg = (d.assets || []).find(function(a) { return a.name.endsWith('.dmg'); });
+        if (dmg) {
+          document.querySelectorAll('a[href$="/releases/latest"]').forEach(function(el) {
+            if (el.textContent.indexOf('Download') !== -1) el.href = dmg.browser_download_url;
+          });
+        }
+      })
+      .catch(function() {});
+
     fetch('https://api.github.com/repos/daymonio/daymon')
       .then(function(r) { return r.json(); })
       .then(function(d) {
