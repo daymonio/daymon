@@ -85,7 +85,8 @@ const api = {
     setWindowSize: (large: boolean) => ipcRenderer.invoke('app:setWindowSize', large),
     openFile: (filePath: string) => ipcRenderer.invoke('app:openFile', filePath),
     showInFolder: (filePath: string) => ipcRenderer.invoke('app:showInFolder', filePath),
-    sendToApp: (target: string, message: string, filePath?: string) => ipcRenderer.invoke('app:sendToApp', target, message, filePath)
+    sendToApp: (target: string, message: string, filePath?: string) => ipcRenderer.invoke('app:sendToApp', target, message, filePath),
+    requestAccessibility: () => ipcRenderer.invoke('app:requestAccessibility') as Promise<boolean>
   }
 }
 
