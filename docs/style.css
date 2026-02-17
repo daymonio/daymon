@@ -103,20 +103,9 @@ nav a:hover {
 }
 
 .hero h1 {
-  font-size: clamp(0.95rem, 2vw, 1.1rem);
-  font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
-  line-height: 1.4;
-  max-width: 700px;
-  margin: 0 auto;
-}
-
-.hero h2 {
   font-size: clamp(1.8rem, 4.5vw, 2.8rem);
   font-weight: 700;
   color: var(--accent-hover);
-  margin-top: 12px;
 }
 
 .subtitle {

@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://daymon.io">
-    <img src="docs/banner.png" alt="Daymon — Your AI subscription only works when you do. Daymon puts it to work 24/7." width="100%">
+    <img src="docs/banner.png" alt="Daymon — Make Claude earn its subscription." width="100%">
   </a>
 </p>
 
@@ -25,11 +25,9 @@ Scheduled tasks, persistent memory, background automation. No API keys. No cloud
 
 ## Why Daymon?
 
-You pay for Claude Pro or Max — but it only works when you're actively chatting. The other 23 hours a day, your subscription sits idle.
+Sleep. Daymon doesn't. It runs Claude tasks on schedule, remembers context across conversations, watches files for changes, and works in the background — all while you sleep, commute, or focus on other things.
 
-Daymon changes that. It gives Claude the ability to run tasks on a schedule, remember things across conversations, watch files for changes, and work in the background — all while you sleep, commute, or focus on other things.
-
-No API keys. No token costs. No cloud. Just your existing Claude subscription, working harder.
+No API keys. No token costs. No cloud. Just your existing Claude subscription, finally working 24/7.
 
 ---
 
