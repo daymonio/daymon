@@ -18,7 +18,7 @@ Scheduled tasks, persistent memory, background automation. No API keys. No cloud
 [daymon.io](https://daymon.io)
 
 <p align="center">
-  <video src="docs/demo.mp4" autoplay loop muted playsinline width="800" alt="Daymon demo — scheduling tasks from Claude"></video>
+  <video src="https://github.com/user-attachments/assets/ca60674b-3b7b-45fe-aecb-f9ce0b88cbbb" autoplay loop muted playsinline width="800"></video>
 </p>
 
 ---
