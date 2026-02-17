@@ -241,6 +241,7 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
         </div>
       </div>
 
+      <div className="space-y-4">
       <div>
         <h3 className="text-xs font-semibold text-gray-700 mb-1">Connection</h3>
         <div className="bg-gray-50 rounded-lg p-2 space-y-1">
@@ -266,16 +267,6 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
               {integrationStatus == null ? '...' : integrationStatus.claudeCode.configured ? 'Connected' : 'Not found'}
             </span>
           </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-xs font-semibold text-gray-700 mb-1">Paths</h3>
-        <div className="bg-gray-50 rounded-lg p-2 divide-y divide-gray-100">
-          {row('Database', paths?.dbPath ?? null)}
-          {row('Results Directory', paths?.resultsDir ?? null)}
-          {row('Data Directory', paths?.dataDir ?? null)}
-          {row('Claude Config', paths?.claudeConfigPath ?? null)}
         </div>
       </div>
 
@@ -335,6 +326,17 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
           </div>
         </div>
       </div>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-semibold text-gray-700 mb-1">Paths</h3>
+        <div className="bg-gray-50 rounded-lg p-2 divide-y divide-gray-100">
+          {row('Database', paths?.dbPath ?? null)}
+          {row('Results Directory', paths?.resultsDir ?? null)}
+          {row('Data Directory', paths?.dataDir ?? null)}
+          {row('Claude Config', paths?.claudeConfigPath ?? null)}
+        </div>
+      </div>
 
       <div className={`${wide ? 'col-span-2 grid grid-cols-2 gap-2' : 'space-y-2'}`}>
         <button
@@ -354,6 +356,12 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
           className="w-full py-1.5 text-xs text-yellow-600 hover:text-yellow-700 border border-yellow-200 hover:border-yellow-300 rounded transition-colors"
         >
           Star Us on GitHub
+        </button>
+        <button
+          onClick={() => window.open('mailto:hello@daymon.io?subject=Subscribe&body=Subscribe me for updates')}
+          className="w-full py-1.5 text-xs text-green-600 hover:text-green-700 border border-green-200 hover:border-green-300 rounded transition-colors"
+        >
+          Subscribe for Updates
         </button>
         <button
           onClick={() => window.api.app.quit()}
