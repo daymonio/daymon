@@ -1,12 +1,13 @@
 import { app } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createTray, showPopoverWindowFromDock } from './tray'
-import { initDatabase, closeDatabase } from './db'
+import { initDatabase, closeDatabase, getDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
 import { ensureClaudeConfig } from './claude-config'
 import { launchSidecar, shutdownSidecar } from './sidecar'
 import { getSetting, setSetting } from './db/tasks'
 import { initUpdater, stopUpdater } from './updater'
+import { release } from 'os'
 import { APP_NAME, APP_ID } from '../shared/constants'
 
 function isBrokenPipeError(error: unknown): boolean {
@@ -28,8 +29,48 @@ function safeLog(message: string, error?: unknown): void {
 
 function fatalMainError(message: string, error: unknown): never {
   safeLog(message, error)
+  submitCrashIfEnabled(error, 'main').catch(() => {})
   // Exit immediately to avoid a broken half-initialized process with no tray icon.
   process.exit(1)
+}
+
+async function submitCrashIfEnabled(error: unknown, processType: string): Promise<void> {
+  const { submitCrashReport, getMachineId, isTelemetryEnabled } = await import('../shared/telemetry')
+  if (!isTelemetryEnabled()) return
+  try {
+    if (getSetting('telemetry_enabled') === 'false') return
+  } catch { /* DB may not be initialized yet — default to enabled */ }
+  await submitCrashReport({
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? (error.stack ?? '').slice(0, 3000) : '',
+    process: processType,
+    version: app.getVersion(),
+    os: `${process.platform}-${release()}`,
+    nodeVersion: process.version,
+    timestamp: new Date().toISOString(),
+    machineId: getMachineId()
+  })
+}
+
+async function submitHeartbeatIfEnabled(): Promise<void> {
+  const { submitHeartbeat, getMachineId, isTelemetryEnabled } = await import('../shared/telemetry')
+  if (!isTelemetryEnabled()) return
+  if (getSetting('telemetry_enabled') === 'false') return
+  const today = new Date().toISOString().slice(0, 10)
+  if (getSetting('last_heartbeat_date') === today) return
+  setSetting('last_heartbeat_date', today)
+  const db = getDatabase()
+  const tasks = db.prepare('SELECT COUNT(*) as c FROM tasks').get() as { c: number }
+  const workers = db.prepare('SELECT COUNT(*) as c FROM workers').get() as { c: number }
+  const memories = db.prepare('SELECT COUNT(*) as c FROM entities').get() as { c: number }
+  await submitHeartbeat({
+    version: app.getVersion(),
+    os: `${process.platform}-${release()}`,
+    machineId: getMachineId(),
+    taskCount: tasks.c,
+    workerCount: workers.c,
+    memoryCount: memories.c
+  })
 }
 
 function installBrokenPipeGuards(): void {
@@ -87,10 +128,11 @@ function bootstrap(): void {
 
     initDatabase()
 
-    // First launch: enable auto-launch and disable advanced mode.
+    // First launch: enable auto-launch, disable advanced mode, enable telemetry.
     if (!getSetting('setup_complete')) {
       app.setLoginItemSettings({ openAtLogin: true })
       setSetting('advanced_mode', 'false')
+      setSetting('telemetry_enabled', 'true')
       setSetting('setup_complete', 'true')
     }
 
@@ -108,6 +150,7 @@ function bootstrap(): void {
         console.error('Failed to launch sidecar:', err)
       })
       initUpdater()
+      submitHeartbeatIfEnabled().catch(() => {})
     })
   }).catch((err) => {
     fatalMainError('Failed during app startup', err)

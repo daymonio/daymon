@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { usePolling } from '../hooks/usePolling'
 import { useContainerWidth } from '../hooks/useContainerWidth'
 import { AnalogClock } from './AnalogClock'
+import { LiveConsoleSection } from './LiveConsoleSection'
 import type { Task, TaskRun } from '@shared/types'
 import { formatRelativeTime } from '../utils/time'
 
@@ -194,6 +195,13 @@ export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): Rea
       </div>
     ) : null
 
+  const taskNames: Record<number, string> = {}
+  for (const t of data.tasks) taskNames[t.id] = t.name
+
+  const consoleSection = (
+    <LiveConsoleSection runningRuns={data.runningRuns} taskNames={taskNames} />
+  )
+
   const errorAlert = error ? (
     <div className="px-3 py-2 text-xs text-yellow-700 bg-yellow-50 rounded-lg">
       Temporary data refresh issue: {error}
@@ -244,7 +252,7 @@ export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): Rea
 
   if (!wide) {
     return (
-      <div ref={containerRef} className="p-4 space-y-3">
+      <div ref={containerRef} className="p-4 flex flex-col gap-3 min-h-full">
         {schedulerCard}
         {errorAlert}
         {memoryCard}
@@ -252,8 +260,9 @@ export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): Rea
         {tasksCard}
         {watchesCard}
         {runningSection}
-        {lastRunCard}
         {updateCard}
+        {consoleSection}
+        {lastRunCard}
         {githubCta}
       </div>
     )
@@ -264,12 +273,13 @@ export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): Rea
   )
 
   return (
-    <div ref={containerRef} className="p-4 flex gap-6">
-      <div className="flex-1 space-y-3">
+    <div ref={containerRef} className="p-4 flex gap-6 min-h-full">
+      <div className="flex-1 flex flex-col gap-3">
         {errorAlert}
         <div className="grid grid-cols-2 gap-3">{cards}</div>
         {runningSection}
         {updateCard}
+        {consoleSection}
         {githubCta}
       </div>
       <div className="flex flex-col items-center pt-4 w-[200px] shrink-0">

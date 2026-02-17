@@ -5,6 +5,9 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   main: {
+    define: {
+      'process.env.DAYMON_TELEMETRY_TOKEN': JSON.stringify(process.env.DAYMON_TELEMETRY_TOKEN ?? '')
+    },
     build: {
       rollupOptions: {
         external: ['better-sqlite3', 'sqlite-vec', '@huggingface/transformers', 'onnxruntime-node']

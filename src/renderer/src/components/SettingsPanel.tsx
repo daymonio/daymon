@@ -45,6 +45,7 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
   const [quietFrom, setQuietFrom] = useState('08:00')
   const [quietUntil, setQuietUntil] = useState('22:00')
   const [defaultNudgeMode, setDefaultNudgeMode] = useState<string>('always')
+  const [telemetry, setTelemetry] = useState<boolean | null>(null)
   const [confirmUninstall, setConfirmUninstall] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
 
@@ -73,6 +74,9 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     window.api.settings.get('default_nudge_mode').then((v) => {
       if (v) setDefaultNudgeMode(v)
     })
+    window.api.settings.get('telemetry_enabled').then((v) => {
+      setTelemetry(v !== 'false')
+    })
     window.api.app.getUpdateStatus().then(setUpdateStatus)
   }, [])
 
@@ -99,6 +103,12 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
     const next = !advancedMode
     await window.api.settings.set('advanced_mode', String(next))
     onAdvancedModeChange(next)
+  }
+
+  async function toggleTelemetry(): Promise<void> {
+    const next = !telemetry
+    await window.api.settings.set('telemetry_enabled', String(next))
+    setTelemetry(next)
   }
 
   async function toggleQuietHours(): Promise<void> {
@@ -182,6 +192,7 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
           {toggle('Notifications', notifications, toggleNotifications, 'Show macOS notifications when tasks complete')}
           {toggle('Large window', largeWindow, toggleLargeWindow, 'Bigger window with expanded cards and table layout')}
           {toggle('Advanced mode', advancedMode, toggleAdvancedMode, 'Show task IDs, debug info, and extra controls')}
+          {toggle('Help improve Daymon', telemetry, toggleTelemetry, 'Share anonymous crash reports and usage data. No personal information is collected.')}
         </div>
       </div>
 

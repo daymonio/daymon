@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { TabBar, type Tab } from './components/TabBar'
 import { StatusPanel } from './components/StatusPanel'
 import { MemoryPanel } from './components/MemoryPanel'
@@ -7,12 +7,15 @@ import { TasksPanel } from './components/TasksPanel'
 import { WatchesPanel } from './components/WatchesPanel'
 import { ResultsPanel } from './components/ResultsPanel'
 import { SettingsPanel } from './components/SettingsPanel'
+import { CongratsModal } from './components/CongratsModal'
 
 const ADVANCED_TABS = new Set<Tab>(['memory', 'watches', 'results'])
 
 function App(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('status')
   const [advancedMode, setAdvancedMode] = useState(false)
+  const [showCongrats, setShowCongrats] = useState(false)
+  const celebratedRef = useRef(false)
 
   useEffect(() => {
     if (!window.api?.settings) return
@@ -22,6 +25,41 @@ function App(): React.JSX.Element {
       // Keep default when bridge/settings are not yet available.
     })
   }, [])
+
+  useEffect(() => {
+    if (!window.api?.settings || !window.api?.tasks) return
+
+    async function checkFirstCompletion(): Promise<void> {
+      if (celebratedRef.current) return
+      try {
+        const celebrated = await window.api.settings.get('first_task_celebrated')
+        if (celebrated === 'true') {
+          celebratedRef.current = true
+          return
+        }
+        const runs = await window.api.tasks.listAllRuns(1)
+        if (runs.length > 0 && runs[0].status === 'completed') {
+          setShowCongrats(true)
+        }
+      } catch {
+        // Non-critical — silently ignore
+      }
+    }
+
+    checkFirstCompletion()
+    const interval = setInterval(checkFirstCompletion, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
+  async function handleCongratsDismiss(): Promise<void> {
+    celebratedRef.current = true
+    setShowCongrats(false)
+    try {
+      await window.api.settings.set('first_task_celebrated', 'true')
+    } catch {
+      // Best-effort persist
+    }
+  }
 
   function handleAdvancedModeChange(enabled: boolean): void {
     setAdvancedMode(enabled)
@@ -73,6 +111,7 @@ function App(): React.JSX.Element {
       <div className="flex-1 overflow-y-auto">
         {renderPanel()}
       </div>
+      {showCongrats && <CongratsModal onDismiss={handleCongratsDismiss} />}
     </div>
   )
 }

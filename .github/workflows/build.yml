@@ -40,6 +40,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          DAYMON_TELEMETRY_TOKEN: ${{ secrets.DAYMON_TELEMETRY_TOKEN }}
 
       - name: Build universal MCP native deps
         run: |
