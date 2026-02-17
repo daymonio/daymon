@@ -7,7 +7,9 @@ import { TasksPanel } from './components/TasksPanel'
 import { WatchesPanel } from './components/WatchesPanel'
 import { ResultsPanel } from './components/ResultsPanel'
 import { SettingsPanel } from './components/SettingsPanel'
+import { HelpPanel } from './components/HelpPanel'
 import { CongratsModal } from './components/CongratsModal'
+import { UpdateModal } from './components/UpdateModal'
 
 const ADVANCED_TABS = new Set<Tab>(['memory', 'watches', 'results'])
 
@@ -16,6 +18,37 @@ function App(): React.JSX.Element {
   const [advancedMode, setAdvancedMode] = useState(false)
   const [showCongrats, setShowCongrats] = useState(false)
   const celebratedRef = useRef(false)
+  const [updateStatus, setUpdateStatus] = useState<{ status: string; version?: string; progress?: number } | null>(null)
+  const [updateDismissed, setUpdateDismissed] = useState(false)
+
+  function refreshUpdateStatus(): void {
+    window.api.app.getUpdateStatus().then(setUpdateStatus)
+  }
+
+  // Poll update status
+  useEffect(() => {
+    if (!window.api?.app) return
+    refreshUpdateStatus()
+    const poll = setInterval(refreshUpdateStatus, 5000)
+    return () => clearInterval(poll)
+  }, [])
+
+  const updateActive = updateStatus != null && (updateStatus.status === 'available' || updateStatus.status === 'downloading' || updateStatus.status === 'ready')
+  const showUpdateModal = updateActive && !updateDismissed
+
+  // Reset dismissed flag when update status goes back to idle (e.g. after install)
+  useEffect(() => {
+    if (!updateActive) setUpdateDismissed(false)
+  }, [updateActive])
+
+  async function handleUpdateDownload(): Promise<void> {
+    await window.api.app.downloadUpdate()
+    const poll = setInterval(async () => {
+      const s = await window.api.app.getUpdateStatus()
+      setUpdateStatus(s)
+      if (s.status !== 'downloading') clearInterval(poll)
+    }, 500)
+  }
 
   useEffect(() => {
     if (!window.api?.settings) return
@@ -71,7 +104,7 @@ function App(): React.JSX.Element {
   function renderPanel(): React.JSX.Element {
     switch (tab) {
       case 'status':
-        return <StatusPanel onNavigate={(t) => setTab(t as Tab)} advancedMode={advancedMode} />
+        return <StatusPanel onNavigate={(t) => setTab(t as Tab)} advancedMode={advancedMode} updateStatus={updateStatus} onShowUpdateModal={() => setUpdateDismissed(false)} />
       case 'memory':
         return <MemoryPanel />
       case 'workers':
@@ -83,7 +116,9 @@ function App(): React.JSX.Element {
       case 'results':
         return <ResultsPanel />
       case 'settings':
-        return <SettingsPanel advancedMode={advancedMode} onAdvancedModeChange={handleAdvancedModeChange} />
+        return <SettingsPanel advancedMode={advancedMode} onAdvancedModeChange={handleAdvancedModeChange} onRefreshUpdateStatus={refreshUpdateStatus} />
+      case 'help':
+        return <HelpPanel />
     }
   }
 
@@ -112,6 +147,16 @@ function App(): React.JSX.Element {
         {renderPanel()}
       </div>
       {showCongrats && <CongratsModal onDismiss={handleCongratsDismiss} />}
+      {showUpdateModal && updateStatus && (
+        <UpdateModal
+          status={updateStatus.status}
+          version={updateStatus.version}
+          progress={updateStatus.progress}
+          onDownload={handleUpdateDownload}
+          onInstall={() => window.api.app.installUpdate()}
+          onDismiss={() => setUpdateDismissed(true)}
+        />
+      )}
     </div>
   )
 }

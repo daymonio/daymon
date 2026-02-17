@@ -1,5 +1,6 @@
 import { autoUpdater } from 'electron-updater'
 import { notifyUpdateAvailable } from './notifications'
+import { setTrayBadge } from './tray'
 
 type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'ready' | 'error'
 
@@ -38,6 +39,7 @@ export function downloadUpdate(): void {
 
 export function installUpdate(): void {
   if (state.status !== 'ready') return
+  setTrayBadge(false)
   autoUpdater.quitAndInstall()
 }
 
@@ -47,11 +49,13 @@ export function initUpdater(): void {
 
   autoUpdater.on('update-available', (info) => {
     state = { status: 'available', version: info.version }
+    setTrayBadge(true)
     notifyUpdateAvailable(info.version)
   })
 
   autoUpdater.on('update-not-available', () => {
     state = { status: 'not-available' }
+    setTrayBadge(false)
   })
 
   autoUpdater.on('download-progress', (progress) => {
@@ -60,6 +64,7 @@ export function initUpdater(): void {
 
   autoUpdater.on('update-downloaded', () => {
     state = { status: 'ready', version: state.version }
+    setTrayBadge(true)
   })
 
   autoUpdater.on('error', (err) => {
@@ -82,5 +87,6 @@ export function stopUpdater(): void {
 export function simulateUpdate(): void {
   const fakeVersion = '99.0.0'
   state = { status: 'available', version: fakeVersion }
+  setTrayBadge(true)
   notifyUpdateAvailable(fakeVersion)
 }

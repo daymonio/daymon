@@ -22,6 +22,7 @@ interface ClaudeIntegrationStatus {
 interface SettingsPanelProps {
   advancedMode: boolean
   onAdvancedModeChange: (enabled: boolean) => void
+  onRefreshUpdateStatus?: () => void
 }
 
 interface UpdateStatus {
@@ -31,7 +32,7 @@ interface UpdateStatus {
   error?: string
 }
 
-export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPanelProps): React.JSX.Element {
+export function SettingsPanel({ advancedMode, onAdvancedModeChange, onRefreshUpdateStatus }: SettingsPanelProps): React.JSX.Element {
   const [containerRef, containerWidth] = useContainerWidth<HTMLDivElement>()
   const wide = containerWidth >= 600
   const [version, setVersion] = useState('')
@@ -192,7 +193,7 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
           {toggle('Notifications', notifications, toggleNotifications, 'Show macOS notifications when tasks complete')}
           {toggle('Large window', largeWindow, toggleLargeWindow, 'Bigger window with expanded cards and table layout')}
           {toggle('Advanced mode', advancedMode, toggleAdvancedMode, 'Show task IDs, debug info, and extra controls')}
-          {toggle('Help improve Daymon', telemetry, toggleTelemetry, 'Share anonymous crash reports and usage data. No personal information is collected.')}
+          {toggle('Help improve Daymon', telemetry, toggleTelemetry, 'Share anonymous crash reports and diagnostics. No personal information is collected.')}
         </div>
       </div>
 
@@ -286,7 +287,23 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange }: SettingsPa
         <div className="bg-gray-50 rounded-lg p-2 space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-600">Version</span>
-            <span className="text-gray-400">{version || '...'}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">{version || '...'}</span>
+              {advancedMode && (
+                <button
+                  onClick={async () => {
+                    await window.api.app.simulateUpdate()
+                    setTimeout(() => {
+                      window.api.app.getUpdateStatus().then(setUpdateStatus)
+                      onRefreshUpdateStatus?.()
+                    }, 500)
+                  }}
+                  className="text-orange-500 hover:text-orange-700 text-xs"
+                >
+                  Simulate
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-600">

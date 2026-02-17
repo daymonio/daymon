@@ -1,4 +1,4 @@
-export type Tab = 'status' | 'memory' | 'workers' | 'tasks' | 'watches' | 'results' | 'settings'
+export type Tab = 'status' | 'memory' | 'workers' | 'tasks' | 'watches' | 'results' | 'settings' | 'help'
 
 const allTabs: { id: Tab; label: string; advanced?: boolean }[] = [
   { id: 'status', label: 'Status' },
@@ -7,7 +7,8 @@ const allTabs: { id: Tab; label: string; advanced?: boolean }[] = [
   { id: 'tasks', label: 'Tasks' },
   { id: 'watches', label: 'Watches', advanced: true },
   { id: 'results', label: 'Results' },
-  { id: 'settings', label: 'Settings' }
+  { id: 'settings', label: 'Settings' },
+  { id: 'help', label: 'Help' }
 ]
 
 interface TabBarProps {

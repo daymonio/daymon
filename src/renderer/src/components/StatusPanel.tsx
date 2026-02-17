@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import 'react'
 import { usePolling } from '../hooks/usePolling'
 import { useContainerWidth } from '../hooks/useContainerWidth'
 import { AnalogClock } from './AnalogClock'
@@ -47,19 +47,14 @@ const cardClass =
 interface StatusPanelProps {
   onNavigate?: (tab: string) => void
   advancedMode: boolean
+  updateStatus?: { status: string; version?: string; progress?: number } | null
+  onShowUpdateModal?: () => void
 }
 
-export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): React.JSX.Element {
+export function StatusPanel({ onNavigate, advancedMode, updateStatus, onShowUpdateModal }: StatusPanelProps): React.JSX.Element {
   const [containerRef, containerWidth] = useContainerWidth<HTMLDivElement>()
   const wide = containerWidth >= 600
   const { data, error, isLoading } = usePolling(fetchStatus, 10000)
-  const [updateStatus, setUpdateStatus] = useState<{ status: string; version?: string; progress?: number } | null>(null)
-
-  useEffect(() => {
-    window.api.app.getUpdateStatus().then(setUpdateStatus)
-    const poll = setInterval(() => window.api.app.getUpdateStatus().then(setUpdateStatus), 30000)
-    return () => clearInterval(poll)
-  }, [])
 
   if (isLoading && !data) {
     return <div ref={containerRef} className="p-4 text-xs text-gray-400">Loading...</div>
@@ -208,17 +203,8 @@ export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): Rea
     </div>
   ) : null
 
-  async function handleDownload(): Promise<void> {
-    await window.api.app.downloadUpdate()
-    const poll = setInterval(async () => {
-      const s = await window.api.app.getUpdateStatus()
-      setUpdateStatus(s)
-      if (s.status !== 'downloading') clearInterval(poll)
-    }, 500)
-  }
-
   const updateCard = (updateStatus?.status === 'available' || updateStatus?.status === 'downloading' || updateStatus?.status === 'ready') ? (
-    <div key="update" className="w-full p-3 bg-green-50 rounded-lg">
+    <button key="update" className="w-full text-left p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer" onClick={() => onShowUpdateModal?.()}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-green-700">
           {updateStatus.status === 'available' && `Update v${updateStatus.version} available`}
@@ -226,13 +212,13 @@ export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): Rea
           {updateStatus.status === 'ready' && 'Update ready'}
         </span>
         {updateStatus.status === 'available' && (
-          <button onClick={handleDownload} className="text-xs text-green-600 hover:text-green-800 font-medium">Download</button>
+          <span className="text-xs text-green-600 font-medium">Download</span>
         )}
         {updateStatus.status === 'ready' && (
-          <button onClick={() => window.api.app.installUpdate()} className="text-xs text-green-600 hover:text-green-800 font-medium">Install &amp; Restart</button>
+          <span className="text-xs text-green-600 font-medium">Install &amp; Restart</span>
         )}
       </div>
-    </div>
+    </button>
   ) : null
 
   const githubCta = (
