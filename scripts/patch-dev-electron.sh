@@ -26,9 +26,11 @@ plutil -replace CFBundleDisplayName -string "Daymon" "$PLIST"
 plutil -replace CFBundleIdentifier -string "io.daymon.app" "$PLIST"
 
 # Rename the executable so macOS Accessibility shows "Daymon" instead of "Electron"
+# Keep a symlink at the old path so electron-vite can still find it via path.txt
 MACOS_DIR="$ELECTRON_APP/Contents/MacOS"
-if [ -f "$MACOS_DIR/Electron" ] && [ ! -f "$MACOS_DIR/Daymon" ]; then
+if [ -f "$MACOS_DIR/Electron" ] && [ ! -L "$MACOS_DIR/Electron" ]; then
   mv "$MACOS_DIR/Electron" "$MACOS_DIR/Daymon"
+  ln -s "Daymon" "$MACOS_DIR/Electron"
   plutil -replace CFBundleExecutable -string "Daymon" "$PLIST"
 fi
 
