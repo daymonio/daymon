@@ -1,4 +1,5 @@
 import { autoUpdater } from 'electron-updater'
+import { notifyUpdateAvailable } from './notifications'
 
 type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'ready' | 'error'
 
@@ -46,6 +47,7 @@ export function initUpdater(): void {
 
   autoUpdater.on('update-available', (info) => {
     state = { status: 'available', version: info.version }
+    notifyUpdateAvailable(info.version)
   })
 
   autoUpdater.on('update-not-available', () => {
@@ -74,4 +76,11 @@ export function stopUpdater(): void {
     clearInterval(checkInterval)
     checkInterval = null
   }
+}
+
+/** Dev-only: simulate an update-available state to test notification + UI card */
+export function simulateUpdate(): void {
+  const fakeVersion = '99.0.0'
+  state = { status: 'available', version: fakeVersion }
+  notifyUpdateAvailable(fakeVersion)
 }

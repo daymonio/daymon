@@ -64,6 +64,7 @@ interface AppAPI {
   checkForUpdates: () => Promise<void>
   downloadUpdate: () => Promise<void>
   installUpdate: () => Promise<void>
+  simulateUpdate: () => Promise<void>
   setWindowSize: (large: boolean) => Promise<void>
   openFile: (filePath: string) => Promise<string>
   showInFolder: (filePath: string) => Promise<void>

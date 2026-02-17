@@ -36,6 +36,14 @@ export function notifyTaskFailed(taskName: string, error: string): void {
   })
 }
 
+export function notifyUpdateAvailable(version: string): void {
+  if (!shouldNotify()) return
+  showNotification(
+    'Daymon update available',
+    `Version ${version} is ready to download. Open Daymon to update.`
+  ).catch(() => { /* non-fatal */ })
+}
+
 export function testNotification(): Promise<NotificationDispatchResult> {
   return showNotification('Daymon notification test', 'If you can see this, notifications are working.')
 }

@@ -9,7 +9,7 @@ import { getConfig, getClaudeConfigPath } from './config'
 import { checkClaudeCliAvailable } from '../shared/claude-code'
 import { sidecarFetch } from './sidecar'
 import { uninstall } from './uninstall'
-import { checkForUpdates, downloadUpdate, installUpdate, getUpdateStatus } from './updater'
+import { checkForUpdates, downloadUpdate, installUpdate, getUpdateStatus, simulateUpdate } from './updater'
 import { getClaudeIntegrationStatus } from './claude-config'
 import { testNotification } from './notifications'
 import { z } from 'zod'
@@ -198,6 +198,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:checkForUpdates', () => checkForUpdates())
   ipcMain.handle('app:downloadUpdate', () => downloadUpdate())
   ipcMain.handle('app:installUpdate', () => installUpdate())
+  ipcMain.handle('app:simulateUpdate', () => simulateUpdate())
   ipcMain.handle('app:setWindowSize', (_e, large: boolean) => {
     resizePopoverWindow(large)
   })
