@@ -40,7 +40,7 @@ export function downloadUpdate(): void {
 export function installUpdate(): void {
   if (state.status !== 'ready') return
   setTrayBadge(false)
-  autoUpdater.quitAndInstall()
+  autoUpdater.quitAndInstall(false, true)
 }
 
 export function initUpdater(): void {

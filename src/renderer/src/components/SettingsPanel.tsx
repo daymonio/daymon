@@ -301,7 +301,7 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange, onRefreshUpd
             <span className="text-gray-600">Version</span>
             <div className="flex items-center gap-2">
               <span className="text-gray-400">{version || '...'}</span>
-              {advancedMode && (
+              {import.meta.env.DEV && advancedMode && (
                 <button
                   onClick={async () => {
                     await window.api.app.simulateUpdate()

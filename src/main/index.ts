@@ -4,7 +4,7 @@ import { createTray, showPopoverWindowFromDock } from './tray'
 import { initDatabase, closeDatabase, getDatabase } from './db'
 import { registerIpcHandlers } from './ipc'
 import { ensureClaudeConfig } from './claude-config'
-import { launchSidecar, shutdownSidecar } from './sidecar'
+import { launchSidecar, shutdownSidecarSync } from './sidecar'
 import { getSetting, setSetting } from './db/tasks'
 import { initUpdater, stopUpdater } from './updater'
 import { release, platform } from 'os'
@@ -182,7 +182,7 @@ function bootstrap(): void {
       safeLog('Error while stopping updater', err)
     }
     try {
-      shutdownSidecar()
+      shutdownSidecarSync()
     } catch (err) {
       safeLog('Error while stopping sidecar', err)
     }

@@ -301,6 +301,21 @@ function handleHealthFailure(): void {
 
 // ─── Shutdown ─────────────────────────────────────────────
 
+/** Synchronous shutdown for use in before-quit — no async HTTP, just kill by PID. */
+export function shutdownSidecarSync(): void {
+  if (healthTimer) { clearInterval(healthTimer); healthTimer = null }
+  if (sseConnection) { sseConnection.destroy(); sseConnection = null }
+  const config = getConfig()
+  const pidFile = join(config.dataDir, 'sidecar.pid')
+  if (existsSync(pidFile)) {
+    try {
+      const pid = parseInt(readFileSync(pidFile, 'utf-8').trim(), 10)
+      process.kill(pid, 'SIGTERM')
+    } catch { /* already dead */ }
+  }
+  sidecarPort = null
+}
+
 export async function shutdownSidecar(): Promise<void> {
   if (healthTimer) { clearInterval(healthTimer); healthTimer = null }
   if (sseConnection) { sseConnection.destroy(); sseConnection = null }
