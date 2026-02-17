@@ -206,9 +206,9 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange, onRefreshUpd
               <span className="text-gray-600">Accessibility permission</span>
               <button
                 onClick={() => window.api.app.requestAccessibility()}
-                className="text-blue-500 hover:text-blue-700 text-xs"
+                className="text-blue-500 hover:text-blue-700 text-xs cursor-pointer"
               >
-                Add permission
+                Open Settings
               </button>
             </div>
             <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">Required for auto-nudge to type into Claude Code</p>

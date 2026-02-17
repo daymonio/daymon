@@ -207,12 +207,14 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle('app:openFile', (_e, filePath: string) => shell.openPath(filePath))
   ipcMain.handle('app:requestAccessibility', () => {
-    if (platform() !== 'darwin') return true
-    const trusted = systemPreferences.isTrustedAccessibilityClient(true)
-    if (!trusted) {
-      shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility')
-    }
-    return trusted
+    if (platform() !== 'darwin') return false
+    // Always prompt + open Settings — isTrustedAccessibilityClient only checks
+    // the Electron process, but auto-nudge runs osascript from the sidecar (node).
+    systemPreferences.isTrustedAccessibilityClient(true)
+    try {
+      execSync('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"')
+    } catch { /* ignore */ }
+    return false
   })
   ipcMain.handle('app:showInFolder', (_e, filePath: string) => shell.showItemInFolder(filePath))
   ipcMain.handle('app:sendToApp', (_e, target: string, message: string, filePath?: string) => {
