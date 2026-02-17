@@ -88,10 +88,11 @@ function jsonResponse(res: ServerResponse, status: number, data: unknown): void 
 }
 
 function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let body = ''
     req.on('data', (chunk: Buffer) => { body += chunk.toString() })
     req.on('end', () => resolve(body))
+    req.on('error', reject)
   })
 }
 
@@ -100,12 +101,6 @@ const startTime = Date.now()
 async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = req.url || '/'
   const method = req.method || 'GET'
-
-  // CORS for local dev
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-  if (method === 'OPTIONS') { res.writeHead(204); res.end(); return }
 
   try {
     // GET /health
@@ -150,7 +145,13 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     // POST /notify — relay task completion events for Electron push notifications
     if (method === 'POST' && url === '/notify') {
       const body = await readBody(req)
-      const data = JSON.parse(body)
+      let data: Record<string, unknown>
+      try {
+        data = JSON.parse(body)
+      } catch {
+        jsonResponse(res, 400, { error: 'Invalid JSON' })
+        return
+      }
       const event = data.event
       if (event === 'task:complete' || event === 'task:failed') {
         emitEvent(event, data)

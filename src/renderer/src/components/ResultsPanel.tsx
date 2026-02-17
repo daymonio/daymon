@@ -64,6 +64,7 @@ export function ResultsPanel(): React.JSX.Element {
   const wide = containerWidth >= 600
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [taskNames, setTaskNames] = useState<Record<number, string>>({})
+  const [pending, setPending] = useState<Record<string, boolean>>({})
   const { data: runs, error, isLoading } = usePolling(() => window.api.tasks.listAllRuns(30), 5000)
 
   useEffect(() => {
@@ -130,27 +131,41 @@ export function ResultsPanel(): React.JSX.Element {
             {run.resultFile && (
               <div className="flex gap-2 mt-1.5">
                 <button
-                  onClick={() =>
-                    window.api.app.sendToApp(
-                      'claude-code',
-                      `Read the file at ${run.resultFile} and present the results in a well-formatted way.`
-                    )
-                  }
-                  className="text-xs text-blue-500 hover:text-blue-700"
+                  disabled={!!pending[`${run.id}-code`]}
+                  onClick={async () => {
+                    const key = `${run.id}-code`
+                    setPending((p) => ({ ...p, [key]: true }))
+                    try {
+                      await window.api.app.sendToApp(
+                        'claude-code',
+                        `Read the file at ${run.resultFile} and present the results in a well-formatted way.`
+                      )
+                    } finally {
+                      setTimeout(() => setPending((p) => ({ ...p, [key]: false })), 2000)
+                    }
+                  }}
+                  className={`text-xs ${pending[`${run.id}-code`] ? 'text-gray-400 cursor-default' : 'text-blue-500 hover:text-blue-700'}`}
                 >
-                  Open in Claude Code
+                  {pending[`${run.id}-code`] ? 'pending...' : 'Code'}
                 </button>
                 <button
-                  onClick={() =>
-                    window.api.app.sendToApp(
-                      'claude-desktop',
-                      '',
-                      run.resultFile!
-                    )
-                  }
-                  className="text-xs text-purple-500 hover:text-purple-700"
+                  disabled={!!pending[`${run.id}-desktop`]}
+                  onClick={async () => {
+                    const key = `${run.id}-desktop`
+                    setPending((p) => ({ ...p, [key]: true }))
+                    try {
+                      await window.api.app.sendToApp(
+                        'claude-desktop',
+                        '',
+                        run.resultFile!
+                      )
+                    } finally {
+                      setTimeout(() => setPending((p) => ({ ...p, [key]: false })), 2000)
+                    }
+                  }}
+                  className={`text-xs ${pending[`${run.id}-desktop`] ? 'text-gray-400 cursor-default' : 'text-purple-500 hover:text-purple-700'}`}
                 >
-                  Open in Claude Desktop
+                  {pending[`${run.id}-desktop`] ? 'pending...' : 'Desktop'}
                 </button>
                 <button
                   onClick={() => window.api.app.showInFolder(run.resultFile!)}

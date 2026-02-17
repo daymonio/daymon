@@ -9,6 +9,7 @@ export function MemoryPanel(): React.JSX.Element {
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [obsCache, setObsCache] = useState<Record<number, Observation[]>>({})
+  const [pending, setPending] = useState<Record<string, boolean>>({})
   const obsCacheRef = useRef(obsCache)
   obsCacheRef.current = obsCache
 
@@ -87,13 +88,20 @@ export function MemoryPanel(): React.JSX.Element {
   }
 
   async function openInApp(entity: Entity, target: 'claude-code' | 'claude-desktop'): Promise<void> {
-    let obs = obsCache[entity.id]
-    if (!obs) {
-      obs = await window.api.memory.getObservations(entity.id)
-      setObsCache((prev) => ({ ...prev, [entity.id]: obs }))
+    const key = `${entity.id}-${target === 'claude-code' ? 'code' : 'desktop'}`
+    if (pending[key]) return
+    setPending((p) => ({ ...p, [key]: true }))
+    try {
+      let obs = obsCache[entity.id]
+      if (!obs) {
+        obs = await window.api.memory.getObservations(entity.id)
+        setObsCache((prev) => ({ ...prev, [entity.id]: obs }))
+      }
+      const message = buildMemoryPrompt(entity, obs)
+      await window.api.app.sendToApp(target, message)
+    } finally {
+      setTimeout(() => setPending((p) => ({ ...p, [key]: false })), 2000)
     }
-    const message = buildMemoryPrompt(entity, obs)
-    await window.api.app.sendToApp(target, message)
   }
 
   function renderObservations(entityId: number): React.JSX.Element | null {
@@ -145,8 +153,8 @@ export function MemoryPanel(): React.JSX.Element {
                     </div>
                   </div>
                   <div className="ml-2 flex gap-2 shrink-0">
-                    <button onClick={() => openInApp(entity, 'claude-code')} className="text-xs text-blue-500 hover:text-blue-700">Code</button>
-                    <button onClick={() => openInApp(entity, 'claude-desktop')} className="text-xs text-purple-500 hover:text-purple-700">Desktop</button>
+                    <button disabled={!!pending[`${entity.id}-code`]} onClick={() => openInApp(entity, 'claude-code')} className={`text-xs ${pending[`${entity.id}-code`] ? 'text-gray-400 cursor-default' : 'text-blue-500 hover:text-blue-700'}`}>{pending[`${entity.id}-code`] ? 'pending...' : 'Code'}</button>
+                    <button disabled={!!pending[`${entity.id}-desktop`]} onClick={() => openInApp(entity, 'claude-desktop')} className={`text-xs ${pending[`${entity.id}-desktop`] ? 'text-gray-400 cursor-default' : 'text-purple-500 hover:text-purple-700'}`}>{pending[`${entity.id}-desktop`] ? 'pending...' : 'Desktop'}</button>
                     <button onClick={() => deleteEntity(entity.id)} className="text-xs text-red-400 hover:text-red-600">Delete</button>
                   </div>
                 </div>
@@ -174,8 +182,8 @@ export function MemoryPanel(): React.JSX.Element {
                     </div>
                   </div>
                   <div className="ml-2 flex gap-2 shrink-0">
-                    <button onClick={(e) => { e.stopPropagation(); openInApp(entity, 'claude-code') }} className="text-xs text-blue-500 hover:text-blue-700">Claude Code</button>
-                    <button onClick={(e) => { e.stopPropagation(); openInApp(entity, 'claude-desktop') }} className="text-xs text-purple-500 hover:text-purple-700">Desktop</button>
+                    <button disabled={!!pending[`${entity.id}-code`]} onClick={(e) => { e.stopPropagation(); openInApp(entity, 'claude-code') }} className={`text-xs ${pending[`${entity.id}-code`] ? 'text-gray-400 cursor-default' : 'text-blue-500 hover:text-blue-700'}`}>{pending[`${entity.id}-code`] ? 'pending...' : 'Code'}</button>
+                    <button disabled={!!pending[`${entity.id}-desktop`]} onClick={(e) => { e.stopPropagation(); openInApp(entity, 'claude-desktop') }} className={`text-xs ${pending[`${entity.id}-desktop`] ? 'text-gray-400 cursor-default' : 'text-purple-500 hover:text-purple-700'}`}>{pending[`${entity.id}-desktop`] ? 'pending...' : 'Desktop'}</button>
                     <button onClick={(e) => { e.stopPropagation(); deleteEntity(entity.id) }} className="text-xs text-red-400 hover:text-red-600">Delete</button>
                   </div>
                 </div>
