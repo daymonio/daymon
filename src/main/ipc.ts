@@ -1,4 +1,4 @@
-import { ipcMain, app, shell, clipboard, BrowserWindow, systemPreferences } from 'electron'
+import { ipcMain, app, shell, clipboard, BrowserWindow } from 'electron'
 import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
 import { platform } from 'os'
@@ -208,21 +208,10 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:openFile', (_e, filePath: string) => shell.openPath(filePath))
   ipcMain.handle('app:requestAccessibility', () => {
     if (platform() !== 'darwin') return false
-    // Trigger a real osascript call — this makes macOS prompt for Accessibility
-    // permission and adds the app to the list. A no-op keystroke to avoid side effects.
     try {
-      execSync('osascript -e \'tell application "System Events" to return name of first process\'', {
-        timeout: 5000,
-        stdio: 'ignore'
-      })
-      return true
-    } catch {
-      // Permission denied or user cancelled — open Settings manually
-      try {
-        execSync('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"')
-      } catch { /* ignore */ }
-      return false
-    }
+      execSync('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"')
+    } catch { /* ignore */ }
+    return false
   })
   ipcMain.handle('app:showInFolder', (_e, filePath: string) => shell.showItemInFolder(filePath))
   ipcMain.handle('app:sendToApp', (_e, target: string, message: string, filePath?: string) => {
