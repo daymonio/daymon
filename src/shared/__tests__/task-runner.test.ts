@@ -991,6 +991,27 @@ describe('executeTask - rate limit retry', () => {
     expect(rateLimitLog!.entryType).toBe('error')
   })
 
+  it('rate-limit log entries use sequential seq values, not Date.now()', async () => {
+    const id = createActiveTask('Seq Check', 'Do work')
+
+    // All calls return rate limit error so we get multiple retry log entries
+    mockExecute.mockResolvedValue({
+      stdout: '', stderr: 'usage limit reached', exitCode: 1, durationMs: 50, timedOut: false, sessionId: null
+    })
+
+    await executeTask(id, { db, resultsDir })
+
+    const runs = queries.getTaskRuns(db, id, 1)
+    const consoleLogs = queries.getConsoleLogs(db, runs[0].id, 0, 100)
+    const rateLimitLogs = consoleLogs.filter(l => l.content.includes('Rate limit reached'))
+
+    expect(rateLimitLogs.length).toBeGreaterThan(0)
+    for (const log of rateLimitLogs) {
+      // seq should be a reasonable number (< 10 million), not a Date.now() timestamp (~1.7 trillion)
+      expect(log.seq).toBeLessThan(10_000_000)
+    }
+  })
+
   it('stops retrying after max retries and fails', async () => {
     const id = createActiveTask('Max Retry Task', 'Do work')
 

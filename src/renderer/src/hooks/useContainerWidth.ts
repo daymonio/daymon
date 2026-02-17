@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 export function useContainerWidth<T extends HTMLElement>(): [(node: T | null) => void, number] {
   const [width, setWidth] = useState(0)
@@ -15,5 +15,6 @@ export function useContainerWidth<T extends HTMLElement>(): [(node: T | null) =>
       setWidth(node.clientWidth)
     }
   }, [])
+  useEffect(() => () => { roRef.current?.disconnect() }, [])
   return [ref, width]
 }

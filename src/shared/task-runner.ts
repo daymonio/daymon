@@ -122,7 +122,7 @@ async function executeWithRateLimitRetry(
     try {
       queries.insertConsoleLogs(db, [{
         runId,
-        seq: Date.now(),
+        seq: 999999 + retries,
         entryType: 'error',
         content: `Rate limit reached. Waiting ${waitSec}s until reset ${retryLabel}`
       }])

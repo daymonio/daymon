@@ -207,10 +207,6 @@ export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): Rea
     </button>
   )
 
-  const cards = [schedulerCard, memoryCard, workersCard, tasksCard, watchesCard, lastRunCard].filter(
-    Boolean
-  )
-
   if (!wide) {
     return (
       <div ref={containerRef} className="p-4 space-y-3">
@@ -226,6 +222,10 @@ export function StatusPanel({ onNavigate, advancedMode }: StatusPanelProps): Rea
       </div>
     )
   }
+
+  const cards = [schedulerCard, memoryCard, workersCard, tasksCard, watchesCard, lastRunCard].filter(
+    Boolean
+  )
 
   return (
     <div ref={containerRef} className="p-4 flex gap-6">

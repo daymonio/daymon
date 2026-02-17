@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { usePolling } from '../hooks/usePolling'
 import { useContainerWidth } from '../hooks/useContainerWidth'
 import type { Entity, Observation } from '@shared/types'
@@ -9,6 +9,8 @@ export function MemoryPanel(): React.JSX.Element {
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [obsCache, setObsCache] = useState<Record<number, Observation[]>>({})
+  const obsCacheRef = useRef(obsCache)
+  obsCacheRef.current = obsCache
 
   const fetcher = useCallback(
     () =>
@@ -29,8 +31,8 @@ export function MemoryPanel(): React.JSX.Element {
       for (const entity of entities) {
         if (cancelled) return
         // Reuse cached if we already have it
-        if (obsCache[entity.id]) {
-          newCache[entity.id] = obsCache[entity.id]
+        if (obsCacheRef.current[entity.id]) {
+          newCache[entity.id] = obsCacheRef.current[entity.id]
         } else {
           try {
             newCache[entity.id] = await window.api.memory.getObservations(entity.id)
@@ -43,7 +45,7 @@ export function MemoryPanel(): React.JSX.Element {
     }
     load()
     return () => { cancelled = true }
-  }, [wide, entities]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wide, entities])
 
   async function toggleExpand(id: number): Promise<void> {
     if (expandedId === id) {
@@ -129,9 +131,12 @@ export function MemoryPanel(): React.JSX.Element {
           </div>
         ) : wide ? (
           <div className="grid grid-cols-2 gap-3 p-3">
-            {entities.map((entity: Entity) => (
+            {entities.map((entity: Entity, i: number) => (
               <div key={entity.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2">
+                <div
+                  className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setExpandedId(expandedId === entity.id ? null : entity.id)}
+                >
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-medium text-gray-800 truncate">{entity.name}</div>
                     <div className="text-xs text-gray-400">
@@ -145,9 +150,11 @@ export function MemoryPanel(): React.JSX.Element {
                     <button onClick={() => deleteEntity(entity.id)} className="text-xs text-red-400 hover:text-red-600">Delete</button>
                   </div>
                 </div>
-                <div className="px-3 pb-2 bg-gray-50">
-                  {renderObservations(entity.id)}
-                </div>
+                {(i < 2 || expandedId === entity.id) && (
+                  <div className="px-3 pb-2 bg-gray-50">
+                    {renderObservations(entity.id)}
+                  </div>
+                )}
               </div>
             ))}
           </div>

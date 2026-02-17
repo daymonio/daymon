@@ -87,7 +87,8 @@ export function ResultsPanel(): React.JSX.Element {
     )
   }
 
-  function renderRun(run: TaskRun): React.JSX.Element {
+  function renderRun(run: TaskRun, index: number): React.JSX.Element {
+    const wideAutoExpand = wide && index < 2
     return (
       <div key={run.id} className={wide ? 'border border-gray-200 rounded-lg overflow-hidden' : ''}>
         <div
@@ -110,7 +111,7 @@ export function ResultsPanel(): React.JSX.Element {
           </div>
         </div>
 
-        {(wide || expandedId === run.id) && (
+        {(wideAutoExpand || expandedId === run.id) && (
           <div className="px-3 pb-2 bg-gray-50">
             {run.errorMessage && (
               <div className="text-xs text-red-500 mb-1 p-1.5 bg-red-50 rounded selectable">
@@ -174,11 +175,11 @@ export function ResultsPanel(): React.JSX.Element {
       )}
       {wide ? (
         <div className="grid grid-cols-2 gap-3 p-3">
-          {runs.map((run: TaskRun) => renderRun(run))}
+          {runs.map((run: TaskRun, i: number) => renderRun(run, i))}
         </div>
       ) : (
         <div className="divide-y divide-gray-100">
-          {runs.map((run: TaskRun) => renderRun(run))}
+          {runs.map((run: TaskRun, i: number) => renderRun(run, i))}
         </div>
       )}
     </div>

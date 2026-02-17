@@ -129,7 +129,8 @@ export function nudgeClaudeCode(options: NudgeOptions): void {
     const status = options.success ? 'completed successfully' : 'failed'
     const duration = (options.durationMs / 1000).toFixed(1)
 
-    let message = `Daymon task "${options.taskName}" (id: ${options.taskId}) ${status} in ${duration}s.`
+    const safeName = options.taskName.replace(/[\x00-\x1f\x7f]/g, '')
+    let message = `Daymon task "${safeName}" (id: ${options.taskId}) ${status} in ${duration}s.`
     message += ' Show me the results using daymon_task_history.'
 
     // Escape for AppleScript string: backslashes first, then double quotes

@@ -252,6 +252,20 @@ describe('nudgeClaudeCode', () => {
     expect(nudgeCall).toContain('Task with \\"quotes\\"')
   })
 
+  it('strips control characters from task name', async () => {
+    const nudge = await importWithMocks()
+    nudge({ taskId: 1, taskName: 'Task\nwith\tnewlines\r\x00', success: true, durationMs: 1000 })
+
+    expect(mockExecSync).toHaveBeenCalledTimes(2)
+    const nudgeCall = mockExecSync.mock.calls[1][0] as string
+    // Control chars should be stripped from the task name, leaving clean text
+    expect(nudgeCall).toContain('Taskwithnewlines')
+    // The task name portion should not contain any control characters
+    expect(nudgeCall).not.toContain('Task\nwith')
+    expect(nudgeCall).not.toContain('Task\twith')
+    expect(nudgeCall).not.toContain('\x00')
+  })
+
   it('sets 10s timeout on nudge execSync', async () => {
     const nudge = await importWithMocks()
     nudge({ taskId: 1, taskName: 'Test', success: true, durationMs: 1000 })
