@@ -1,5 +1,5 @@
 import { createHash } from 'crypto'
-import { hostname, userInfo, release, platform } from 'os'
+import { hostname, userInfo } from 'os'
 
 // ─── Configuration ──────────────────────────────────────────
 
