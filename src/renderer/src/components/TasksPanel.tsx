@@ -579,6 +579,7 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
   const [containerRef, containerWidth] = useContainerWidth<HTMLDivElement>()
   const wide = containerWidth >= 600
   const [actionError, setActionError] = useState<string | null>(null)
+  const [pendingRuns, setPendingRuns] = useState<Set<number>>(new Set())
   const [consoleTaskId, setConsoleTaskId] = useState<number | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [defaultNudgeMode, setDefaultNudgeMode] = useState('always')
@@ -638,13 +639,31 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
 
   async function runNow(id: number): Promise<void> {
     setActionError(null)
+    setPendingRuns((prev) => new Set(prev).add(id))
     try {
       await window.api.tasks.runNow(id)
       refresh()
     } catch (err) {
+      setPendingRuns((prev) => { const next = new Set(prev); next.delete(id); return next })
       setActionError(err instanceof Error ? err.message : 'Failed to run task')
     }
   }
+
+  // Clear pending flags once polling detects the actual running run
+  useEffect(() => {
+    if (pendingRuns.size === 0) return
+    const confirmed = new Set<number>()
+    for (const id of pendingRuns) {
+      if (runningByTaskId.has(id)) confirmed.add(id)
+    }
+    if (confirmed.size > 0) {
+      setPendingRuns((prev) => {
+        const next = new Set(prev)
+        for (const id of confirmed) next.delete(id)
+        return next
+      })
+    }
+  }, [runningRuns])
 
   function renderNudge(task: Task): React.JSX.Element {
     return (
@@ -774,6 +793,7 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
           <tbody>
           {filteredTasks.map((task) => {
             const activeRun = runningByTaskId.get(task.id)
+            const busy = !!activeRun || pendingRuns.has(task.id)
             const source = sourceLabel(task)
             const worker = task.workerId != null ? workerMap.get(task.workerId) : undefined
             return (
@@ -807,6 +827,29 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
                   <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => runNow(task.id)}
+                      disabled={busy}
+                      className="text-xs text-blue-500 hover:text-blue-700 disabled:text-blue-300 disabled:cursor-not-allowed"
+                    >
+                      {busy ? 'Running' : 'Run'}
+                    </button>
+                    {task.status !== 'completed' && (
+                      <button
+                        onClick={() => togglePause(task)}
+                        disabled={busy}
+                        className="text-xs text-yellow-600 hover:text-yellow-800 disabled:text-yellow-300 disabled:cursor-not-allowed"
+                      >
+                        {task.status === 'paused' ? 'Resume' : 'Pause'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => deleteTask(task.id)}
+                      disabled={busy}
+                      className="text-xs text-red-400 hover:text-red-600 disabled:text-red-200 disabled:cursor-not-allowed"
+                    >
+                      Delete
+                    </button>
                     {activeRun && (
                       <button
                         onClick={() => setConsoleTaskId(consoleTaskId === task.id ? null : task.id)}
@@ -815,17 +858,6 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
                         {consoleTaskId === task.id ? 'Hide' : 'Console'}
                       </button>
                     )}
-                    <button onClick={() => runNow(task.id)} className="text-xs text-blue-500 hover:text-blue-700">
-                      Run
-                    </button>
-                    {task.status !== 'completed' && (
-                      <button onClick={() => togglePause(task)} className="text-xs text-yellow-600 hover:text-yellow-800">
-                        {task.status === 'paused' ? 'Resume' : 'Pause'}
-                      </button>
-                    )}
-                    <button onClick={() => deleteTask(task.id)} className="text-xs text-red-400 hover:text-red-600">
-                      Delete
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -837,6 +869,7 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
         <div className="divide-y divide-gray-100">
         {filteredTasks.map((task) => {
           const activeRun = runningByTaskId.get(task.id)
+          const busy = !!activeRun || pendingRuns.has(task.id)
           const source = sourceLabel(task)
           const worker = task.workerId != null ? workerMap.get(task.workerId) : undefined
           return (
@@ -864,6 +897,29 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
                 <ConsoleView runId={activeRun.id} />
               )}
               <div className="flex gap-2 items-center">
+                <button
+                  onClick={() => runNow(task.id)}
+                  disabled={busy}
+                  className="text-xs text-blue-500 hover:text-blue-700 disabled:text-blue-300 disabled:cursor-not-allowed"
+                >
+                  {busy ? 'Running' : 'Run Now'}
+                </button>
+                {task.status !== 'completed' && (
+                  <button
+                    onClick={() => togglePause(task)}
+                    disabled={busy}
+                    className="text-xs text-yellow-600 hover:text-yellow-800 disabled:text-yellow-300 disabled:cursor-not-allowed"
+                  >
+                    {task.status === 'paused' ? 'Resume' : 'Pause'}
+                  </button>
+                )}
+                <button
+                  onClick={() => deleteTask(task.id)}
+                  disabled={busy}
+                  className="text-xs text-red-400 hover:text-red-600 disabled:text-red-200 disabled:cursor-not-allowed"
+                >
+                  Delete
+                </button>
                 {activeRun && (
                   <button
                     onClick={() => setConsoleTaskId(consoleTaskId === task.id ? null : task.id)}
@@ -872,17 +928,6 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
                     {consoleTaskId === task.id ? 'Hide Console' : 'Console'}
                   </button>
                 )}
-                <button onClick={() => runNow(task.id)} className="text-xs text-blue-500 hover:text-blue-700">
-                  Run Now
-                </button>
-                {task.status !== 'completed' && (
-                  <button onClick={() => togglePause(task)} className="text-xs text-yellow-600 hover:text-yellow-800">
-                    {task.status === 'paused' ? 'Resume' : 'Pause'}
-                  </button>
-                )}
-                <button onClick={() => deleteTask(task.id)} className="text-xs text-red-400 hover:text-red-600">
-                  Delete
-                </button>
                 <div className="ml-auto flex items-center gap-1">
                   <span className="text-[10px] text-gray-400">Nudge:</span>
                   {renderNudge(task)}

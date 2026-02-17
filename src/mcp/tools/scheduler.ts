@@ -1,5 +1,7 @@
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { homedir } from 'os'
+import { readFileSync } from 'fs'
+import { request as httpRequest } from 'http'
 import { z } from 'zod'
 import cron from 'node-cron'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -298,6 +300,35 @@ export function registerSchedulerTools(server: McpServer): void {
               }), 500)
             }
           } catch { /* non-fatal */ }
+
+          // Relay to sidecar for Electron push notifications (best-effort)
+          try {
+            const dbPath = process.env.DAYMON_DB_PATH
+            if (dbPath) {
+              const dataDir = process.env.DAYMON_DATA_DIR || dirname(dbPath)
+              const port = parseInt(readFileSync(join(dataDir, 'sidecar.port'), 'utf-8').trim(), 10)
+              if (port > 0) {
+                const event = result.success ? 'task:complete' : 'task:failed'
+                const payload = JSON.stringify({
+                  event,
+                  taskId: id,
+                  taskName: task.name,
+                  success: result.success,
+                  nudgeMode: task.nudgeMode,
+                  ...(result.success
+                    ? { outputPreview: result.output?.slice(0, 200), durationMs: result.durationMs }
+                    : { errorMessage: result.errorMessage })
+                })
+                const req = httpRequest({
+                  hostname: '127.0.0.1', port, path: '/notify', method: 'POST',
+                  headers: { 'Content-Type': 'application/json' }
+                })
+                req.on('error', () => {}) // non-fatal
+                req.write(payload)
+                req.end()
+              }
+            }
+          } catch { /* non-fatal — sidecar may not be running */ }
         })
         .catch((err) => {
           console.error(`Task ${id} ("${task.name}") execution error:`, err)

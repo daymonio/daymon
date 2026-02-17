@@ -239,9 +239,16 @@ function processSSEMessage(raw: string): void {
 
   try {
     const data = JSON.parse(dataStr)
-    if (eventType === 'task:complete') {
+
+    // Respect per-task nudge_mode for native notifications
+    const nudgeMode: string = data.nudgeMode ?? 'always'
+    const isSuccess = eventType === 'task:complete'
+    const shouldShowNotification = nudgeMode === 'always'
+      || (nudgeMode === 'failure_only' && !isSuccess)
+
+    if (eventType === 'task:complete' && shouldShowNotification) {
       notifyTaskComplete(data.taskName, data.outputPreview)
-    } else if (eventType === 'task:failed') {
+    } else if (eventType === 'task:failed' && shouldShowNotification) {
       notifyTaskFailed(data.taskName, data.errorMessage || 'Unknown error')
     }
   } catch {

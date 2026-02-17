@@ -18,7 +18,7 @@ import { loadSqliteVec } from '../shared/embeddings'
 import { executeTask } from '../shared/task-runner'
 import { startScheduler, stopScheduler, syncNow, getSchedulerStatus } from './scheduler'
 import { startAllWatches, stopAllWatches, syncWatches } from './file-watcher'
-import { addSSEClient } from './events'
+import { addSSEClient, emitEvent } from './events'
 import { notifyTaskComplete, notifyTaskFailed } from './notifications'
 
 declare const __APP_VERSION__: string
@@ -87,6 +87,14 @@ function jsonResponse(res: ServerResponse, status: number, data: unknown): void 
   res.end(JSON.stringify(data))
 }
 
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve) => {
+    let body = ''
+    req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+    req.on('end', () => resolve(body))
+  })
+}
+
 const startTime = Date.now()
 
 async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -136,6 +144,18 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       }).catch((err) => {
         console.error(`Sidecar: Task ${taskId} execution error:`, err)
       })
+      return
+    }
+
+    // POST /notify — relay task completion events for Electron push notifications
+    if (method === 'POST' && url === '/notify') {
+      const body = await readBody(req)
+      const data = JSON.parse(body)
+      const event = data.event
+      if (event === 'task:complete' || event === 'task:failed') {
+        emitEvent(event, data)
+      }
+      jsonResponse(res, 200, { ok: true })
       return
     }
 

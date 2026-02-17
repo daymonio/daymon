@@ -33,7 +33,7 @@ afterEach(() => {
 })
 
 describe('notifyTaskComplete', () => {
-  it('emits task:complete SSE event', () => {
+  it('emits task:complete SSE event with nudgeMode', () => {
     notifyTaskComplete(db, 1, 'Test Task', 'output preview', 5000)
 
     expect(emitEvent).toHaveBeenCalledWith('task:complete', {
@@ -41,8 +41,17 @@ describe('notifyTaskComplete', () => {
       taskName: 'Test Task',
       success: true,
       outputPreview: 'output preview',
-      durationMs: 5000
+      durationMs: 5000,
+      nudgeMode: 'always'
     })
+  })
+
+  it('includes explicit nudgeMode in SSE event', () => {
+    notifyTaskComplete(db, 1, 'Test Task', 'output', 3000, 'failure_only')
+
+    expect(emitEvent).toHaveBeenCalledWith('task:complete', expect.objectContaining({
+      nudgeMode: 'failure_only'
+    }))
   })
 
   it('triggers auto-nudge when nudgeMode is always', () => {
@@ -92,14 +101,15 @@ describe('notifyTaskComplete', () => {
 })
 
 describe('notifyTaskFailed', () => {
-  it('emits task:failed SSE event', () => {
+  it('emits task:failed SSE event with nudgeMode', () => {
     notifyTaskFailed(db, 2, 'Failing Task', 'timeout reached')
 
     expect(emitEvent).toHaveBeenCalledWith('task:failed', {
       taskId: 2,
       taskName: 'Failing Task',
       success: false,
-      errorMessage: 'timeout reached'
+      errorMessage: 'timeout reached',
+      nudgeMode: 'always'
     })
   })
 

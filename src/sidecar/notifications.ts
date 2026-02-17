@@ -15,7 +15,7 @@ export function notifyTaskComplete(
   durationMs: number,
   nudgeMode?: string
 ): void {
-  emitEvent('task:complete', { taskId, taskName, success: true, outputPreview, durationMs })
+  emitEvent('task:complete', { taskId, taskName, success: true, outputPreview, durationMs, nudgeMode: nudgeMode ?? 'always' })
   tryNudge(db, taskId, taskName, true, durationMs, undefined, nudgeMode)
 }
 
@@ -26,7 +26,7 @@ export function notifyTaskFailed(
   errorMessage: string,
   nudgeMode?: string
 ): void {
-  emitEvent('task:failed', { taskId, taskName, success: false, errorMessage })
+  emitEvent('task:failed', { taskId, taskName, success: false, errorMessage, nudgeMode: nudgeMode ?? 'always' })
   tryNudge(db, taskId, taskName, false, 0, errorMessage, nudgeMode)
 }
 

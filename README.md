@@ -17,6 +17,8 @@ Scheduled tasks, persistent memory, background automation. No API keys. No cloud
 
 [daymon.io](https://daymon.io)
 
+> Daymon is not affiliated with, endorsed by, or sponsored by Anthropic.
+
 <p align="center">
   <video src="https://github.com/user-attachments/assets/ca60674b-3b7b-45fe-aecb-f9ce0b88cbbb" autoplay loop muted playsinline width="800"></video>
 </p>

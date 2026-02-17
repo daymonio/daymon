@@ -238,6 +238,13 @@ nav a:hover {
   color: var(--accent-hover);
 }
 
+.disclaimer {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
 /* === Setup Section === */
 .setup-section {
   padding: 80px 0;
