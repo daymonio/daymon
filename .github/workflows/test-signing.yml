@@ -1,0 +1,36 @@
+name: Test Windows Code Signing
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-sign:
+    runs-on: windows-latest
+    steps:
+      - name: Create dummy exe
+        shell: pwsh
+        run: |
+          # Create a minimal valid PE executable for signing
+          $bytes = [System.IO.File]::ReadAllBytes("C:\Windows\System32\cmd.exe")
+          [System.IO.File]::WriteAllBytes("$PWD\test.exe", $bytes)
+          echo "Created test.exe ($($(Get-Item test.exe).Length) bytes)"
+
+      - name: Sign with SSL.com eSigner
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}\test.exe
+          environment: PROD
+
+      - name: Verify signature
+        shell: pwsh
+        run: |
+          $sig = Get-AuthenticodeSignature -FilePath "test.exe"
+          echo "Status: $($sig.Status)"
+          echo "Signer: $($sig.SignerCertificate.Subject)"
+          echo "Issuer: $($sig.SignerCertificate.Issuer)"
+          if ($sig.Status -ne "Valid") { exit 1 }
