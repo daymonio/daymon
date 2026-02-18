@@ -135,7 +135,7 @@ OpenClaw (formerly Clawdbot/Moltbot) is a Node.js/TypeScript AI agent gateway by
 
 **OpenClaw**: Multiple surfaces — WebChat (React), macOS tray app (voice/health), iOS app, Android app. All chat-focused. Primary interaction is via messaging platforms.
 
-**Daymon**: Single Electron menu bar app with management panels (Status, Memory, Workers, Tasks, Results, Settings). Dashboard-style, not chat-focused.
+**Daymon**: Single desktop menu bar app with management panels (Status, Memory, Workers, Tasks, Results, Settings). Dashboard-style, not chat-focused.
 
 ---
 

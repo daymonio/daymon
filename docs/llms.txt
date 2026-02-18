@@ -21,7 +21,7 @@ Install Daymon → it auto-configures Claude Desktop and Claude Code → tell Cl
 
 ## Architecture
 
-- **Electron** menu bar + Dock app (thin UI shell)
+- **Desktop** menu bar / system tray app (thin UI shell)
 - **Sidecar** standalone Node.js HTTP server (cron scheduler, file watchers, task execution, embeddings)
 - **MCP Server** (stdio transport) for Claude Desktop and Claude Code integration
 - **Shared modules** used by both sidecar and MCP server

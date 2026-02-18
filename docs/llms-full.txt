@@ -25,7 +25,7 @@ Daymon can be controlled from three places:
 |------|-----------|-----------|
 | Claude Code | MCP stdio via .mcp.json | Direct (spawns claude -p) |
 | Claude Desktop | MCP stdio via claude_desktop_config.json | Direct (spawns claude -p) |
-| Daymon UI | Electron IPC → Sidecar HTTP | Via sidecar process |
+| Daymon UI | IPC → Sidecar HTTP | Via sidecar process |
 
 ---
 
@@ -219,7 +219,7 @@ Available settings:
 ## Architecture
 
 ```
-Electron (thin UI shell)                 Sidecar (stock Node.js)
+Desktop App (thin UI shell)              Sidecar (stock Node.js)
 ├── Tray + popover window                ├── HTTP server on 127.0.0.1
 ├── IPC bridge to React renderer         ├── Cron scheduler (node-cron)
 ├── Native notifications (via SSE)       ├── Task execution (spawn claude)
@@ -234,11 +234,11 @@ Electron (thin UI shell)                 Sidecar (stock Node.js)
 
 ### Why Sidecar?
 
-Electron's patched Node.js runtime causes `spawn EBADF` on all `child_process` calls. The sidecar is a standalone Node.js HTTP server that Electron launches as a detached process. All process-spawning work runs there.
+The desktop app's patched Node.js runtime causes `spawn EBADF` on all `child_process` calls. The sidecar is a standalone Node.js HTTP server launched as a detached process. All process-spawning work runs there.
 
 ### Tech Stack
 
-Electron 35, React 18, Tailwind CSS 4, TypeScript, Vite 7, better-sqlite3, node-cron, zod, MCP SDK, HuggingFace Transformers (local embeddings with all-MiniLM-L6-v2), Vitest
+React 18, Tailwind CSS 4, TypeScript, Vite 7, better-sqlite3, node-cron, zod, MCP SDK, HuggingFace Transformers (local embeddings with all-MiniLM-L6-v2), Vitest
 
 ---
 

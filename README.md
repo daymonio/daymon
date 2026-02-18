@@ -216,7 +216,7 @@ npm run build:linux  # Build + package Linux AppImage + deb
 ```
 daymon/
 ├── src/
-│   ├── main/           # Electron main process (thin UI shell)
+│   ├── main/           # Desktop app (menu bar / tray)
 │   ├── sidecar/        # Standalone Node.js server (cron, watchers, task execution)
 │   ├── mcp/            # MCP server (stdio)
 │   │   └── tools/      # Memory, scheduler, worker, watcher, settings tools
@@ -226,7 +226,7 @@ daymon/
 └── resources/          # App icons
 ```
 
-**Tech stack**: Electron 35, React 18, Tailwind CSS 4, TypeScript, Vite 7, better-sqlite3, node-cron, zod, MCP SDK, HuggingFace Transformers (local embeddings), Vitest
+**Tech stack**: React 18, Tailwind CSS 4, TypeScript, Vite 7, better-sqlite3, node-cron, zod, MCP SDK, HuggingFace Transformers (local embeddings), Vitest
 
 </details>
 
