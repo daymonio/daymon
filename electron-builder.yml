@@ -56,7 +56,6 @@ dmg:
       type: link
       path: /Applications
 win:
-  signingHashAlgorithms: [sha256]
   target:
     - target: nsis
       arch: [x64]
