@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { homedir } from 'os'
+import { homedir, tmpdir } from 'os'
 import { join } from 'path'
 import { validateWatchPath } from '../watch-path'
 
@@ -9,12 +9,13 @@ describe('validateWatchPath', () => {
     expect(validateWatchPath(path)).toBeNull()
   })
 
-  it('accepts a path inside /tmp', () => {
-    expect(validateWatchPath('/tmp/daymon-test')).toBeNull()
+  it('accepts a path inside temp directory', () => {
+    expect(validateWatchPath(join(tmpdir(), 'daymon-test'))).toBeNull()
   })
 
   it('rejects a path outside allowed roots', () => {
-    expect(validateWatchPath('/etc')).toMatch(/home directory/)
+    const outsidePath = process.platform === 'win32' ? 'C:\\Windows' : '/etc'
+    expect(validateWatchPath(outsidePath)).toMatch(/home directory/)
   })
 
   it('rejects sensitive home directories', () => {

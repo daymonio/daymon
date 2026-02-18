@@ -1,22 +1,29 @@
-import { homedir } from 'os'
-import { resolve, sep } from 'path'
+import { homedir, tmpdir } from 'os'
+import { isAbsolute, resolve, sep } from 'path'
 import { realpathSync } from 'fs'
 
 const SENSITIVE_HOME_SUFFIXES = [
-  '/.ssh',
-  '/.gnupg',
-  '/.aws',
-  '/.env',
-  '/.kube',
-  '/.docker',
-  '/.npmrc',
-  '/.config/gh',
-  '/Library/Keychains'
+  `${sep}.ssh`,
+  `${sep}.gnupg`,
+  `${sep}.aws`,
+  `${sep}.env`,
+  `${sep}.kube`,
+  `${sep}.docker`,
+  `${sep}.npmrc`,
+  `${sep}.config${sep}gh`,
+  `${sep}Library${sep}Keychains`
 ]
+
+function getTempRoots(): string[] {
+  const roots = [tmpdir()]
+  // Also allow /tmp on Unix (symlink to real tmpdir on macOS)
+  if (process.platform !== 'win32') roots.push('/tmp')
+  return roots
+}
 
 export function validateWatchPath(watchPath: string): string | null {
   const resolved = resolve(watchPath)
-  if (!resolved.startsWith(sep)) {
+  if (!isAbsolute(resolved)) {
     return 'Path must be absolute.'
   }
 
@@ -30,8 +37,9 @@ export function validateWatchPath(watchPath: string): string | null {
   }
 
   const home = homedir()
-  if (!realPath.startsWith(home) && !realPath.startsWith('/tmp')) {
-    return `Path must be within your home directory (${home}) or /tmp.`
+  const inTemp = getTempRoots().some((t) => realPath.startsWith(t))
+  if (!realPath.startsWith(home) && !inTemp) {
+    return `Path must be within your home directory (${home}) or temp.`
   }
 
   for (const suffix of SENSITIVE_HOME_SUFFIXES) {

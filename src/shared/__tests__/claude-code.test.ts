@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EventEmitter } from 'events'
+import { join } from 'path'
 import { parseStreamEvent } from '../claude-code'
+
+// First candidate path for /mock-home on each platform
+const MOCK_HOME = '/mock-home'
+const MOCK_CLAUDE_PATH =
+  process.platform === 'win32'
+    ? join(MOCK_HOME, '.claude', 'bin', 'claude.exe')
+    : join(MOCK_HOME, '.local', 'bin', 'claude')
 
 // ─── parseStreamEvent ─────────────────────────────────────────
 
@@ -144,7 +152,7 @@ describe('checkClaudeCliAvailable', () => {
     const checkClaudeCliAvailable = await importWithMock()
     checkClaudeCliAvailable()
     const callArgs = mockExecSync.mock.calls[0]
-    expect(callArgs[0]).toBe('"/mock-home/.local/bin/claude" --version')
+    expect(callArgs[0]).toBe(`"${MOCK_CLAUDE_PATH}" --version`)
     const env = callArgs[1].env
     expect(env).not.toHaveProperty('ELECTRON_RUN_AS_NODE')
   })
@@ -227,7 +235,7 @@ describe('executeClaudeCode', () => {
     await promise
 
     expect(mockSpawn).toHaveBeenCalledWith(
-      '/mock-home/.local/bin/claude',
+      MOCK_CLAUDE_PATH,
       ['-p', 'My prompt', '--output-format', 'stream-json', '--verbose'],
       expect.objectContaining({
         stdio: ['ignore', 'pipe', 'pipe']

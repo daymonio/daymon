@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { homedir } from 'os'
+import { join } from 'path'
 import Database from 'better-sqlite3'
 import { initTestDb } from '../../../shared/__tests__/helpers/test-db'
 import * as queries from '../../../shared/db-queries'
@@ -359,14 +361,15 @@ describe('daymon_delete_worker response', () => {
 
 describe('daymon_watch response', () => {
   it('clean confirmation, no ID', async () => {
+    const testPath = join(homedir(), 'test-downloads')
     const handler = toolHandlers.get('daymon_watch')!
     const result = await handler({
-      path: '/tmp/test-downloads',
+      path: testPath,
       actionPrompt: 'Process new files'
     })
     const text = getResponseText(result)
     assertCleanResponse(text)
-    expect(text).toContain('/tmp/test-downloads')
+    expect(text).toContain('test-downloads')
   })
 })
 
