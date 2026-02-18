@@ -36,6 +36,8 @@ interface WatchesAPI {
   create: (path: string, description?: string, actionPrompt?: string) => Promise<Watch>
   list: (status?: string) => Promise<Watch[]>
   delete: (id: number) => Promise<void>
+  pause: (id: number) => Promise<void>
+  resume: (id: number) => Promise<void>
   count: (status?: string) => Promise<number>
 }
 
