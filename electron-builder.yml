@@ -66,10 +66,11 @@ linux:
   category: Utility
   icon: resources/icon.png
   desktop:
-    Name: Daymon
-    Comment: Open source autopilot for Claude
-    Categories: Utility;Development;
-    StartupWMClass: daymon
+    entry:
+      Name: Daymon
+      Comment: Open source autopilot for Claude
+      Categories: Utility;Development;
+      StartupWMClass: daymon
 npmRebuild: true
 publish:
   provider: github
