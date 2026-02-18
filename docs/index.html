@@ -45,6 +45,7 @@
       <nav>
         <a href="#features">Features</a>
         <a href="#workers">Workers</a>
+        <a href="#architecture">Architecture</a>
         <a href="#compare">Compare</a>
         <a href="https://github.com/daymonio/daymon" target="_blank" rel="noopener">GitHub</a>
       </nav>
@@ -230,6 +231,79 @@
             </div>
           </div>
           <p class="limit-kicker">Same question. Smarter answer. Every time.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture" class="arch-section">
+      <div class="container">
+        <h3>Built on MCP &mdash; the open standard</h3>
+        <p class="arch-subtitle">Daymon is a local <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> server. It speaks stdio with Claude. Everything stays on your Mac.</p>
+
+        <div class="arch-diagram">
+          <!-- Layer 1: Clients -->
+          <div class="arch-layer arch-layer-clients">
+            <div class="arch-node">
+              <div class="arch-node-icon">&#128187;</div>
+              <div class="arch-node-label">Claude Desktop</div>
+              <div class="arch-node-sub">claude_desktop_config.json</div>
+            </div>
+            <div class="arch-node">
+              <div class="arch-node-icon">&gt;_</div>
+              <div class="arch-node-label">Claude Code</div>
+              <div class="arch-node-sub">.mcp.json</div>
+            </div>
+          </div>
+
+          <!-- Connector -->
+          <div class="arch-connector">
+            <div class="arch-connector-line"></div>
+            <div class="arch-connector-label">MCP Protocol &middot; stdio</div>
+            <div class="arch-connector-line"></div>
+          </div>
+
+          <!-- Layer 2: Hub -->
+          <div class="arch-layer arch-layer-hub">
+            <div class="arch-node arch-node-hub">
+              <div class="arch-node-icon">&#9881;&#65039;</div>
+              <div class="arch-node-label">Daymon</div>
+              <div class="arch-node-sub">MCP Server &middot; runs locally</div>
+            </div>
+          </div>
+
+          <!-- Connector -->
+          <div class="arch-connector">
+            <div class="arch-connector-line"></div>
+          </div>
+
+          <!-- Layer 3: Tools -->
+          <div class="arch-layer arch-layer-tools">
+            <div class="arch-tool-card">
+              <div class="arch-tool-icon">&#9200;</div>
+              <div class="arch-tool-name">Scheduler</div>
+              <div class="arch-tool-desc">Cron &amp; one-time tasks</div>
+            </div>
+            <div class="arch-tool-card">
+              <div class="arch-tool-icon">&#129504;</div>
+              <div class="arch-tool-name">Memory</div>
+              <div class="arch-tool-desc">SQLite + vector search</div>
+            </div>
+            <div class="arch-tool-card">
+              <div class="arch-tool-icon">&#128100;</div>
+              <div class="arch-tool-name">Workers</div>
+              <div class="arch-tool-desc">Named agent configs</div>
+            </div>
+            <div class="arch-tool-card">
+              <div class="arch-tool-icon">&#128193;</div>
+              <div class="arch-tool-name">Watchers</div>
+              <div class="arch-tool-desc">File system events</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Storage badge -->
+        <div class="arch-storage">
+          <span class="arch-storage-badge">&#128274; SQLite on your Mac &nbsp;&middot;&nbsp; no cloud &nbsp;&middot;&nbsp; no API keys &nbsp;&middot;&nbsp; inspect anytime</span>
         </div>
       </div>
     </section>

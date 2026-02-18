@@ -873,6 +873,192 @@ footer p {
   }
 }
 
+/* === Architecture === */
+.arch-section {
+  padding: 80px 0;
+  border-top: 1px solid rgba(232, 106, 26, 0.1);
+}
+
+.arch-section h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.arch-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 48px;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.arch-subtitle a {
+  color: var(--accent-hover);
+}
+
+.arch-diagram {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.arch-layer {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.arch-node {
+  background: var(--bg-surface);
+  border: 1px solid rgba(232, 106, 26, 0.15);
+  border-radius: var(--radius);
+  padding: 18px 28px;
+  text-align: center;
+  min-width: 180px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.arch-node:hover {
+  border-color: rgba(232, 106, 26, 0.4);
+  box-shadow: 0 0 30px var(--accent-glow);
+}
+
+.arch-node-hub {
+  border-left: 3px solid var(--accent);
+  min-width: 220px;
+  padding: 22px 36px;
+}
+
+.arch-node-icon {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+}
+
+.arch-node-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.arch-node-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* Connectors */
+.arch-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.arch-connector-line {
+  width: 2px;
+  height: 20px;
+  background: rgba(232, 106, 26, 0.3);
+  border-radius: 1px;
+}
+
+.arch-connector-label {
+  font-size: 0.72rem;
+  color: var(--accent-hover);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Tool cards */
+.arch-layer-tools {
+  gap: 12px;
+}
+
+.arch-tool-card {
+  background: var(--bg-surface);
+  border: 1px solid rgba(232, 106, 26, 0.12);
+  border-radius: var(--radius);
+  padding: 16px 12px;
+  text-align: center;
+  flex: 1;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.arch-tool-card:hover {
+  border-color: rgba(232, 106, 26, 0.4);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.arch-tool-icon {
+  font-size: 1.3rem;
+  margin-bottom: 6px;
+}
+
+.arch-tool-name {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.arch-tool-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Storage badge */
+.arch-storage {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.arch-storage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface);
+  border: 1px solid rgba(232, 106, 26, 0.15);
+  border-radius: 100px;
+  padding: 8px 20px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .arch-layer-clients {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .arch-node {
+    width: 100%;
+    max-width: 260px;
+    min-width: 0;
+  }
+
+  .arch-node-hub {
+    min-width: 0;
+  }
+
+  .arch-layer-tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .arch-storage-badge {
+    font-size: 0.72rem;
+    padding: 6px 14px;
+  }
+}
+
 /* === Animations === */
 @media (prefers-reduced-motion: no-preference) {
   .feature-card {
