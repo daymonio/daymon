@@ -79,3 +79,4 @@ Or download from https://github.com/daymonio/daymon/releases/latest
 - Website: https://daymon.io
 - GitHub: https://github.com/daymonio/daymon
 - License: MIT
+
