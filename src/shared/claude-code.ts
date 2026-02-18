@@ -51,14 +51,24 @@ function resolveClaudePath(): string | null {
   if (cachedClaudePath) return cachedClaudePath
 
   const home = homedir()
-  const candidates = [
-    join(home, '.local', 'bin', 'claude'),
-    join(home, '.claude', 'bin', 'claude'),
-    '/usr/local/bin/claude',
-    '/usr/bin/claude',
-    '/snap/bin/claude',
-    '/opt/homebrew/bin/claude'
-  ]
+  const isWindows = process.platform === 'win32'
+
+  const candidates: string[] = isWindows
+    ? [
+        join(home, '.claude', 'bin', 'claude.exe'),
+        join(home, 'AppData', 'Local', 'Programs', 'claude-code', 'claude.exe'),
+        join(home, 'AppData', 'Local', 'Claude', 'claude.exe'),
+        join(home, 'AppData', 'Local', 'Microsoft', 'WinGet', 'Links', 'claude.exe'),
+        'C:\\Program Files\\Claude\\claude.exe'
+      ]
+    : [
+        join(home, '.local', 'bin', 'claude'),
+        join(home, '.claude', 'bin', 'claude'),
+        '/usr/local/bin/claude',
+        '/usr/bin/claude',
+        '/snap/bin/claude',
+        '/opt/homebrew/bin/claude'
+      ]
 
   for (const p of candidates) {
     if (existsSync(p)) {
@@ -67,24 +77,41 @@ function resolveClaudePath(): string | null {
     }
   }
 
-  // Fall back to login shell resolution (works when PATH is set in .zshrc / .bashrc)
-  const shells = ['/bin/zsh', '/bin/bash']
-  for (const sh of shells) {
-    if (!existsSync(sh)) continue
+  // Fall back to shell resolution
+  const env = { ...process.env }
+  delete env.ELECTRON_RUN_AS_NODE
+
+  if (isWindows) {
+    // Use 'where' on Windows (equivalent of 'which')
     try {
-      const env = { ...process.env }
-      delete env.ELECTRON_RUN_AS_NODE
-      const resolved = execSync(`${sh} -l -c 'which claude'`, {
+      const resolved = execSync('where claude', {
         encoding: 'utf-8',
         env,
         timeout: 5000
-      }).trim()
+      }).trim().split('\n')[0].trim()
       if (resolved && existsSync(resolved)) {
         cachedClaudePath = resolved
         return resolved
       }
-    } catch {
-      // Shell not available or claude not in that shell's PATH
+    } catch { /* not in PATH */ }
+  } else {
+    // Unix: try login shell resolution (works when PATH is set in .zshrc / .bashrc)
+    const shells = ['/bin/zsh', '/bin/bash']
+    for (const sh of shells) {
+      if (!existsSync(sh)) continue
+      try {
+        const resolved = execSync(`${sh} -l -c 'which claude'`, {
+          encoding: 'utf-8',
+          env,
+          timeout: 5000
+        }).trim()
+        if (resolved && existsSync(resolved)) {
+          cachedClaudePath = resolved
+          return resolved
+        }
+      } catch {
+        // Shell not available or claude not in that shell's PATH
+      }
     }
   }
 
@@ -168,7 +195,8 @@ export function executeClaudeCode(
       proc = spawn(claudePath, args, {
         cwd: homedir(),
         env,
-        stdio: ['ignore', 'pipe', 'pipe']
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true
       })
     } catch (err) {
       resolve({

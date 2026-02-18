@@ -221,6 +221,13 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange, onRefreshUpd
               Requires <code className="text-gray-500">xdotool</code> package (X11 only). Install with: <code className="text-gray-500">sudo apt install xdotool</code>
             </p>
           </div>
+          ) : window.api.app.getPlatform() === 'win32' ? (
+          <div className="py-1">
+            <div className="text-xs text-gray-600">Auto-nudge</div>
+            <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+              Uses PowerShell to send keystrokes. No additional setup needed.
+            </p>
+          </div>
           ) : null}
           <div className="py-1">
             <div className="flex items-center justify-between text-xs">

@@ -74,42 +74,61 @@ export async function launchSidecar(): Promise<void> {
   env.DAYMON_RESULTS_DIR = config.resultsDir
   env.DAYMON_DATA_DIR = config.dataDir
 
-  // Launch sidecar through a shell wrapper that closes inherited Electron FDs.
-  // Electron's patched runtime leaves stale FDs (chromium internals) in the child.
-  // If we spawn node directly, those bad FDs cause EBADF when the sidecar later
-  // calls spawn('claude'). The shell closes them before exec'ing into node.
-  const closeAndExec = [
-    '-c',
-    // Close all FDs > 2 (inherited from Electron), then exec into node
-    `for fd in /dev/fd/*; do n=$(basename "$fd"); [ "$n" -gt 2 ] && eval "exec $n>&-" 2>/dev/null; done; exec "${nodePath}" "${sidecarPath}"`
-  ]
-
-  try {
-    const child = spawn('/bin/sh', closeAndExec, {
-      detached: true,
-      stdio: 'ignore',
-      env
-    })
-    child.unref()
-    console.log(`Sidecar spawned via shell wrapper (PID ${child.pid})`)
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    console.error(`Failed to spawn sidecar: ${msg}`)
-
-    // Fallback: launch via nohup
+  if (process.platform === 'win32') {
+    // On Windows, handle inheritance works differently — no stale FD issue.
+    // Spawn directly with detached mode and windowsHide to prevent console flash.
     try {
-      console.log('Trying nohup fallback to launch sidecar...')
-      const cmd = `for fd in /dev/fd/*; do n=$(basename "$fd"); [ "$n" -gt 2 ] && eval "exec $n>&-" 2>/dev/null; done; exec "${nodePath}" "${sidecarPath}"`
-      execSync(`nohup /bin/sh -c '${cmd}' &`, {
-        env,
+      const child = spawn(nodePath, [sidecarPath], {
+        detached: true,
         stdio: 'ignore',
-        timeout: 5000
+        env,
+        windowsHide: true
       })
-      console.log('Sidecar launched via nohup fallback')
-    } catch (fallbackErr) {
-      const fallbackMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)
-      console.error(`Nohup fallback also failed: ${fallbackMsg}`)
+      child.unref()
+      console.log(`Sidecar spawned (PID ${child.pid})`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`Failed to spawn sidecar: ${msg}`)
       return
+    }
+  } else {
+    // Unix: Launch sidecar through a shell wrapper that closes inherited Electron FDs.
+    // Electron's patched runtime leaves stale FDs (chromium internals) in the child.
+    // If we spawn node directly, those bad FDs cause EBADF when the sidecar later
+    // calls spawn('claude'). The shell closes them before exec'ing into node.
+    const closeAndExec = [
+      '-c',
+      // Close all FDs > 2 (inherited from Electron), then exec into node
+      `for fd in /dev/fd/*; do n=$(basename "$fd"); [ "$n" -gt 2 ] && eval "exec $n>&-" 2>/dev/null; done; exec "${nodePath}" "${sidecarPath}"`
+    ]
+
+    try {
+      const child = spawn('/bin/sh', closeAndExec, {
+        detached: true,
+        stdio: 'ignore',
+        env
+      })
+      child.unref()
+      console.log(`Sidecar spawned via shell wrapper (PID ${child.pid})`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`Failed to spawn sidecar: ${msg}`)
+
+      // Fallback: launch via nohup
+      try {
+        console.log('Trying nohup fallback to launch sidecar...')
+        const cmd = `for fd in /dev/fd/*; do n=$(basename "$fd"); [ "$n" -gt 2 ] && eval "exec $n>&-" 2>/dev/null; done; exec "${nodePath}" "${sidecarPath}"`
+        execSync(`nohup /bin/sh -c '${cmd}' &`, {
+          env,
+          stdio: 'ignore',
+          timeout: 5000
+        })
+        console.log('Sidecar launched via nohup fallback')
+      } catch (fallbackErr) {
+        const fallbackMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)
+        console.error(`Nohup fallback also failed: ${fallbackMsg}`)
+        return
+      }
     }
   }
 

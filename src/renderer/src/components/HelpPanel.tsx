@@ -39,6 +39,8 @@ export function HelpPanel(): React.JSX.Element {
           <p className="text-gray-400 text-[10px]">
             {window.api.app.getPlatform() === 'linux'
               ? 'Requires xdotool for auto-nudge. Install with: sudo apt install xdotool (X11 only).'
+              : window.api.app.getPlatform() === 'win32'
+              ? 'Uses PowerShell for auto-nudge. Works out of the box on Windows 10+.'
               : 'Requires accessibility permission on macOS. Grant in System Settings \u2192 Privacy & Security \u2192 Accessibility.'}
           </p>
         </div>

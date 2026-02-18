@@ -124,8 +124,53 @@ jobs:
             dist/*.deb
             dist/latest-linux.yml
 
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild better-sqlite3 for Node.js (tests only)
+        run: npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3
+
+      - name: TypeScript check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          DAYMON_TELEMETRY_TOKEN: ${{ secrets.DAYMON_TELEMETRY_TOKEN }}
+
+      - name: Package Windows
+        run: npx electron-builder --win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: daymon-windows
+          path: |
+            dist/*.exe
+            dist/latest.yml
+
   release:
-    needs: [build-mac, build-linux]
+    needs: [build-mac, build-linux, build-windows]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
@@ -144,6 +189,12 @@ jobs:
           name: daymon-linux
           path: dist-linux/
 
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: daymon-windows
+          path: dist-windows/
+
       - name: Set version
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
@@ -159,6 +210,8 @@ jobs:
             dist-linux/*.AppImage
             dist-linux/*.deb
             dist-linux/latest-linux.yml
+            dist-windows/*.exe
+            dist-windows/latest.yml
           body: |
             ## Install
 
@@ -170,6 +223,10 @@ jobs:
             ```
             brew install daymonio/daymon/daymon
             ```
+
+            ### Windows
+
+            **[Download Daymon-${{ steps.version.outputs.version }}-Setup.exe](https://github.com/daymonio/daymon/releases/download/${{ github.ref_name }}/Daymon-Setup-${{ steps.version.outputs.version }}.exe)** — run the installer.
 
             ### Linux
 

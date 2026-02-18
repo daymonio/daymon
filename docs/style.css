@@ -133,10 +133,17 @@ nav a:hover {
 /* === CTA Buttons === */
 .cta {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.cta-row {
+  display: flex;
   gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-top: 28px;
 }
 
 .btn {
@@ -159,6 +166,50 @@ nav a:hover {
   background: var(--accent-hover);
   text-decoration: none;
   box-shadow: 0 0 24px var(--accent-glow);
+}
+
+.btn-mac {
+  background: #f5f5f7;
+  color: #1d1d1f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.btn-mac:hover {
+  background: #fff;
+  text-decoration: none;
+  box-shadow: 0 0 20px rgba(245, 245, 247, 0.25);
+}
+
+.btn-win {
+  background: #0078D4;
+  color: #fff;
+  border: 1px solid rgba(0, 120, 212, 0.3);
+}
+.btn-win:hover {
+  background: #1a86d9;
+  text-decoration: none;
+  box-shadow: 0 0 20px rgba(0, 120, 212, 0.35);
+}
+
+.btn-linux {
+  background: #E95420;
+  color: #fff;
+  border: 1px solid rgba(233, 84, 32, 0.3);
+}
+.btn-linux:hover {
+  background: #f06530;
+  text-decoration: none;
+  box-shadow: 0 0 20px rgba(233, 84, 32, 0.35);
+}
+
+.btn-mac .btn-icon, .btn-win .btn-icon, .btn-linux .btn-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.btn-detected {
+  box-shadow: 0 0 0 2px #fff, 0 0 16px rgba(255, 255, 255, 0.15);
 }
 
 .btn-secondary {
@@ -853,7 +904,7 @@ footer p {
     grid-template-columns: 1fr;
   }
 
-  .cta {
+  .cta-row {
     flex-direction: column;
     align-items: center;
   }

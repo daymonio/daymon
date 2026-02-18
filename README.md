@@ -8,13 +8,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-12%2B-blue)](https://github.com/daymonio/daymon/releases/latest)
+[![Windows](https://img.shields.io/badge/Windows-10%2B-blue)](https://github.com/daymonio/daymon/releases/latest)
 [![Linux](https://img.shields.io/badge/Linux-x64-blue)](https://github.com/daymonio/daymon/releases/latest)
 [![GitHub release](https://img.shields.io/github/v/release/daymonio/daymon)](https://github.com/daymonio/daymon/releases/latest)
 [![GitHub stars](https://img.shields.io/github/stars/daymonio/daymon)](https://github.com/daymonio/daymon/stargazers)
 
 **Open source autopilot for Claude.**
 
-Scheduled tasks, persistent memory, background automation. No API keys. No cloud. Runs on your Mac or Linux machine.
+Scheduled tasks, persistent memory, background automation. No API keys. No cloud. Runs on your Mac, Windows, or Linux machine.
 
 [daymon.io](https://daymon.io)
 
@@ -36,7 +37,7 @@ No API keys. No token costs. No cloud. Just your existing Claude subscription, f
 
 ## Requirements
 
-- **macOS 12 (Monterey) or later** (Apple Silicon & Intel) or **Linux x64** (Ubuntu, Debian, Fedora, etc.)
+- **macOS 12 (Monterey) or later** (Apple Silicon & Intel), **Windows 10+** (x64), or **Linux x64** (Ubuntu, Debian, Fedora, etc.)
 - **[Claude Desktop](https://claude.ai/download)** or **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** (you need at least one)
 - A Claude subscription (Pro, Max, or Team) — Daymon uses your existing subscription, no API keys needed
 
@@ -51,6 +52,10 @@ brew install daymonio/daymon/daymon
 ### macOS — Download
 
 Download the latest `.dmg` from [GitHub Releases](https://github.com/daymonio/daymon/releases/latest).
+
+### Windows — Download
+
+Download the latest `.exe` installer from [GitHub Releases](https://github.com/daymonio/daymon/releases/latest).
 
 ### Linux — Download
 
@@ -100,7 +105,7 @@ Then try:
 
 ## What is Daymon?
 
-Daymon is a desktop app for macOS and Linux that lives in your menu bar. It gives Claude persistent memory, scheduled tasks, workers, and file watchers — all running locally on your machine.
+Daymon is a desktop app for macOS, Windows, and Linux that lives in your menu bar (system tray on Windows). It gives Claude persistent memory, scheduled tasks, workers, and file watchers — all running locally on your machine.
 
 Your Claude subscription only works when you do. Daymon puts it to work 24/7.
 

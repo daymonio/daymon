@@ -259,9 +259,9 @@ function createBadgeIcon(baseIcon: Electron.NativeImage): Electron.NativeImage {
 function loadTrayIcon(): Electron.NativeImage {
   const root = app.isPackaged ? process.resourcesPath : app.getAppPath()
 
-  // On Linux, use full-color logo (template icons are macOS-specific and may
-  // not display well in Linux system trays)
-  if (process.platform === 'linux') {
+  // On Linux/Windows, use full-color logo (template icons are macOS-specific
+  // and may not display well in non-macOS system trays)
+  if (process.platform === 'linux' || process.platform === 'win32') {
     const logoPath = join(root, 'resources', 'logo.png')
     if (existsSync(logoPath)) {
       const logo = nativeImage.createFromPath(logoPath)

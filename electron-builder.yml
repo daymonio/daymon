@@ -16,6 +16,7 @@ asarUnpack:
   - "node_modules/sqlite-vec-darwin-x64/**"
   - "node_modules/sqlite-vec-linux-x64/**"
   - "node_modules/sqlite-vec-linux-arm64/**"
+  - "node_modules/sqlite-vec-windows-x64/**"
   - "node_modules/@img/**"
   - "resources/**"
 extraResources:
@@ -54,6 +55,10 @@ dmg:
       y: 220
       type: link
       path: /Applications
+win:
+  target:
+    - target: nsis
+      arch: [x64]
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true

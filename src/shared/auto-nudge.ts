@@ -60,6 +60,40 @@ export function findIdeProcessLinux(): { process: string; windowName: string } |
   return null
 }
 
+// ─── Windows IDE Detection ──────────────────────────────────
+
+// IDE process names as they appear in Windows Get-Process
+const WINDOWS_IDE_PROCESSES: Array<{ process: string; windowTitle: string }> = [
+  { process: 'Cursor', windowTitle: 'Cursor' },
+  { process: 'Code - Insiders', windowTitle: 'Visual Studio Code' },
+  { process: 'Code', windowTitle: 'Visual Studio Code' }
+]
+
+/**
+ * Find a running IDE process on Windows via PowerShell Get-Process.
+ * Returns the process name and window title, or null if none found.
+ */
+export function findIdeProcessWindows(): { process: string; windowTitle: string } | null {
+  for (const ide of WINDOWS_IDE_PROCESSES) {
+    try {
+      const result = execSync(
+        `powershell -NoProfile -Command "Get-Process '${ide.process}' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1 | ForEach-Object { $_.Id }"`,
+        { encoding: 'utf-8', timeout: 5000 }
+      ).trim()
+      if (result) return ide
+    } catch { /* not running */ }
+  }
+  return null
+}
+
+/**
+ * Escape special characters for WScript.Shell.SendKeys.
+ * Characters +^%~(){}[] have special meaning and must be wrapped in braces.
+ */
+function escapeSendKeys(text: string): string {
+  return text.replace(/([+^%~(){}[\]])/g, '{$1}')
+}
+
 // ─── Quiet Hours ─────────────────────────────────────────────
 
 /**
@@ -222,19 +256,58 @@ function nudgeLinux(options: NudgeOptions): void {
 }
 
 /**
+ * Send a nudge via PowerShell on Windows (using WScript.Shell COM object).
+ */
+function nudgeWindows(options: NudgeOptions): void {
+  const ide = findIdeProcessWindows()
+  if (!ide) {
+    console.error('[auto-nudge] No supported IDE found running')
+    return
+  }
+
+  const message = buildNudgeMessage(options)
+  const escaped = escapeSendKeys(message)
+
+  // PowerShell script: find IDE, activate window, Ctrl+L, type message, Enter
+  // Using WScript.Shell COM for SendKeys — available on all Windows versions
+  const ps = [
+    '$wsh = New-Object -ComObject WScript.Shell;',
+    `$proc = Get-Process '${ide.process}' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1;`,
+    'if ($proc) {',
+    '  [void]$wsh.AppActivate($proc.Id);',
+    '  Start-Sleep -Milliseconds 300;',
+    "  $wsh.SendKeys('^l');",
+    '  Start-Sleep -Milliseconds 300;',
+    `  $wsh.SendKeys('${escaped.replace(/'/g, "''")}');`,
+    "  $wsh.SendKeys('{ENTER}');",
+    '}'
+  ].join(' ')
+
+  console.error(`[auto-nudge] Sending nudge for task ${options.taskId} to ${ide.process}...`)
+  execSync(`powershell -NoProfile -Command "${ps.replace(/"/g, '\\"')}"`, {
+    timeout: 15000,
+    stdio: 'ignore',
+    windowsHide: true
+  })
+  console.error(`[auto-nudge] Nudge sent successfully`)
+}
+
+/**
  * Send a nudge message to the active Claude Code chat.
- * Uses osascript on macOS, xdotool on Linux (X11).
+ * Uses osascript on macOS, xdotool on Linux (X11), PowerShell on Windows.
  * Non-fatal: all errors are logged to stderr but never throw.
  */
 export function nudgeClaudeCode(options: NudgeOptions): void {
   const os = platform()
-  if (os !== 'darwin' && os !== 'linux') return
+  if (os !== 'darwin' && os !== 'linux' && os !== 'win32') return
 
   try {
     if (os === 'darwin') {
       nudgeMacOS(options)
-    } else {
+    } else if (os === 'linux') {
       nudgeLinux(options)
+    } else {
+      nudgeWindows(options)
     }
   } catch (err) {
     console.error(`[auto-nudge] Failed:`, err instanceof Error ? err.message : err)

@@ -14,29 +14,57 @@ export function resolveNodePath(): string {
 
   // Probe common locations (packaged Electron doesn't inherit login shell PATH)
   const home = homedir()
-  const candidates = [
-    '/usr/local/bin/node',
-    '/usr/bin/node',
-    '/opt/homebrew/bin/node'
-  ]
+  const isWindows = process.platform === 'win32'
+  const candidates: string[] = []
 
-  // Add nvm versions (find highest installed version)
-  const nvmDir = join(home, '.nvm', 'versions', 'node')
-  if (existsSync(nvmDir)) {
-    try {
-      const nvmPaths = (readdirSync(nvmDir) as string[])
-        .filter((v: string) => v.startsWith('v'))
-        .sort((a: string, b: string) => {
-          const pa = a.slice(1).split('.').map(Number)
-          const pb = b.slice(1).split('.').map(Number)
-          for (let i = 0; i < 3; i++) {
-            if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pb[i] ?? 0) - (pa[i] ?? 0)
-          }
-          return 0
-        })
-        .map((v: string) => join(nvmDir, v, 'bin', 'node'))
-      candidates.unshift(...nvmPaths)
-    } catch { /* ignore */ }
+  if (isWindows) {
+    // nvm-windows: %APPDATA%\nvm\<version>\node.exe
+    const nvmWinDir = join(home, 'AppData', 'Roaming', 'nvm')
+    if (existsSync(nvmWinDir)) {
+      try {
+        const nvmPaths = (readdirSync(nvmWinDir) as string[])
+          .filter((v: string) => v.startsWith('v'))
+          .sort((a: string, b: string) => {
+            const pa = a.slice(1).split('.').map(Number)
+            const pb = b.slice(1).split('.').map(Number)
+            for (let i = 0; i < 3; i++) {
+              if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pb[i] ?? 0) - (pa[i] ?? 0)
+            }
+            return 0
+          })
+          .map((v: string) => join(nvmWinDir, v, 'node.exe'))
+        candidates.push(...nvmPaths)
+      } catch { /* ignore */ }
+    }
+    candidates.push(
+      'C:\\Program Files\\nodejs\\node.exe',
+      join(home, 'AppData', 'Local', 'Programs', 'nodejs', 'node.exe')
+    )
+  } else {
+    candidates.push(
+      '/usr/local/bin/node',
+      '/usr/bin/node',
+      '/opt/homebrew/bin/node'
+    )
+
+    // Add nvm versions (find highest installed version)
+    const nvmDir = join(home, '.nvm', 'versions', 'node')
+    if (existsSync(nvmDir)) {
+      try {
+        const nvmPaths = (readdirSync(nvmDir) as string[])
+          .filter((v: string) => v.startsWith('v'))
+          .sort((a: string, b: string) => {
+            const pa = a.slice(1).split('.').map(Number)
+            const pb = b.slice(1).split('.').map(Number)
+            for (let i = 0; i < 3; i++) {
+              if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pb[i] ?? 0) - (pa[i] ?? 0)
+            }
+            return 0
+          })
+          .map((v: string) => join(nvmDir, v, 'bin', 'node'))
+        candidates.unshift(...nvmPaths)
+      } catch { /* ignore */ }
+    }
   }
 
   for (const p of candidates) {
@@ -46,9 +74,10 @@ export function resolveNodePath(): string {
     }
   }
 
-  // Fall back to login shell resolution
+  // Fall back to shell resolution
+  const whichCmd = isWindows ? 'where node' : 'which node'
   try {
-    const resolved = execSync('which node', { encoding: 'utf-8', timeout: 5000 }).trim()
+    const resolved = execSync(whichCmd, { encoding: 'utf-8', timeout: 5000 }).trim().split('\n')[0].trim()
     if (resolved && existsSync(resolved)) {
       cachedNodePath = resolved
       return resolved

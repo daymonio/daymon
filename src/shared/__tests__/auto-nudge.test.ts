@@ -201,7 +201,7 @@ describe('nudgeClaudeCode', () => {
   })
 
   it('does not call anything on unsupported platforms', async () => {
-    mockPlatform.mockReturnValue('win32')
+    mockPlatform.mockReturnValue('freebsd')
     const nudge = await importWithMocks()
     nudge({ taskId: 1, taskName: 'Test', success: true, durationMs: 1000 })
 
@@ -400,6 +400,120 @@ describe('findIdeProcessLinux', () => {
     mockExecSync.mockImplementation(() => { throw new Error('not found') })
     const mod = await importModule()
     expect(mod.findIdeProcessLinux()).toBeNull()
+  })
+})
+
+// ─── nudgeClaudeCode (Windows) ────────────────────────────────
+
+describe('nudgeClaudeCode (Windows)', () => {
+  let mockExecSync: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.resetModules()
+    mockExecSync = vi.fn()
+  })
+
+  async function importWindows() {
+    vi.doMock('child_process', () => ({ execSync: mockExecSync }))
+    vi.doMock('os', () => ({ platform: vi.fn().mockReturnValue('win32') }))
+    vi.doMock('../db-queries', () => ({ getSetting: vi.fn() }))
+    const mod = await import('../auto-nudge')
+    return mod.nudgeClaudeCode
+  }
+
+  it('uses PowerShell on Windows to send keystrokes', async () => {
+    // Get-Process finds Cursor with a window handle, PowerShell commands succeed
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes("Get-Process 'Cursor'") && cmd.includes('ForEach-Object')) return '12345\n'
+      return ''
+    })
+    const nudge = await importWindows()
+    nudge({ taskId: 5, taskName: 'Win Task', success: true, durationMs: 3000 })
+
+    const calls = mockExecSync.mock.calls.map(c => c[0] as string)
+    // First call: findIdeProcessWindows (Get-Process), second: nudgeWindows (PowerShell script)
+    expect(calls.some(c => c.includes("Get-Process 'Cursor'"))).toBe(true)
+    expect(calls.some(c => c.includes('AppActivate') && c.includes("SendKeys('^l')"))).toBe(true)
+    expect(calls.some(c => c.includes('Win Task'))).toBe(true)
+    expect(calls.some(c => c.includes('{ENTER}'))).toBe(true)
+    // Should NOT use osascript or xdotool
+    expect(calls.some(c => c.includes('osascript'))).toBe(false)
+    expect(calls.some(c => c.includes('xdotool'))).toBe(false)
+  })
+
+  it('skips nudge on Windows when no IDE is running', async () => {
+    mockExecSync.mockImplementation(() => {
+      throw new Error('not found')
+    })
+    const nudge = await importWindows()
+    nudge({ taskId: 1, taskName: 'Test', success: true, durationMs: 1000 })
+
+    const calls = mockExecSync.mock.calls.map(c => c[0] as string)
+    // Should have checked all 3 IDE processes
+    expect(calls.filter(c => c.includes('Get-Process')).length).toBe(3)
+    // Should NOT have sent any keystrokes
+    expect(calls.some(c => c.includes('AppActivate'))).toBe(false)
+  })
+
+  it('properly escapes SendKeys special characters', async () => {
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes("Get-Process 'Cursor'") && cmd.includes('ForEach-Object')) return '12345\n'
+      return ''
+    })
+    const nudge = await importWindows()
+    nudge({ taskId: 1, taskName: 'Task (with) [brackets]', success: true, durationMs: 1000 })
+
+    const calls = mockExecSync.mock.calls.map(c => c[0] as string)
+    const nudgeCall = calls.find(c => c.includes('AppActivate'))!
+    // Parentheses and brackets should be escaped with braces
+    expect(nudgeCall).toContain('{(}')
+    expect(nudgeCall).toContain('{)}')
+    expect(nudgeCall).toContain('{[}')
+    expect(nudgeCall).toContain('{]}')
+  })
+})
+
+// ─── findIdeProcessWindows ────────────────────────────────────
+
+describe('findIdeProcessWindows', () => {
+  let mockExecSync: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.resetModules()
+    mockExecSync = vi.fn()
+  })
+
+  async function importModule() {
+    vi.doMock('child_process', () => ({ execSync: mockExecSync }))
+    vi.doMock('os', () => ({ platform: vi.fn().mockReturnValue('win32') }))
+    vi.doMock('../db-queries', () => ({ getSetting: vi.fn() }))
+    return await import('../auto-nudge')
+  }
+
+  it('detects Cursor process', async () => {
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes("Get-Process 'Cursor'")) return '12345'
+      throw new Error('not found')
+    })
+    const mod = await importModule()
+    const result = mod.findIdeProcessWindows()
+    expect(result).toEqual({ process: 'Cursor', windowTitle: 'Cursor' })
+  })
+
+  it('detects Code process when Cursor is not running', async () => {
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes("Get-Process 'Code'") && !cmd.includes('Insiders')) return '54321'
+      throw new Error('not found')
+    })
+    const mod = await importModule()
+    const result = mod.findIdeProcessWindows()
+    expect(result).toEqual({ process: 'Code', windowTitle: 'Visual Studio Code' })
+  })
+
+  it('returns null when no IDE is running', async () => {
+    mockExecSync.mockImplementation(() => { throw new Error('not found') })
+    const mod = await importModule()
+    expect(mod.findIdeProcessWindows()).toBeNull()
   })
 })
 

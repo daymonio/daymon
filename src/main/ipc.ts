@@ -7,7 +7,7 @@ import * as memory from './db/memory'
 import * as tasks from './db/tasks'
 import { getConfig, getClaudeConfigPath } from './config'
 import { checkClaudeCliAvailable } from '../shared/claude-code'
-import { findIdeProcessLinux } from '../shared/auto-nudge'
+import { findIdeProcessLinux, findIdeProcessWindows } from '../shared/auto-nudge'
 import { sidecarFetch } from './sidecar'
 import { uninstall } from './uninstall'
 import { checkForUpdates, downloadUpdate, installUpdate, getUpdateStatus, simulateUpdate } from './updater'
@@ -337,8 +337,61 @@ end tell`
       } else {
         throw new Error(`Unknown target: ${target}`)
       }
+    } else if (os === 'win32') {
+      // Windows: use PowerShell + WScript.Shell COM
+      if (target === 'claude-code') {
+        const ide = findIdeProcessWindows()
+        if (!ide) throw new Error('No supported IDE (Cursor, VSCode) found running')
+
+        const escaped = message.replace(/([+^%~(){}[\]])/g, '{$1}')
+        const ps = [
+          '$wsh = New-Object -ComObject WScript.Shell;',
+          `$proc = Get-Process '${ide.process}' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1;`,
+          'if ($proc) {',
+          '  [void]$wsh.AppActivate($proc.Id);',
+          '  Start-Sleep -Milliseconds 300;',
+          "  $wsh.SendKeys('^l');",
+          '  Start-Sleep -Milliseconds 300;',
+          `  $wsh.SendKeys('${escaped.replace(/'/g, "''")}');`,
+          "  $wsh.SendKeys('{ENTER}');",
+          '} else { exit 1 }'
+        ].join(' ')
+        execSync(`powershell -NoProfile -Command "${ps.replace(/"/g, '\\"')}"`, {
+          timeout: 15000,
+          stdio: 'ignore',
+          windowsHide: true
+        })
+      } else if (target === 'claude-desktop') {
+        let fullMessage = message
+        if (filePath) {
+          const content = readFileSync(filePath, 'utf-8')
+          fullMessage = `Present these task results in a well-formatted way:\n\n${content}`
+        }
+        clipboard.writeText(fullMessage)
+
+        const ps = [
+          '$wsh = New-Object -ComObject WScript.Shell;',
+          "$proc = Get-Process 'Claude' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1;",
+          'if ($proc) {',
+          '  [void]$wsh.AppActivate($proc.Id);',
+          '  Start-Sleep -Milliseconds 500;',
+          "  $wsh.SendKeys('^n');",
+          '  Start-Sleep -Milliseconds 300;',
+          "  $wsh.SendKeys('^v');",
+          '  Start-Sleep -Milliseconds 200;',
+          "  $wsh.SendKeys('{ENTER}');",
+          '} else { exit 1 }'
+        ].join(' ')
+        execSync(`powershell -NoProfile -Command "${ps.replace(/"/g, '\\"')}"`, {
+          timeout: 15000,
+          stdio: 'ignore',
+          windowsHide: true
+        })
+      } else {
+        throw new Error(`Unknown target: ${target}`)
+      }
     } else {
-      throw new Error('Only supported on macOS and Linux (X11)')
+      throw new Error('Only supported on macOS, Linux (X11), and Windows')
     }
   })
 }
