@@ -200,8 +200,8 @@ describe('nudgeClaudeCode', () => {
     expect(nudgeCall).toContain('daymon_task_history')
   })
 
-  it('does not call osascript on non-macOS platforms', async () => {
-    mockPlatform.mockReturnValue('linux')
+  it('does not call anything on unsupported platforms', async () => {
+    mockPlatform.mockReturnValue('win32')
     const nudge = await importWithMocks()
     nudge({ taskId: 1, taskName: 'Test', success: true, durationMs: 1000 })
 
@@ -273,6 +273,133 @@ describe('nudgeClaudeCode', () => {
     const opts = mockExecSync.mock.calls[1][1] as Record<string, unknown>
     expect(opts.timeout).toBe(10000)
     expect(opts.stdio).toBe('ignore')
+  })
+})
+
+// ─── nudgeClaudeCode (Linux) ────────────────────────────────
+
+describe('nudgeClaudeCode (Linux)', () => {
+  let mockExecSync: ReturnType<typeof vi.fn>
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    vi.resetModules()
+    mockExecSync = vi.fn()
+    process.env = { ...originalEnv }
+    delete process.env.XDG_SESSION_TYPE
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  async function importLinux() {
+    vi.doMock('child_process', () => ({ execSync: mockExecSync }))
+    vi.doMock('os', () => ({ platform: vi.fn().mockReturnValue('linux') }))
+    vi.doMock('../db-queries', () => ({ getSetting: vi.fn() }))
+    const mod = await import('../auto-nudge')
+    return mod.nudgeClaudeCode
+  }
+
+  it('uses xdotool on Linux when X11 session is active', async () => {
+    // which xdotool succeeds, pgrep finds 'cursor', xdotool commands work
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd === 'which xdotool') return '/usr/bin/xdotool'
+      if (cmd.includes('pgrep -x "cursor"')) return '12345'
+      if (cmd.includes('xdotool search')) return '67890\n'
+      return ''
+    })
+    const nudge = await importLinux()
+    nudge({ taskId: 5, taskName: 'Linux Task', success: true, durationMs: 3000 })
+
+    const calls = mockExecSync.mock.calls.map(c => c[0] as string)
+    expect(calls.some(c => c === 'which xdotool')).toBe(true)
+    expect(calls.some(c => c.includes('pgrep'))).toBe(true)
+    expect(calls.some(c => c.includes('xdotool windowactivate'))).toBe(true)
+    expect(calls.some(c => c.includes('xdotool key') && c.includes('ctrl+l'))).toBe(true)
+    expect(calls.some(c => c.includes('xdotool type'))).toBe(true)
+    expect(calls.some(c => c.includes('xdotool key') && c.includes('Return'))).toBe(true)
+    // Should NOT use osascript
+    expect(calls.some(c => c.includes('osascript'))).toBe(false)
+  })
+
+  it('skips nudge on Linux Wayland', async () => {
+    process.env.XDG_SESSION_TYPE = 'wayland'
+    const nudge = await importLinux()
+    nudge({ taskId: 1, taskName: 'Test', success: true, durationMs: 1000 })
+
+    expect(mockExecSync).not.toHaveBeenCalled()
+  })
+
+  it('skips nudge on Linux when xdotool not installed', async () => {
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd === 'which xdotool') throw new Error('not found')
+      return ''
+    })
+    const nudge = await importLinux()
+    nudge({ taskId: 1, taskName: 'Test', success: true, durationMs: 1000 })
+
+    expect(mockExecSync).toHaveBeenCalledTimes(1) // only 'which xdotool'
+  })
+
+  it('skips nudge on Linux when no IDE is running', async () => {
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd === 'which xdotool') return '/usr/bin/xdotool'
+      if (cmd.includes('pgrep')) throw new Error('not found')
+      return ''
+    })
+    const nudge = await importLinux()
+    nudge({ taskId: 1, taskName: 'Test', success: true, durationMs: 1000 })
+
+    const calls = mockExecSync.mock.calls.map(c => c[0] as string)
+    // Should have checked xdotool + all 3 IDE processes via pgrep
+    expect(calls.filter(c => c.includes('pgrep')).length).toBe(3)
+    // Should NOT have called xdotool commands
+    expect(calls.some(c => c.includes('xdotool windowactivate'))).toBe(false)
+  })
+})
+
+// ─── findIdeProcessLinux ────────────────────────────────────
+
+describe('findIdeProcessLinux', () => {
+  let mockExecSync: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.resetModules()
+    mockExecSync = vi.fn()
+  })
+
+  async function importModule() {
+    vi.doMock('child_process', () => ({ execSync: mockExecSync }))
+    vi.doMock('os', () => ({ platform: vi.fn().mockReturnValue('linux') }))
+    vi.doMock('../db-queries', () => ({ getSetting: vi.fn() }))
+    return await import('../auto-nudge')
+  }
+
+  it('detects cursor process', async () => {
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes('pgrep -x "cursor"')) return '12345'
+      throw new Error('not found')
+    })
+    const mod = await importModule()
+    const result = mod.findIdeProcessLinux()
+    expect(result).toEqual({ process: 'cursor', windowName: 'Cursor' })
+  })
+
+  it('detects code process when cursor is not running', async () => {
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes('pgrep -x "code"')) return '54321'
+      throw new Error('not found')
+    })
+    const mod = await importModule()
+    const result = mod.findIdeProcessLinux()
+    expect(result).toEqual({ process: 'code', windowName: 'Visual Studio Code' })
+  })
+
+  it('returns null when no IDE is running', async () => {
+    mockExecSync.mockImplementation(() => { throw new Error('not found') })
+    const mod = await importModule()
+    expect(mod.findIdeProcessLinux()).toBeNull()
   })
 })
 

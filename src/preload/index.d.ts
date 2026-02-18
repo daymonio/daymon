@@ -70,6 +70,7 @@ interface AppAPI {
   showInFolder: (filePath: string) => Promise<void>
   sendToApp: (target: string, message: string, filePath?: string) => Promise<void>
   requestAccessibility: () => Promise<boolean>
+  getPlatform: () => string
 }
 
 interface WorkersAPI {

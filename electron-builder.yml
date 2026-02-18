@@ -14,6 +14,8 @@ asarUnpack:
   - "node_modules/onnxruntime-node/**"
   - "node_modules/sqlite-vec-darwin-arm64/**"
   - "node_modules/sqlite-vec-darwin-x64/**"
+  - "node_modules/sqlite-vec-linux-x64/**"
+  - "node_modules/sqlite-vec-linux-arm64/**"
   - "node_modules/@img/**"
   - "resources/**"
 extraResources:
@@ -57,8 +59,17 @@ nsis:
   allowToChangeInstallationDirectory: true
 linux:
   target:
-    - AppImage
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
   category: Utility
+  icon: resources/icon.png
+  desktop:
+    Name: Daymon
+    Comment: Open source autopilot for Claude
+    Categories: Utility;Development;
+    StartupWMClass: daymon
 npmRebuild: true
 publish:
   provider: github

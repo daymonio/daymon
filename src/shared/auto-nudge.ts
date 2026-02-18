@@ -11,7 +11,9 @@ export interface NudgeOptions {
   errorMessage?: string
 }
 
-// Known IDE bundle identifiers that may host Claude Code
+// ─── macOS IDE Detection ─────────────────────────────────────
+
+// Known IDE bundle identifiers that may host Claude Code (macOS)
 const IDE_BUNDLE_IDS = [
   'com.todesktop.230313mzl4w4u92', // Cursor
   'com.microsoft.VSCode',
@@ -19,7 +21,7 @@ const IDE_BUNDLE_IDS = [
 ]
 
 /**
- * Find the bundle ID of a running IDE that could host Claude Code.
+ * Find the bundle ID of a running IDE that could host Claude Code (macOS).
  * Returns null if none found.
  */
 function findIdeBundle(): string | null {
@@ -30,6 +32,29 @@ function findIdeBundle(): string | null {
         { timeout: 3000, stdio: 'ignore' }
       )
       return bid
+    } catch { /* not running */ }
+  }
+  return null
+}
+
+// ─── Linux IDE Detection ─────────────────────────────────────
+
+// IDE process names and their corresponding window title search terms
+const LINUX_IDE_PROCESSES: Array<{ process: string; windowName: string }> = [
+  { process: 'cursor', windowName: 'Cursor' },
+  { process: 'code-insiders', windowName: 'Visual Studio Code' },
+  { process: 'code', windowName: 'Visual Studio Code' }
+]
+
+/**
+ * Find a running IDE process on Linux via pgrep.
+ * Returns the window name to search for, or null if none found.
+ */
+export function findIdeProcessLinux(): { process: string; windowName: string } | null {
+  for (const ide of LINUX_IDE_PROCESSES) {
+    try {
+      execSync(`pgrep -x "${ide.process}"`, { timeout: 3000, stdio: 'ignore' })
+      return ide
     } catch { /* not running */ }
   }
   return null
@@ -112,31 +137,29 @@ async function processNudgeQueue(): Promise<void> {
 // ─── Nudge Execution ─────────────────────────────────────────
 
 /**
- * Send a nudge message to the active Claude Code chat via osascript.
- * Activates the IDE, focuses Claude Code input (Cmd+L), types the message.
- * Non-fatal: all errors are logged to stderr but never throw.
+ * Build the nudge message text for a completed task.
  */
-export function nudgeClaudeCode(options: NudgeOptions): void {
-  if (platform() !== 'darwin') return
+function buildNudgeMessage(options: NudgeOptions): string {
+  const status = options.success ? 'completed successfully' : 'failed'
+  const duration = (options.durationMs / 1000).toFixed(1)
+  const safeName = options.taskName.replace(/[\x00-\x1f\x7f]/g, '')
+  return `Daymon task "${safeName}" (id: ${options.taskId}) ${status} in ${duration}s. Show me the results using daymon_task_history.`
+}
 
-  try {
-    const ideBundle = findIdeBundle()
-    if (!ideBundle) {
-      console.error('[auto-nudge] No supported IDE found running')
-      return
-    }
+/**
+ * Send a nudge via osascript on macOS.
+ */
+function nudgeMacOS(options: NudgeOptions): void {
+  const ideBundle = findIdeBundle()
+  if (!ideBundle) {
+    console.error('[auto-nudge] No supported IDE found running')
+    return
+  }
 
-    const status = options.success ? 'completed successfully' : 'failed'
-    const duration = (options.durationMs / 1000).toFixed(1)
+  const message = buildNudgeMessage(options)
+  const escaped = message.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 
-    const safeName = options.taskName.replace(/[\x00-\x1f\x7f]/g, '')
-    let message = `Daymon task "${safeName}" (id: ${options.taskId}) ${status} in ${duration}s.`
-    message += ' Show me the results using daymon_task_history.'
-
-    // Escape for AppleScript string: backslashes first, then double quotes
-    const escaped = message.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-
-    const script = `
+  const script = `
 tell application id "${ideBundle}" to activate
 delay 0.3
 tell application "System Events"
@@ -146,12 +169,73 @@ tell application "System Events"
   keystroke return
 end tell`
 
-    console.error(`[auto-nudge] Sending nudge for task ${options.taskId} to ${ideBundle}...`)
-    execSync(`osascript -e '${script.replace(/'/g, "'\"'\"'")}'`, {
-      timeout: 10000,
-      stdio: 'ignore'
-    })
-    console.error(`[auto-nudge] Nudge sent successfully`)
+  console.error(`[auto-nudge] Sending nudge for task ${options.taskId} to ${ideBundle}...`)
+  execSync(`osascript -e '${script.replace(/'/g, "'\"'\"'")}'`, {
+    timeout: 10000,
+    stdio: 'ignore'
+  })
+  console.error(`[auto-nudge] Nudge sent successfully`)
+}
+
+/**
+ * Send a nudge via xdotool on Linux (X11 only).
+ */
+function nudgeLinux(options: NudgeOptions): void {
+  // xdotool only works on X11
+  if (process.env.XDG_SESSION_TYPE === 'wayland') {
+    console.error('[auto-nudge] Wayland detected — xdotool not supported, skipping nudge')
+    return
+  }
+
+  try {
+    execSync('which xdotool', { timeout: 3000, stdio: 'ignore' })
+  } catch {
+    console.error('[auto-nudge] xdotool not installed, skipping nudge')
+    return
+  }
+
+  const ide = findIdeProcessLinux()
+  if (!ide) {
+    console.error('[auto-nudge] No supported IDE found running')
+    return
+  }
+
+  const message = buildNudgeMessage(options)
+
+  // Find and activate IDE window, send Ctrl+L, type message, press Enter
+  const wid = execSync(`xdotool search --name "${ide.windowName}" | head -1`, {
+    encoding: 'utf-8',
+    timeout: 5000
+  }).trim()
+  if (!wid) {
+    console.error(`[auto-nudge] Could not find window for ${ide.windowName}`)
+    return
+  }
+
+  console.error(`[auto-nudge] Sending nudge for task ${options.taskId} to ${ide.process} (wid ${wid})...`)
+  execSync(`xdotool windowactivate --sync ${wid}`, { timeout: 5000, stdio: 'ignore' })
+  execSync(`xdotool key --window ${wid} ctrl+l`, { timeout: 5000, stdio: 'ignore' })
+  execSync('sleep 0.3', { timeout: 5000, stdio: 'ignore' })
+  execSync(`xdotool type --window ${wid} --clearmodifiers -- ${JSON.stringify(message)}`, { timeout: 10000, stdio: 'ignore' })
+  execSync(`xdotool key --window ${wid} Return`, { timeout: 5000, stdio: 'ignore' })
+  console.error(`[auto-nudge] Nudge sent successfully`)
+}
+
+/**
+ * Send a nudge message to the active Claude Code chat.
+ * Uses osascript on macOS, xdotool on Linux (X11).
+ * Non-fatal: all errors are logged to stderr but never throw.
+ */
+export function nudgeClaudeCode(options: NudgeOptions): void {
+  const os = platform()
+  if (os !== 'darwin' && os !== 'linux') return
+
+  try {
+    if (os === 'darwin') {
+      nudgeMacOS(options)
+    } else {
+      nudgeLinux(options)
+    }
   } catch (err) {
     console.error(`[auto-nudge] Failed:`, err instanceof Error ? err.message : err)
   }

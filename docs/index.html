@@ -67,10 +67,11 @@
         </div>
         <p class="hero-eyebrow">Works with Claude Desktop and Claude Code.</p>
         <p class="disclaimer">Not affiliated with, endorsed by, or sponsored by Anthropic.</p>
-        <p class="hero-description">Daymon is a free, open-source macOS desktop app that adds scheduling, persistent memory, and background automation to Claude. It sits in your menu bar, connects to Claude Desktop or Claude Code, and runs tasks on a schedule &mdash; even when the app is closed. No API keys, no cloud servers, no account required.</p>
-        <p class="hero-trust"><strong>100% local. No cloud. No account. No tracking.</strong><br>Your data is a SQLite file on your Mac &mdash; inspect or delete it anytime.</p>
+        <p class="hero-description">Daymon is a free, open-source desktop app for macOS and Linux that adds scheduling, persistent memory, and background automation to Claude. It sits in your menu bar, connects to Claude Desktop or Claude Code, and runs tasks on a schedule &mdash; even when the app is closed. No API keys, no cloud servers, no account required.</p>
+        <p class="hero-trust"><strong>100% local. No cloud. No account. No tracking.</strong><br>Your data is a SQLite file on your machine &mdash; inspect or delete it anytime.</p>
         <div class="cta">
-          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary" onclick="trackDownload()">Download for Mac</a>
+          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary download-btn" onclick="trackDownload()">Download for Mac</a>
+          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-secondary download-alt-btn" onclick="trackDownload()" style="display:none">Download for Linux</a>
           <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
           <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" style="gap:10px" target="_blank" rel="noopener"><span class="star-badge" style="display:none;align-items:center;gap:4px;background:rgba(245,149,66,0.25);border:1px solid rgba(245,149,66,0.5);padding:3px 10px;border-radius:20px;font-size:0.8rem;font-weight:700;color:#f59542;line-height:1">&#9733; <span class="star-count"></span></span><span>Star Us on GitHub</span></a>
           <a href="mailto:hello@daymon.io?subject=Subscribe&body=Subscribe%20me%20for%20updates" class="btn btn-secondary">Subscribe for Updates</a>
@@ -78,7 +79,7 @@
         <div class="brew-install">
           <code>brew install daymonio/daymon/daymon</code>
         </div>
-        <p class="requirements">Requires macOS 12+ and <a href="https://claude.ai/download">Claude Desktop</a> or <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>.</p>
+        <p class="requirements">Requires macOS 12+ or Linux (x64). Works with <a href="https://claude.ai/download">Claude Desktop</a> or <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>.</p>
       </div>
     </section>
 
@@ -509,7 +510,8 @@
         <h3>Your AI shouldn't sit idle.</h3>
         <p>Your subscription works while you sleep. Daymon is free, open source, and runs entirely on your machine.</p>
         <div class="cta">
-          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary" onclick="trackDownload()">Download for Mac</a>
+          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-primary download-btn" onclick="trackDownload()">Download for Mac</a>
+          <a href="https://github.com/daymonio/daymon/releases/latest" class="btn btn-secondary download-alt-btn" onclick="trackDownload()" style="display:none">Download for Linux</a>
           <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
           <a href="https://github.com/daymonio/daymon" class="btn btn-secondary" style="gap:10px" target="_blank" rel="noopener"><span class="star-badge" style="display:none;align-items:center;gap:4px;background:rgba(245,149,66,0.25);border:1px solid rgba(245,149,66,0.5);padding:3px 10px;border-radius:20px;font-size:0.8rem;font-weight:700;color:#f59542;line-height:1">&#9733; <span class="star-count"></span></span><span>Star Us on GitHub</span></a>
           <a href="mailto:hello@daymon.io?subject=Subscribe&body=Subscribe%20me%20for%20updates" class="btn btn-secondary">Subscribe for Updates</a>
@@ -526,12 +528,16 @@
         <p class="uninstall-intro">Changed your mind? Remove Daymon completely in seconds.</p>
         <div class="uninstall-steps">
           <div class="uninstall-option">
-            <strong>Homebrew</strong>
+            <strong>Homebrew (macOS)</strong>
             <code class="inline-code">brew uninstall daymon</code>
           </div>
           <div class="uninstall-option">
-            <strong>Manual</strong>
+            <strong>macOS (manual)</strong>
             <p>Drag Daymon from Applications to Trash. To remove all data: <code class="inline-code">rm -rf ~/Library/Application\ Support/daymon</code></p>
+          </div>
+          <div class="uninstall-option">
+            <strong>Linux (.deb)</strong>
+            <p><code class="inline-code">sudo apt remove daymon</code> &mdash; to remove all data: <code class="inline-code">rm -rf ~/.config/daymon</code></p>
           </div>
         </div>
       </div>
@@ -550,15 +556,44 @@
       twq('event', 'tw-r5tu7-r5tu8', {});
     }
 
+    // Detect platform and show the right download button
+    var isLinux = /Linux/.test(navigator.userAgent);
+    if (isLinux) {
+      document.querySelectorAll('.download-btn').forEach(function(el) {
+        el.textContent = 'Download for Linux (.deb)';
+      });
+      document.querySelectorAll('.download-alt-btn').forEach(function(el) {
+        el.textContent = 'Download for Mac';
+        el.style.display = '';
+      });
+    } else {
+      document.querySelectorAll('.download-alt-btn').forEach(function(el) {
+        el.textContent = 'Download for Linux';
+        el.style.display = '';
+      });
+    }
+
     fetch('https://api.github.com/repos/daymonio/daymon/releases/latest')
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        var dmg = (d.assets || []).find(function(a) { return a.name.endsWith('.dmg'); });
-        if (dmg) {
-          document.querySelectorAll('a[href$="/releases/latest"]').forEach(function(el) {
-            if (el.textContent.indexOf('Download') !== -1) el.href = dmg.browser_download_url;
-          });
-        }
+        var assets = d.assets || [];
+        var dmg = assets.find(function(a) { return a.name.endsWith('.dmg'); });
+        var deb = assets.find(function(a) { return a.name.endsWith('.deb'); });
+
+        document.querySelectorAll('.download-btn').forEach(function(el) {
+          if (isLinux && deb) {
+            el.href = deb.browser_download_url;
+          } else if (!isLinux && dmg) {
+            el.href = dmg.browser_download_url;
+          }
+        });
+        document.querySelectorAll('.download-alt-btn').forEach(function(el) {
+          if (isLinux && dmg) {
+            el.href = dmg.browser_download_url;
+          } else if (!isLinux && deb) {
+            el.href = deb.browser_download_url;
+          }
+        });
       })
       .catch(function() {});
 

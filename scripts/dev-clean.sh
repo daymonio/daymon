@@ -9,7 +9,12 @@ pkill -9 -f "$ROOT_DIR/node_modules/electron/dist" 2>/dev/null || true
 sleep 1
 
 # Remove stale Chromium singleton lock files (covers both "daymon" and "Daymon" casing).
+# macOS
 for APP_DATA in "$HOME/Library/Application Support/daymon" "$HOME/Library/Application Support/Daymon"; do
+  rm -f "$APP_DATA/SingletonLock" "$APP_DATA/SingletonSocket" "$APP_DATA/SingletonCookie" 2>/dev/null || true
+done
+# Linux
+for APP_DATA in "$HOME/.config/daymon" "$HOME/.config/Daymon"; do
   rm -f "$APP_DATA/SingletonLock" "$APP_DATA/SingletonSocket" "$APP_DATA/SingletonCookie" 2>/dev/null || true
 done
 

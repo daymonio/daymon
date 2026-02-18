@@ -75,23 +75,94 @@ jobs:
           path: |
             dist/*.dmg
             dist/*.zip
+            dist/*.blockmap
             dist/latest-mac.yml
+
+  build-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild better-sqlite3 for Node.js (tests only)
+        run: npx --yes node-gyp rebuild --directory=node_modules/better-sqlite3
+
+      - name: TypeScript check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          DAYMON_TELEMETRY_TOKEN: ${{ secrets.DAYMON_TELEMETRY_TOKEN }}
+
+      - name: Package Linux
+        run: npx electron-builder --linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: daymon-linux
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/latest-linux.yml
+
+  release:
+    needs: [build-mac, build-linux]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: daymon-mac
+          path: dist-mac/
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: daymon-linux
+          path: dist-linux/
 
       - name: Set version
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/*.dmg
-            dist/*.zip
-            dist/*.blockmap
-            dist/latest-mac.yml
+            dist-mac/*.dmg
+            dist-mac/*.zip
+            dist-mac/*.blockmap
+            dist-mac/latest-mac.yml
+            dist-linux/*.AppImage
+            dist-linux/*.deb
+            dist-linux/latest-linux.yml
           body: |
             ## Install
+
+            ### macOS
 
             **[Download Daymon-${{ steps.version.outputs.version }}-universal.dmg](https://github.com/daymonio/daymon/releases/download/${{ github.ref_name }}/Daymon-${{ steps.version.outputs.version }}-universal.dmg)** — open it and drag Daymon to Applications.
 
@@ -100,17 +171,24 @@ jobs:
             brew install daymonio/daymon/daymon
             ```
 
-            > The `.zip`, `.blockmap`, and `latest-mac.yml` files are for auto-updates — you don't need them.
+            ### Linux
+
+            **[Download Daymon-${{ steps.version.outputs.version }}-amd64.deb](https://github.com/daymonio/daymon/releases/download/${{ github.ref_name }}/daymon_${{ steps.version.outputs.version }}_amd64.deb)** — install with `sudo dpkg -i daymon_${{ steps.version.outputs.version }}_amd64.deb`
+
+            Or use the AppImage:
+            **[Download Daymon-${{ steps.version.outputs.version }}.AppImage](https://github.com/daymonio/daymon/releases/download/${{ github.ref_name }}/Daymon-${{ steps.version.outputs.version }}.AppImage)** — `chmod +x` and run.
+
+            > The `.zip`, `.blockmap`, and `latest-*.yml` files are for auto-updates — you don't need them.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   update-homebrew:
-    needs: build-mac
+    needs: release
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download artifacts
+      - name: Download macOS artifacts
         uses: actions/download-artifact@v4
         with:
           name: daymon-mac

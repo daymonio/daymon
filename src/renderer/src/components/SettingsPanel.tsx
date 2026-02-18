@@ -190,7 +190,7 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange, onRefreshUpd
         <h3 className="text-xs font-semibold text-gray-700 mb-1">Preferences</h3>
         <div className="bg-gray-50 rounded-lg p-2 space-y-1">
           {toggle('Launch at login', autoLaunch, toggleAutoLaunch, 'Start Daymon when you log in')}
-          {toggle('Notifications', notifications, toggleNotifications, 'Show macOS notifications when tasks complete')}
+          {toggle('Notifications', notifications, toggleNotifications, 'Show notifications when tasks complete')}
           {toggle('Large window', largeWindow, toggleLargeWindow, 'Bigger window with expanded cards and table layout')}
           {toggle('Advanced mode', advancedMode, toggleAdvancedMode, 'Show task IDs, debug info, and extra controls')}
           {toggle('Help improve Daymon', telemetry, toggleTelemetry, 'Share anonymous crash reports and diagnostics. No personal information is collected.')}
@@ -201,6 +201,7 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange, onRefreshUpd
         <h3 className="text-xs font-semibold text-gray-700 mb-1">Auto-Nudge</h3>
         <p className="text-[10px] text-gray-400 mb-1.5 leading-tight">When a task finishes, Daymon can show results in your active Claude Code chat automatically.</p>
         <div className="bg-gray-50 rounded-lg p-2 space-y-1">
+          {window.api.app.getPlatform() === 'darwin' ? (
           <div className="py-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-600">Accessibility permission</span>
@@ -213,6 +214,14 @@ export function SettingsPanel({ advancedMode, onAdvancedModeChange, onRefreshUpd
             </div>
             <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">Required for auto-nudge to type into Claude Code</p>
           </div>
+          ) : window.api.app.getPlatform() === 'linux' ? (
+          <div className="py-1">
+            <div className="text-xs text-gray-600">Auto-nudge requirement</div>
+            <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+              Requires <code className="text-gray-500">xdotool</code> package (X11 only). Install with: <code className="text-gray-500">sudo apt install xdotool</code>
+            </p>
+          </div>
+          ) : null}
           <div className="py-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-600">Default for new tasks</span>

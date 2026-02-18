@@ -88,7 +88,8 @@ const api = {
     openFile: (filePath: string) => ipcRenderer.invoke('app:openFile', filePath),
     showInFolder: (filePath: string) => ipcRenderer.invoke('app:showInFolder', filePath),
     sendToApp: (target: string, message: string, filePath?: string) => ipcRenderer.invoke('app:sendToApp', target, message, filePath),
-    requestAccessibility: () => ipcRenderer.invoke('app:requestAccessibility') as Promise<boolean>
+    requestAccessibility: () => ipcRenderer.invoke('app:requestAccessibility') as Promise<boolean>,
+    getPlatform: () => process.platform
   }
 }
 

@@ -55,6 +55,8 @@ function resolveClaudePath(): string | null {
     join(home, '.local', 'bin', 'claude'),
     join(home, '.claude', 'bin', 'claude'),
     '/usr/local/bin/claude',
+    '/usr/bin/claude',
+    '/snap/bin/claude',
     '/opt/homebrew/bin/claude'
   ]
 

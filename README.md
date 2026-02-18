@@ -8,12 +8,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-12%2B-blue)](https://github.com/daymonio/daymon/releases/latest)
+[![Linux](https://img.shields.io/badge/Linux-x64-blue)](https://github.com/daymonio/daymon/releases/latest)
 [![GitHub release](https://img.shields.io/github/v/release/daymonio/daymon)](https://github.com/daymonio/daymon/releases/latest)
 [![GitHub stars](https://img.shields.io/github/stars/daymonio/daymon)](https://github.com/daymonio/daymon/stargazers)
 
 **Open source autopilot for Claude.**
 
-Scheduled tasks, persistent memory, background automation. No API keys. No cloud. Runs on your Mac.
+Scheduled tasks, persistent memory, background automation. No API keys. No cloud. Runs on your Mac or Linux machine.
 
 [daymon.io](https://daymon.io)
 
@@ -35,21 +36,33 @@ No API keys. No token costs. No cloud. Just your existing Claude subscription, f
 
 ## Requirements
 
-- **macOS 12 (Monterey) or later** (Apple Silicon & Intel)
+- **macOS 12 (Monterey) or later** (Apple Silicon & Intel) or **Linux x64** (Ubuntu, Debian, Fedora, etc.)
 - **[Claude Desktop](https://claude.ai/download)** or **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** (you need at least one)
 - A Claude subscription (Pro, Max, or Team) — Daymon uses your existing subscription, no API keys needed
 
 ## Installation
 
-### Homebrew (recommended)
+### macOS — Homebrew (recommended)
 
 ```bash
 brew install daymonio/daymon/daymon
 ```
 
-### Download
+### macOS — Download
 
 Download the latest `.dmg` from [GitHub Releases](https://github.com/daymonio/daymon/releases/latest).
+
+### Linux — Download
+
+Download the `.deb` or `.AppImage` from [GitHub Releases](https://github.com/daymonio/daymon/releases/latest).
+
+```bash
+# .deb (Ubuntu/Debian)
+sudo dpkg -i daymon_*.deb
+
+# AppImage (any distro)
+chmod +x Daymon-*.AppImage && ./Daymon-*.AppImage
+```
 
 ### Build from Source
 
@@ -87,7 +100,7 @@ Then try:
 
 ## What is Daymon?
 
-Daymon is a macOS app that lives in your menu bar and Dock. It gives Claude persistent memory, scheduled tasks, workers, and file watchers — all running locally on your machine.
+Daymon is a desktop app for macOS and Linux that lives in your menu bar. It gives Claude persistent memory, scheduled tasks, workers, and file watchers — all running locally on your machine.
 
 Your Claude subscription only works when you do. Daymon puts it to work 24/7.
 
@@ -189,6 +202,7 @@ npm run build        # Full build (main + renderer + MCP)
 npm test             # Run test suite
 npm run typecheck    # TypeScript type checking
 npm run build:mac    # Build + package macOS DMG
+npm run build:linux  # Build + package Linux AppImage + deb
 ```
 
 <details>

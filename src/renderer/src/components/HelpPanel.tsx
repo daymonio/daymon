@@ -37,8 +37,9 @@ export function HelpPanel(): React.JSX.Element {
             — Daymon stays silent when everything is fine, but pops up in your chat the moment the site goes down.
           </p>
           <p className="text-gray-400 text-[10px]">
-            Requires accessibility permission on macOS. Grant in System Settings
-            &rarr; Privacy &amp; Security &rarr; Accessibility.
+            {window.api.app.getPlatform() === 'linux'
+              ? 'Requires xdotool for auto-nudge. Install with: sudo apt install xdotool (X11 only).'
+              : 'Requires accessibility permission on macOS. Grant in System Settings \u2192 Privacy & Security \u2192 Accessibility.'}
           </p>
         </div>
       </div>

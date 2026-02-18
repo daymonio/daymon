@@ -16,6 +16,7 @@ export function resolveNodePath(): string {
   const home = homedir()
   const candidates = [
     '/usr/local/bin/node',
+    '/usr/bin/node',
     '/opt/homebrew/bin/node'
   ]
 

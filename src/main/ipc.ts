@@ -7,6 +7,7 @@ import * as memory from './db/memory'
 import * as tasks from './db/tasks'
 import { getConfig, getClaudeConfigPath } from './config'
 import { checkClaudeCliAvailable } from '../shared/claude-code'
+import { findIdeProcessLinux } from '../shared/auto-nudge'
 import { sidecarFetch } from './sidecar'
 import { uninstall } from './uninstall'
 import { checkForUpdates, downloadUpdate, installUpdate, getUpdateStatus, simulateUpdate } from './updater'
@@ -226,30 +227,32 @@ export function registerIpcHandlers(): void {
   })
   ipcMain.handle('app:showInFolder', (_e, filePath: string) => shell.showItemInFolder(filePath))
   ipcMain.handle('app:sendToApp', (_e, target: string, message: string, filePath?: string) => {
-    if (platform() !== 'darwin') throw new Error('Only supported on macOS')
-    const escaped = message.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    const os = platform()
 
-    if (target === 'claude-code') {
-      // Find running IDE (Cursor, VSCode, VSCode Insiders)
-      const ideBundles = [
-        'com.todesktop.230313mzl4w4u92', // Cursor
-        'com.microsoft.VSCode',
-        'com.microsoft.VSCodeInsiders'
-      ]
-      let ideBundle: string | null = null
-      for (const bid of ideBundles) {
-        try {
-          execSync(
-            `osascript -e 'tell application "System Events" to get first application process whose bundle identifier is "${bid}"'`,
-            { timeout: 3000, stdio: 'ignore' }
-          )
-          ideBundle = bid
-          break
-        } catch { /* not running */ }
-      }
-      if (!ideBundle) throw new Error('No supported IDE (Cursor, VSCode) found running')
+    if (os === 'darwin') {
+      // macOS: use osascript + AppleScript
+      const escaped = message.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 
-      const script = `
+      if (target === 'claude-code') {
+        const ideBundles = [
+          'com.todesktop.230313mzl4w4u92', // Cursor
+          'com.microsoft.VSCode',
+          'com.microsoft.VSCodeInsiders'
+        ]
+        let ideBundle: string | null = null
+        for (const bid of ideBundles) {
+          try {
+            execSync(
+              `osascript -e 'tell application "System Events" to get first application process whose bundle identifier is "${bid}"'`,
+              { timeout: 3000, stdio: 'ignore' }
+            )
+            ideBundle = bid
+            break
+          } catch { /* not running */ }
+        }
+        if (!ideBundle) throw new Error('No supported IDE (Cursor, VSCode) found running')
+
+        const script = `
 tell application id "${ideBundle}" to activate
 delay 0.3
 tell application "System Events"
@@ -258,20 +261,19 @@ tell application "System Events"
   keystroke "${escaped}"
   keystroke return
 end tell`
-      execSync(`osascript -e '${script.replace(/'/g, "'\"'\"'")}'`, {
-        timeout: 10000,
-        stdio: 'ignore'
-      })
-    } else if (target === 'claude-desktop') {
-      // Claude Desktop can't read local files — paste content via clipboard
-      let fullMessage = message
-      if (filePath) {
-        const content = readFileSync(filePath, 'utf-8')
-        fullMessage = `Present these task results in a well-formatted way:\n\n${content}`
-      }
-      clipboard.writeText(fullMessage)
+        execSync(`osascript -e '${script.replace(/'/g, "'\"'\"'")}'`, {
+          timeout: 10000,
+          stdio: 'ignore'
+        })
+      } else if (target === 'claude-desktop') {
+        let fullMessage = message
+        if (filePath) {
+          const content = readFileSync(filePath, 'utf-8')
+          fullMessage = `Present these task results in a well-formatted way:\n\n${content}`
+        }
+        clipboard.writeText(fullMessage)
 
-      const script = `
+        const script = `
 tell application "Claude" to activate
 delay 0.5
 tell application "System Events"
@@ -281,12 +283,62 @@ tell application "System Events"
   delay 0.2
   keystroke return
 end tell`
-      execSync(`osascript -e '${script.replace(/'/g, "'\"'\"'")}'`, {
-        timeout: 10000,
-        stdio: 'ignore'
-      })
+        execSync(`osascript -e '${script.replace(/'/g, "'\"'\"'")}'`, {
+          timeout: 10000,
+          stdio: 'ignore'
+        })
+      } else {
+        throw new Error(`Unknown target: ${target}`)
+      }
+    } else if (os === 'linux') {
+      // Linux: use xdotool (X11 only)
+      if (process.env.XDG_SESSION_TYPE === 'wayland') {
+        throw new Error('Send to app is not supported on Wayland (requires X11)')
+      }
+      try {
+        execSync('which xdotool', { timeout: 3000, stdio: 'ignore' })
+      } catch {
+        throw new Error('xdotool is required. Install with: sudo apt install xdotool')
+      }
+
+      if (target === 'claude-code') {
+        const ide = findIdeProcessLinux()
+        if (!ide) throw new Error('No supported IDE (Cursor, VSCode) found running')
+
+        const wid = execSync(`xdotool search --name "${ide.windowName}" | head -1`, {
+          encoding: 'utf-8', timeout: 5000
+        }).trim()
+        if (!wid) throw new Error(`Could not find window for ${ide.windowName}`)
+
+        execSync(`xdotool windowactivate --sync ${wid}`, { timeout: 5000, stdio: 'ignore' })
+        execSync(`xdotool key --window ${wid} ctrl+l`, { timeout: 5000, stdio: 'ignore' })
+        execSync('sleep 0.3', { timeout: 5000, stdio: 'ignore' })
+        execSync(`xdotool type --window ${wid} --clearmodifiers -- ${JSON.stringify(message)}`, { timeout: 10000, stdio: 'ignore' })
+        execSync(`xdotool key --window ${wid} Return`, { timeout: 5000, stdio: 'ignore' })
+      } else if (target === 'claude-desktop') {
+        let fullMessage = message
+        if (filePath) {
+          const content = readFileSync(filePath, 'utf-8')
+          fullMessage = `Present these task results in a well-formatted way:\n\n${content}`
+        }
+        clipboard.writeText(fullMessage)
+
+        const wid = execSync('xdotool search --name "Claude" | head -1', {
+          encoding: 'utf-8', timeout: 5000
+        }).trim()
+        if (!wid) throw new Error('Claude Desktop window not found')
+
+        execSync(`xdotool windowactivate --sync ${wid}`, { timeout: 5000, stdio: 'ignore' })
+        execSync(`xdotool key --window ${wid} ctrl+n`, { timeout: 5000, stdio: 'ignore' })
+        execSync('sleep 0.3', { timeout: 5000, stdio: 'ignore' })
+        execSync(`xdotool key --window ${wid} ctrl+v`, { timeout: 5000, stdio: 'ignore' })
+        execSync('sleep 0.2', { timeout: 5000, stdio: 'ignore' })
+        execSync(`xdotool key --window ${wid} Return`, { timeout: 5000, stdio: 'ignore' })
+      } else {
+        throw new Error(`Unknown target: ${target}`)
+      }
     } else {
-      throw new Error(`Unknown target: ${target}`)
+      throw new Error('Only supported on macOS and Linux (X11)')
     }
   })
 }
