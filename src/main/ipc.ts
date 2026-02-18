@@ -152,7 +152,7 @@ export function registerIpcHandlers(): void {
     return watch
   })
   ipcMain.handle('watches:list', (_e, status?: string) => {
-    const validatedStatus = parseOrThrow(z.enum(['active']).optional(), status)
+    const validatedStatus = parseOrThrow(z.enum(['active', 'paused']).optional(), status)
     return tasks.listWatches(validatedStatus)
   })
   ipcMain.handle('watches:delete', (_e, id: number) => {
@@ -160,8 +160,16 @@ export function registerIpcHandlers(): void {
     tasks.deleteWatch(validatedId)
     sidecarFetch('POST', '/sync').catch(() => {})
   })
+  ipcMain.handle('watches:pause', (_e, id: number) => {
+    tasks.pauseWatch(parseOrThrow(idSchema, id))
+    sidecarFetch('POST', '/sync').catch(() => {})
+  })
+  ipcMain.handle('watches:resume', (_e, id: number) => {
+    tasks.resumeWatch(parseOrThrow(idSchema, id))
+    sidecarFetch('POST', '/sync').catch(() => {})
+  })
   ipcMain.handle('watches:count', (_e, status?: string) => {
-    const validatedStatus = parseOrThrow(z.enum(['active']).optional(), status)
+    const validatedStatus = parseOrThrow(z.enum(['active', 'paused']).optional(), status)
     return tasks.getWatchCount(validatedStatus)
   })
 

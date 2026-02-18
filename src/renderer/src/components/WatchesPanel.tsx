@@ -39,6 +39,19 @@ export function WatchesPanel(): React.JSX.Element {
     }
   }
 
+  async function togglePause(watch: Watch): Promise<void> {
+    try {
+      if (watch.status === 'paused') {
+        await window.api.watches.resume(watch.id)
+      } else {
+        await window.api.watches.pause(watch.id)
+      }
+      refresh()
+    } catch {
+      // ignore; polling will refresh state
+    }
+  }
+
   async function deleteWatch(id: number): Promise<void> {
     if (confirmDeleteId !== id) {
       setConfirmDeleteId(id)
@@ -124,25 +137,38 @@ export function WatchesPanel(): React.JSX.Element {
           <div className="p-4 text-center text-xs text-gray-400">No watches yet.</div>
         )}
         {watches.map((watch: Watch) => (
-          <div key={watch.id} className="px-3 py-2">
+          <div key={watch.id} className={`px-3 py-2 ${watch.status === 'paused' ? 'opacity-60' : ''}`}>
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium text-gray-800 truncate">{watch.path}</div>
+                <div className="text-xs font-medium text-gray-800 truncate">
+                  {watch.path}
+                  {watch.status === 'paused' && (
+                    <span className="ml-1.5 text-[10px] font-medium text-yellow-700 bg-yellow-100 px-1 py-0.5 rounded">Paused</span>
+                  )}
+                </div>
                 <div className="text-xs text-gray-400">
                   {watch.description ?? 'No description'}
                 </div>
               </div>
-              <button
-                onClick={() => deleteWatch(watch.id)}
-                onBlur={() => setConfirmDeleteId(null)}
-                className={`text-xs shrink-0 ${
-                  confirmDeleteId === watch.id
-                    ? 'text-red-600 font-medium'
-                    : 'text-red-400 hover:text-red-600'
-                }`}
-              >
-                {confirmDeleteId === watch.id ? 'Confirm?' : 'Delete'}
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => togglePause(watch)}
+                  className="text-xs text-yellow-600 hover:text-yellow-800"
+                >
+                  {watch.status === 'paused' ? 'Resume' : 'Pause'}
+                </button>
+                <button
+                  onClick={() => deleteWatch(watch.id)}
+                  onBlur={() => setConfirmDeleteId(null)}
+                  className={`text-xs ${
+                    confirmDeleteId === watch.id
+                      ? 'text-red-600 font-medium'
+                      : 'text-red-400 hover:text-red-600'
+                  }`}
+                >
+                  {confirmDeleteId === watch.id ? 'Confirm?' : 'Delete'}
+                </button>
+              </div>
             </div>
             <div className="mt-1 text-xs text-gray-400">
               Triggered {watch.triggerCount} time(s)

@@ -73,6 +73,56 @@ export function registerWatcherTools(server: McpServer): void {
   )
 
   server.registerTool(
+    'daymon_pause_watch',
+    {
+      title: 'Pause Watch',
+      description: 'Pause a file/folder watch by its ID. The watch will stop triggering until resumed. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
+      inputSchema: {
+        id: z.number().describe('The watch ID to pause')
+      }
+    },
+    async ({ id }) => {
+      const db = getMcpDatabase()
+      const watch = queries.getWatch(db, id)
+      if (!watch) {
+        return {
+          content: [{ type: 'text' as const, text: `No watch found with id ${id}.` }]
+        }
+      }
+      queries.pauseWatch(db, id)
+      return {
+        content: [{ type: 'text' as const, text: `Paused watch on "${watch.path}".` }]
+      }
+    }
+  )
+
+  server.registerTool(
+    'daymon_resume_watch',
+    {
+      title: 'Resume Watch',
+      description: 'Resume a paused file/folder watch by its ID. '
+        + 'RESPONSE STYLE: Confirm briefly in 1 sentence. No notes, tips, or implementation details.',
+      inputSchema: {
+        id: z.number().describe('The watch ID to resume')
+      }
+    },
+    async ({ id }) => {
+      const db = getMcpDatabase()
+      const watch = queries.getWatch(db, id)
+      if (!watch) {
+        return {
+          content: [{ type: 'text' as const, text: `No watch found with id ${id}.` }]
+        }
+      }
+      queries.resumeWatch(db, id)
+      return {
+        content: [{ type: 'text' as const, text: `Resumed watch on "${watch.path}".` }]
+      }
+    }
+  )
+
+  server.registerTool(
     'daymon_list_watches',
     {
       title: 'List Watches',

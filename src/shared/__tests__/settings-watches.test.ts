@@ -143,4 +143,37 @@ describe('watches', () => {
     deleteWatch(watch.id)
     expect(listWatches()).toHaveLength(0)
   })
+
+  function pauseWatch(id: number): void {
+    db.prepare("UPDATE watches SET status = 'paused' WHERE id = ?").run(id)
+  }
+
+  function resumeWatch(id: number): void {
+    db.prepare("UPDATE watches SET status = 'active' WHERE id = ?").run(id)
+  }
+
+  it('pauses a watch', () => {
+    const watch = createWatch('/a')
+    expect(watch.status).toBe('active')
+    pauseWatch(watch.id)
+    const watches = listWatches()
+    expect(watches[0].status).toBe('paused')
+  })
+
+  it('resumes a paused watch', () => {
+    const watch = createWatch('/a')
+    pauseWatch(watch.id)
+    resumeWatch(watch.id)
+    const watches = listWatches()
+    expect(watches[0].status).toBe('active')
+  })
+
+  it('paused watches are excluded from active filter', () => {
+    createWatch('/a')
+    const watch2 = createWatch('/b')
+    pauseWatch(watch2.id)
+    expect(listWatches('active')).toHaveLength(1)
+    expect(listWatches('paused')).toHaveLength(1)
+    expect(listWatches()).toHaveLength(2)
+  })
 })

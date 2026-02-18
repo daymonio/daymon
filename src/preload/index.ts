@@ -56,6 +56,8 @@ const api = {
       ipcRenderer.invoke('watches:create', path, description, actionPrompt),
     list: (status?: string) => ipcRenderer.invoke('watches:list', status),
     delete: (id: number) => ipcRenderer.invoke('watches:delete', id),
+    pause: (id: number) => ipcRenderer.invoke('watches:pause', id),
+    resume: (id: number) => ipcRenderer.invoke('watches:resume', id),
     count: (status?: string) => ipcRenderer.invoke('watches:count', status) as Promise<number>
   },
 

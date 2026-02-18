@@ -145,6 +145,14 @@ export function deleteWatch(id: number): void {
   return queries.deleteWatch(getDatabase(), id)
 }
 
+export function pauseWatch(id: number): void {
+  return queries.pauseWatch(getDatabase(), id)
+}
+
+export function resumeWatch(id: number): void {
+  return queries.resumeWatch(getDatabase(), id)
+}
+
 // ─── Settings ───────────────────────────────────────────────
 
 export function getSetting(key: string): string | null {

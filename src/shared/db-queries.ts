@@ -342,6 +342,14 @@ export function deleteWatch(db: Database.Database, id: number): void {
   db.prepare('DELETE FROM watches WHERE id = ?').run(id)
 }
 
+export function pauseWatch(db: Database.Database, id: number): void {
+  db.prepare("UPDATE watches SET status = 'paused' WHERE id = ?").run(id)
+}
+
+export function resumeWatch(db: Database.Database, id: number): void {
+  db.prepare("UPDATE watches SET status = 'active' WHERE id = ?").run(id)
+}
+
 // ─── Settings ───────────────────────────────────────────────
 
 export function getSetting(db: Database.Database, key: string): string | null {
