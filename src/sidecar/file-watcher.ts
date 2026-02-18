@@ -18,6 +18,20 @@ let syncTimer: ReturnType<typeof setInterval> | null = null
 const WATCH_SYNC_INTERVAL_MS = 30_000
 let lastLoggedWatchCount: number | null = null
 
+// Per-watch execution state to prevent infinite trigger loops
+// When an action creates files in the watched directory, we suppress re-triggers
+const POST_EXEC_COOLDOWN_MS = 5000
+const watchExecState = new Map<number, { executing: boolean; cooldownUntil: number }>()
+
+function getWatchExecState(watchId: number): { executing: boolean; cooldownUntil: number } {
+  let state = watchExecState.get(watchId)
+  if (!state) {
+    state = { executing: false, cooldownUntil: 0 }
+    watchExecState.set(watchId, state)
+  }
+  return state
+}
+
 export function startAllWatches(database: Database.Database): void {
   db = database
   if (syncTimer) clearInterval(syncTimer)
@@ -32,6 +46,7 @@ export function stopAllWatches(): void {
     console.log(`Sidecar: Stopped file watch ${id}`)
   }
   activeWatchers.clear()
+  watchExecState.clear()
   lastLoggedWatchCount = null
 }
 
@@ -86,6 +101,7 @@ function stopWatch(id: number): void {
   if (watcher) {
     watcher.close()
     activeWatchers.delete(id)
+    watchExecState.delete(id)
     console.log(`Sidecar: Stopped file watch ${id}`)
   }
 }
@@ -99,6 +115,15 @@ async function handleTrigger(watchId: number, actionPrompt: string, filePath: st
   const now = Date.now()
   const last = lastTrigger.get(key) ?? 0
   if (now - last < DEBOUNCE_MS) return
+
+  const state = getWatchExecState(watchId)
+
+  // Suppress events while an action is running — prevents output files from re-triggering
+  if (state.executing) return
+
+  // Suppress events during post-execution cooldown — catches straggler FS events
+  if (now < state.cooldownUntil) return
+
   lastTrigger.set(key, now)
 
   console.log(`Sidecar: Watch ${watchId}: change detected ${filePath}`)
@@ -111,6 +136,7 @@ async function handleTrigger(watchId: number, actionPrompt: string, filePath: st
   const prompt = `${actionPrompt}\n\nTriggered by file change. File path: ${safeFilePath}`
   console.log(`Sidecar: Watch ${watchId} executing action for ${filePath}`)
 
+  state.executing = true
   try {
     const result = await executeClaudeCode(prompt)
     if (result.exitCode === 0) {
@@ -120,7 +146,21 @@ async function handleTrigger(watchId: number, actionPrompt: string, filePath: st
     }
   } catch (err) {
     console.error(`Sidecar: Watch ${watchId} action error:`, err)
+  } finally {
+    state.executing = false
+    state.cooldownUntil = Date.now() + POST_EXEC_COOLDOWN_MS
   }
+}
+
+// Exported for testing only
+export const _testing = {
+  handleTrigger: (watchId: number, actionPrompt: string, filePath: string) =>
+    handleTrigger(watchId, actionPrompt, filePath),
+  getWatchExecState,
+  get lastTrigger() { return lastTrigger },
+  get watchExecState() { return watchExecState },
+  DEBOUNCE_MS,
+  POST_EXEC_COOLDOWN_MS
 }
 
 function syncWatchesWithDatabase(): void {
