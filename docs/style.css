@@ -201,6 +201,12 @@ nav a:hover {
   box-shadow: 0 0 20px rgba(233, 84, 32, 0.35);
 }
 
+.btn-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: default;
+}
+
 .btn-mac .btn-icon, .btn-win .btn-icon, .btn-linux .btn-icon {
   width: 16px;
   height: 16px;
