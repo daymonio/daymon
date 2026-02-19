@@ -25,6 +25,7 @@ jobs:
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
           file_path: ${{ github.workspace }}\test.exe
           environment_name: PROD
+          override: true
 
       - name: Verify signature
         shell: pwsh
