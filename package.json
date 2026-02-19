@@ -1,6 +1,6 @@
 {
   "name": "daymon",
-  "version": "0.1.28",
+  "version": "0.1.29",
   "description": "Open source autopilot for Claude",
   "main": "./out/main/index.js",
   "author": "Daymon <hello@daymon.io>",
