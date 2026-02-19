@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { initTestDb } from '../../shared/__tests__/helpers/test-db'
-import { cleanupAllRunningRuns } from '../../shared/db-queries'
+import { cleanupAllRunningRuns, createTask, getTask, pauseTask, updateTask } from '../../shared/db-queries'
 
 // This tests the sidecar's HTTP routing logic in isolation.
 // We extract the route handling patterns and test them directly
@@ -97,5 +97,62 @@ describe('sidecar lifecycle', () => {
     expect(cleaned).toBe(1)
     const run = db.prepare('SELECT status FROM task_runs WHERE task_id = ?').get(taskId) as { status: string }
     expect(run.status).toBe('failed')
+  })
+})
+
+describe('POST /tasks/:id/run — paused task ad-hoc execution', () => {
+  let db: Database.Database
+
+  beforeEach(() => {
+    db = initTestDb()
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  it('temporarily activates a paused task for ad-hoc run, then restores status', () => {
+    // Create and pause a task
+    const task = createTask(db, { name: 'Paused Task', prompt: 'test', triggerType: 'manual', executor: 'claude_code' })
+    pauseTask(db, task.id)
+    expect(getTask(db, task.id)!.status).toBe('paused')
+
+    // Simulate the sidecar's ad-hoc run logic: temporarily set active
+    const originalStatus = getTask(db, task.id)!.status
+    if (originalStatus !== 'active') {
+      updateTask(db, task.id, { status: 'active' })
+    }
+    expect(getTask(db, task.id)!.status).toBe('active')
+
+    // After execution completes, restore original status
+    if (originalStatus !== 'active') {
+      const currentTask = getTask(db, task.id)
+      if (currentTask && currentTask.status === 'active') {
+        updateTask(db, task.id, { status: originalStatus })
+      }
+    }
+    expect(getTask(db, task.id)!.status).toBe('paused')
+  })
+
+  it('does not restore status if task was manually changed during execution', () => {
+    // Create and pause a task
+    const task = createTask(db, { name: 'Changed Task', prompt: 'test', triggerType: 'manual', executor: 'claude_code' })
+    pauseTask(db, task.id)
+
+    const originalStatus = getTask(db, task.id)!.status
+    updateTask(db, task.id, { status: 'active' })
+
+    // Simulate user manually changing status during execution (e.g., completing it)
+    updateTask(db, task.id, { status: 'completed' })
+
+    // Restore logic should NOT overwrite user's manual change
+    if (originalStatus !== 'active') {
+      const currentTask = getTask(db, task.id)
+      if (currentTask && currentTask.status === 'active') {
+        updateTask(db, task.id, { status: originalStatus })
+      }
+    }
+    // Status should remain 'completed' (user's manual change preserved)
+    expect(getTask(db, task.id)!.status).toBe('completed')
   })
 })

@@ -665,6 +665,21 @@ export function TasksPanel({ advancedMode = false }: { advancedMode?: boolean })
     }
   }, [runningRuns])
 
+  // Safety timeout: clear stale pending runs that never materialized into actual runs
+  useEffect(() => {
+    if (pendingRuns.size === 0) return
+    const timer = setTimeout(() => {
+      setPendingRuns((prev) => {
+        const next = new Set<number>()
+        for (const id of prev) {
+          if (runningByTaskId.has(id)) next.add(id)
+        }
+        return next.size === prev.size ? prev : next
+      })
+    }, 15000)
+    return () => clearTimeout(timer)
+  }, [pendingRuns.size])
+
   function renderNudge(task: Task): React.JSX.Element {
     return (
       <div className="flex rounded-md overflow-hidden border border-gray-200 w-fit">

@@ -13,7 +13,7 @@ import { join } from 'path'
 import { homedir } from 'os'
 import Database from 'better-sqlite3'
 import { runMigrations } from '../shared/db-migrations'
-import { cleanupAllRunningRuns, getTask as getTaskFromDb } from '../shared/db-queries'
+import { cleanupAllRunningRuns, getTask as getTaskFromDb, updateTask } from '../shared/db-queries'
 import { loadSqliteVec } from '../shared/embeddings'
 import { executeTask } from '../shared/task-runner'
 import { startScheduler, stopScheduler, syncNow, getSchedulerStatus } from './scheduler'
@@ -126,17 +126,38 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     const taskRunMatch = url.match(/^\/tasks\/(\d+)\/run$/)
     if (method === 'POST' && taskRunMatch) {
       const taskId = parseInt(taskRunMatch[1], 10)
+      const task = getTaskFromDb(db, taskId)
+      if (!task) {
+        jsonResponse(res, 404, { ok: false, error: 'Task not found' })
+        return
+      }
+      // For ad-hoc runs, temporarily allow execution without changing persistent status
+      const originalStatus = task.status
+      if (task.status !== 'active') {
+        updateTask(db, taskId, { status: 'active' })
+      }
       // Fire-and-forget: return immediately, execute in background
       jsonResponse(res, 202, { ok: true, taskId, message: 'Task execution started' })
       executeTask(taskId, { db, resultsDir }).then((result) => {
-        const task = getTaskFromDb(db, taskId)
-        const name = task?.name || `Task ${taskId}`
+        // Restore original status if it was changed for ad-hoc execution
+        if (originalStatus !== 'active') {
+          const currentTask = getTaskFromDb(db, taskId)
+          if (currentTask && currentTask.status === 'active') {
+            updateTask(db, taskId, { status: originalStatus })
+          }
+        }
+        const freshTask = getTaskFromDb(db, taskId)
+        const name = freshTask?.name || `Task ${taskId}`
         if (result.success) {
-          notifyTaskComplete(db, taskId, name, result.output?.slice(0, 200), result.durationMs, task?.nudgeMode)
+          notifyTaskComplete(db, taskId, name, result.output?.slice(0, 200), result.durationMs, freshTask?.nudgeMode)
         } else {
-          notifyTaskFailed(db, taskId, name, result.errorMessage || 'Unknown error', task?.nudgeMode)
+          notifyTaskFailed(db, taskId, name, result.errorMessage || 'Unknown error', freshTask?.nudgeMode)
         }
       }).catch((err) => {
+        // Restore original status on unexpected error
+        if (originalStatus !== 'active') {
+          try { updateTask(db, taskId, { status: originalStatus }) } catch { /* best effort */ }
+        }
         console.error(`Sidecar: Task ${taskId} execution error:`, err)
       })
       return
