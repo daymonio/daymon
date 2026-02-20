@@ -6,13 +6,12 @@
  * Communication happens via HTTP on localhost.
  */
 
-import { spawn, execSync } from 'child_process'
-import { readFileSync, existsSync } from 'fs'
+import { spawn } from 'child_process'
+import { readFileSync, existsSync, openSync, closeSync } from 'fs'
 import { join } from 'path'
 import { get as httpGet, request as httpRequest, type IncomingMessage } from 'http'
 import { app } from 'electron'
 import { getConfig } from './config'
-import { resolveNodePath } from './claude-config'
 import { notifyTaskComplete, notifyTaskFailed } from './notifications'
 
 let sidecarPort: number | null = null
@@ -59,26 +58,33 @@ export async function launchSidecar(): Promise<void> {
     }
   }
 
-  const nodePath = resolveNodePath()
+  // Use Electron's bundled node to ensure module version compatibility
+  // In Electron, process.execPath is the Electron binary which can run as node with ELECTRON_RUN_AS_NODE
+  const electronPath = process.execPath
   const sidecarPath = getSidecarPath()
 
-  console.log(`Launching sidecar: ${nodePath} ${sidecarPath}`)
+  console.log(`Launching sidecar: ${electronPath} ${sidecarPath}`)
 
   const env: Record<string, string> = {}
-  // Copy current env, stripping Electron vars
+  // Copy current env
   for (const [key, value] of Object.entries(process.env)) {
-    if (key === 'ELECTRON_RUN_AS_NODE') continue
     if (value !== undefined) env[key] = value
   }
+  // Set ELECTRON_RUN_AS_NODE so Electron runs as Node.js
+  env.ELECTRON_RUN_AS_NODE = '1'
   env.DAYMON_DB_PATH = config.dbPath
   env.DAYMON_RESULTS_DIR = config.resultsDir
   env.DAYMON_DATA_DIR = config.dataDir
+  // Disable GPU/ONNX for transformers to prevent crashes in VMs or systems without GPU
+  env.TRANSFORMERS_DEVICE = 'cpu'
+  env.USE_ONNX = 'false'
+  env.TRANSFORMERS_CACHE = join(config.dataDir, 'huggingface-cache')
 
   if (process.platform === 'win32') {
     // On Windows, handle inheritance works differently — no stale FD issue.
     // Spawn directly with detached mode and windowsHide to prevent console flash.
     try {
-      const child = spawn(nodePath, [sidecarPath], {
+      const child = spawn(electronPath, [sidecarPath], {
         detached: true,
         stdio: 'ignore',
         env,
@@ -92,43 +98,35 @@ export async function launchSidecar(): Promise<void> {
       return
     }
   } else {
-    // Unix: Launch sidecar through a shell wrapper that closes inherited Electron FDs.
-    // Electron's patched runtime leaves stale FDs (chromium internals) in the child.
-    // If we spawn node directly, those bad FDs cause EBADF when the sidecar later
-    // calls spawn('claude'). The shell closes them before exec'ing into node.
-    const closeAndExec = [
-      '-c',
-      // Close all FDs > 2 (inherited from Electron), then exec into node
-      `for fd in /dev/fd/*; do n=$(basename "$fd"); [ "$n" -gt 2 ] && eval "exec $n>&-" 2>/dev/null; done; exec "${nodePath}" "${sidecarPath}"`
-    ]
+    // Unix: Spawn sidecar directly with log file for debugging
+    const sidecarLogPath = join(config.dataDir, 'sidecar.log')
+
+    let logFd: number | undefined
+    try {
+      logFd = openSync(sidecarLogPath, 'a')
+    } catch (err) {
+      console.error(`Failed to open sidecar log: ${err}`)
+    }
 
     try {
-      const child = spawn('/bin/sh', closeAndExec, {
+      const child = spawn(electronPath, [sidecarPath], {
         detached: true,
-        stdio: 'ignore',
+        stdio: logFd !== undefined ? ['ignore', logFd, logFd] : 'ignore',
         env
       })
       child.unref()
-      console.log(`Sidecar spawned via shell wrapper (PID ${child.pid})`)
+      console.log(`Sidecar spawned (PID ${child.pid})`)
+
+      if (logFd !== undefined) {
+        closeSync(logFd)
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       console.error(`Failed to spawn sidecar: ${msg}`)
-
-      // Fallback: launch via nohup
-      try {
-        console.log('Trying nohup fallback to launch sidecar...')
-        const cmd = `for fd in /dev/fd/*; do n=$(basename "$fd"); [ "$n" -gt 2 ] && eval "exec $n>&-" 2>/dev/null; done; exec "${nodePath}" "${sidecarPath}"`
-        execSync(`nohup /bin/sh -c '${cmd}' &`, {
-          env,
-          stdio: 'ignore',
-          timeout: 5000
-        })
-        console.log('Sidecar launched via nohup fallback')
-      } catch (fallbackErr) {
-        const fallbackMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)
-        console.error(`Nohup fallback also failed: ${fallbackMsg}`)
-        return
+      if (logFd !== undefined) {
+        closeSync(logFd)
       }
+      return
     }
   }
 

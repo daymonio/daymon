@@ -36,4 +36,9 @@ writeFileSync('out/mcp/package.json', JSON.stringify({
   }
 }, null, 2))
 
-execSync('npm install --omit=dev', { cwd: 'out/mcp', stdio: 'inherit' })
+execSync('npm install --omit=dev --onnxruntime-node-install-cuda=skip', { cwd: 'out/mcp', stdio: 'inherit' })
+
+// Rebuild native modules for Electron's Node version
+const { version: electronVersion } = require('../node_modules/electron/package.json')
+console.log(`Rebuilding MCP native modules for Electron ${electronVersion}...`)
+execSync(`npx @electron/rebuild --force --module-dir=out/mcp`, { stdio: 'inherit' })

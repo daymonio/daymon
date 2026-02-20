@@ -11,6 +11,7 @@ build/
 *.log
 .env
 .env.*
+.idea
 
 # Internal project management (not for public repo)
 CLAUDE.md
