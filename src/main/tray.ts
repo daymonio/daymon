@@ -70,7 +70,9 @@ function isSafeExternalUrl(raw: string): boolean {
 }
 
 function showPopover(): void {
-  if (!popoverWindow || !tray) return
+  if (!popoverWindow || !tray) {
+    return
+  }
 
   const trayBounds = tray.getBounds()
   const windowBounds = popoverWindow.getBounds()
@@ -122,7 +124,9 @@ export function showPopoverWindowFromDock(): void {
 }
 
 function togglePopover(): void {
-  if (!popoverWindow) return
+  if (!popoverWindow) {
+    return
+  }
   if (popoverWindow.isVisible()) {
     popoverWindow.hide()
   } else {
@@ -191,8 +195,15 @@ export function createTray(largeWindow?: boolean): BrowserWindow {
     { label: 'Quit', click: () => app.quit() }
   ])
 
-  tray.on('click', () => togglePopover())
-  tray.on('right-click', () => tray!.popUpContextMenu(contextMenu))
+  // On Linux, 'click' event doesn't work with GNOME AppIndicator
+  // Use setContextMenu to make tray always show popover on click
+  if (process.platform === 'linux') {
+    console.log('[Tray] Linux detected - using context menu for activation')
+    tray.setContextMenu(contextMenu)
+  } else {
+    tray.on('click', () => togglePopover())
+    tray.on('right-click', () => tray!.popUpContextMenu(contextMenu))
+  }
 
   return popoverWindow
 }
