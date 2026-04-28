@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/daymonio-daymon-badge.png)](https://mseep.ai/app/daymonio-daymon)
+
 <p align="center">
   <a href="https://daymon.io">
     <img src="docs/banner.png" alt="Daymon — Run Claude while you sleep." width="100%">
