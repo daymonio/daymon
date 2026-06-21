@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { join } from 'path'
 import Database from 'better-sqlite3'
 import { initTestDb } from '../../shared/__tests__/helpers/test-db'
 
@@ -174,5 +175,23 @@ describe('handleTrigger execution lock', () => {
     // Cooldown should be approximately now + POST_EXEC_COOLDOWN_MS
     expect(state.cooldownUntil).toBeGreaterThanOrEqual(beforeExec + _testing.POST_EXEC_COOLDOWN_MS)
     expect(state.cooldownUntil).toBeLessThanOrEqual(afterExec + _testing.POST_EXEC_COOLDOWN_MS)
+  })
+})
+
+describe('watchRelativeDepth', () => {
+  const wp = join('root', 'watched')
+
+  it('treats a direct child as depth 1', () => {
+    expect(_testing.watchRelativeDepth(wp, join(wp, 'a.txt'))).toBe(1)
+  })
+
+  it('counts nested segments with the OS separator so the depth limit holds', () => {
+    // Within the limit (depth <= 2): not skipped.
+    expect(_testing.watchRelativeDepth(wp, join(wp, 'a')) > 2).toBe(false)
+    expect(_testing.watchRelativeDepth(wp, join(wp, 'a', 'b')) > 2).toBe(false)
+    // Deeper than 2: must exceed the limit. Splitting only on '/' regressed
+    // this on Windows (backslash paths counted as a single segment).
+    expect(_testing.watchRelativeDepth(wp, join(wp, 'a', 'b', 'c')) > 2).toBe(true)
+    expect(_testing.watchRelativeDepth(wp, join(wp, 'a', 'b', 'c', 'd.txt')) > 2).toBe(true)
   })
 })

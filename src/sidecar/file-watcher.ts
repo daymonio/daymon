@@ -54,6 +54,13 @@ export function syncWatches(): void {
   syncWatchesWithDatabase()
 }
 
+// Number of path segments `filePath` is below `watchPath`. path.relative()
+// returns backslash-separated paths on Windows, so split on either separator
+// (splitting only on '/' makes the depth limit inert on Windows).
+function watchRelativeDepth(watchPath: string, filePath: string): number {
+  return relative(watchPath, filePath).split(/[/\\]/).length
+}
+
 function startWatch(watch: Watch): void {
   if (activeWatchers.has(watch.id)) return
   if (!watch.actionPrompt) {
@@ -76,11 +83,7 @@ function startWatch(watch: Watch): void {
       const filePath = isDir ? join(watch.path, filename) : watch.path
 
       // Limit depth to 1 (direct children + 1 level of subdirectories)
-      if (isDir) {
-        const rel = relative(watch.path, filePath)
-        const depth = rel.split('/').length
-        if (depth > 2) return
-      }
+      if (isDir && watchRelativeDepth(watch.path, filePath) > 2) return
 
       handleTrigger(watch.id, actionPrompt, filePath)
     })
@@ -157,6 +160,7 @@ export const _testing = {
   handleTrigger: (watchId: number, actionPrompt: string, filePath: string) =>
     handleTrigger(watchId, actionPrompt, filePath),
   getWatchExecState,
+  watchRelativeDepth,
   get lastTrigger() { return lastTrigger },
   get watchExecState() { return watchExecState },
   DEBOUNCE_MS,
